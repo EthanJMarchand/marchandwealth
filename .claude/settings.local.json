@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sort -t: -k2)",
+      "WebSearch",
+      "Bash(cp \"/Users/ethanmarchand/Downloads/MW logo on transparent bg.png\" assets/logo.png && ls -la assets/)",
+      "Bash(xargs -I{} stat -f \"%m %N\" {})",
+      "Bash(cp /Users/ethanmarchand/Downloads/marchand-site/tfsa-limits.js /tmp/tfsa-limits.js.bak)",
+      "Bash(sed -i '' \"s/  2026: 7000$/  2026: 7000,\\\\n  2027: 7500/\" /Users/ethanmarchand/Downloads/marchand-site/tfsa-limits.js)",
+      "Bash(cp /tmp/tfsa-limits.js.bak /Users/ethanmarchand/Downloads/marchand-site/tfsa-limits.js)",
+      "Bash(rm /tmp/tfsa-limits.js.bak)",
+      "Bash(npm -v)",
+      "Bash(brew --version)",
+      "Bash(curl -sL -o /tmp/tailwindcss-test -w \"HTTP_CODE:%{http_code}\\\\n\" --max-time 15 \"https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-macos-arm64\")",
+      "Read(//tmp/**)",
+      "Bash(chmod +x /tmp/tailwindcss-test)",
+      "Bash(/tmp/tailwindcss-test --help)",
+      "Bash(rm -f /tmp/tailwindcss-test)",
+      "Bash(curl -sL -o /tmp/tailwindcss-v3 -w \"HTTP_CODE:%{http_code}\\\\n\" --max-time 30 \"https://github.com/tailwindlabs/tailwindcss/releases/download/v3.4.17/tailwindcss-macos-arm64\")",
+      "Bash(chmod +x /tmp/tailwindcss-v3)",
+      "Bash(/tmp/tailwindcss-v3 --help)",
+      "Bash(/tmp/tailwindcss-v3 -i ./src/tailwind.css -o ./assets/css/site.css --config ./tailwind.config.js --minify)",
+      "Bash(grep -o \".\\\\{0,20\\\\}13px.\\\\{0,20\\\\}\" assets/css/site.css)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(/tmp/tailwindcss-v3 -i ./src/tailwind.css -o ./assets/css/site.css --config ./tailwind.config.js --minify 2>&1 | tail -3 *)"
+    ]
+  }
+}

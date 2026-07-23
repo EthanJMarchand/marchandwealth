@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html { scroll-behavior: smooth; }
+body { font-family: 'Inter', sans-serif; }
+.font-serif { font-family: 'Fraunces', serif; }
+
+/* FAQ accordions (homepage + TFSA calculator) */
+.faq-answer { max-height: 0; overflow: hidden; transition: max-height .3s ease; }
+.faq-item.open .faq-answer { max-height: 600px; }
+.faq-item.open .faq-chevron { transform: rotate(180deg); }
+
+/* Form controls (intake form + TFSA calculator) */
+input[type=radio], input[type=checkbox] { accent-color: #232a35; width: 16px; height: 16px; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: #c1a57b; box-shadow: 0 0 0 3px rgba(193, 165, 123, 0.18); }
+
+/* Range sliders (TFSA calculator), styled to match the site's gold / navy palette */
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border-radius: 999px; background: #ddd7ca; outline: none; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #c1a57b; border: 3px solid #232a35; cursor: pointer; }
+input[type=range]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: #c1a57b; border: 3px solid #232a35; cursor: pointer; }
