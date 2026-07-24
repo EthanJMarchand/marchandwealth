@@ -110,12 +110,12 @@
       <div class="grid sm:grid-cols-2 gap-5 mb-5">
         <label class="flex flex-col gap-1.5">
           <span class="text-[13px] font-semibold text-navydeep">Date of birth<em class="text-golddim not-italic">*</em></span>
-          <input type="date" name="dob" required class="text-[14.5px] px-3.5 py-2.5 border-2 border-gold rounded-sm bg-white w-full">
+          <input type="date" name="dob" required class="text-[14.5px] px-3.5 py-2.5 border-2 border-gold rounded-sm bg-white w-full h-12">
           <p id="error-dob" class="hidden text-red-600 text-[12.5px] mt-0.5"></p>
         </label>
         <fieldset class="flex flex-col gap-1.5">
-          <legend class="text-[13px] font-semibold text-navydeep mb-1">Sex<em class="text-golddim not-italic">*</em></legend>
-          <div id="box-sex" class="flex gap-5 flex-wrap px-3.5 py-2.5 border-2 border-gold rounded-sm bg-white">
+          <legend class="text-[13px] font-semibold text-navydeep mb-1.5">Sex<em class="text-golddim not-italic">*</em></legend>
+          <div id="box-sex" class="flex items-center gap-5 flex-wrap px-3.5 py-2.5 border-2 border-gold rounded-sm bg-white h-12">
             <label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="sex" value="Male" required>Male</label>
             <label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="sex" value="Female" required>Female</label>
           </div>
@@ -173,7 +173,7 @@
       <div class="grid sm:grid-cols-2 gap-5 mb-5">
         <label class="flex flex-col gap-1.5">
           <span class="text-[13px] font-semibold text-navydeep">Business structure</span>
-          <select name="businessStructure" class="text-[14.5px] px-3.5 py-2.5 border border-line rounded-sm bg-white w-full">
+          <select name="businessStructure" class="text-[14.5px] px-3.5 py-2.5 border border-line rounded-sm bg-white w-full h-11">
             <option value="">Select one</option>
             <option>Sole Proprietorship</option>
             <option>Corporation</option>
@@ -183,7 +183,7 @@
         </label>
         <label class="flex flex-col gap-1.5">
           <span class="text-[13px] font-semibold text-navydeep">Years in operation</span>
-          <input type="number" min="0" name="yearsOperation" class="text-[14.5px] px-3.5 py-2.5 border border-line rounded-sm bg-white w-full">
+          <input type="number" min="0" name="yearsOperation" class="text-[14.5px] px-3.5 py-2.5 border border-line rounded-sm bg-white w-full h-11">
         </label>
       </div>
 
@@ -271,7 +271,7 @@
       <div class="grid sm:grid-cols-2 gap-5 mb-5">
         <label class="flex flex-col gap-1.5">
           <span class="text-[13px] font-semibold text-navydeep">Marital status</span>
-          <select name="maritalStatus" class="text-[14.5px] px-3.5 py-2.5 border border-line rounded-sm bg-white w-full">
+          <select name="maritalStatus" class="text-[14.5px] px-3.5 py-2.5 border border-line rounded-sm bg-white w-full h-11">
             <option value="">Select one</option>
             <option>Single</option>
             <option>Married / Common-law</option>
@@ -281,7 +281,7 @@
         </label>
         <label class="flex flex-col gap-1.5">
           <span class="text-[13px] font-semibold text-navydeep">Number of dependents</span>
-          <input type="number" min="0" name="numDependents" class="text-[14.5px] px-3.5 py-2.5 border border-line rounded-sm bg-white w-full">
+          <input type="number" min="0" name="numDependents" class="text-[14.5px] px-3.5 py-2.5 border border-line rounded-sm bg-white w-full h-11">
         </label>
       </div>
 
