@@ -74,7 +74,7 @@
     <a href="#notes" data-section="notes" class="rail-link flex items-center gap-2.5 text-[13.5px] font-medium text-inksoft pl-3.5 py-2 border-l-2 border-line"><span class="w-1.5 h-1.5 rounded-full bg-line"></span>Additional Notes</a>
   </nav>
 
-  <form id="intake-form" name="intake" method="POST" data-netlify="true" netlify-honeypot="bot-field" class="flex flex-col gap-7 pb-24">
+  <form id="intake-form" name="intake" method="POST" data-netlify="true" netlify-honeypot="bot-field" class="flex flex-col gap-7 pb-24" novalidate>
     <input type="hidden" name="form-name" value="intake">
     <p class="hidden"><label>Don't fill this out if you're human: <input name="bot-field"></label></p>
 
@@ -101,19 +101,22 @@
       <label class="flex flex-col gap-1.5 mb-5">
         <span class="text-[13px] font-semibold text-navydeep">Full legal name<em class="text-golddim not-italic">*</em></span>
         <input type="text" name="fullName" required autocomplete="name" class="text-[14.5px] px-3.5 py-2.5 border-2 border-gold rounded-sm bg-white w-full">
+        <p id="error-fullName" class="hidden text-red-600 text-[12.5px] mt-0.5"></p>
       </label>
 
       <div class="grid sm:grid-cols-2 gap-5 mb-5">
         <label class="flex flex-col gap-1.5">
           <span class="text-[13px] font-semibold text-navydeep">Date of birth<em class="text-golddim not-italic">*</em></span>
           <input type="date" name="dob" required class="text-[14.5px] px-3.5 py-2.5 border-2 border-gold rounded-sm bg-white w-full">
+          <p id="error-dob" class="hidden text-red-600 text-[12.5px] mt-0.5"></p>
         </label>
         <fieldset class="flex flex-col gap-1.5">
           <legend class="text-[13px] font-semibold text-navydeep mb-1">Sex<em class="text-golddim not-italic">*</em></legend>
-          <div class="flex gap-5 flex-wrap px-3.5 py-2.5 border-2 border-gold rounded-sm bg-white">
+          <div id="box-sex" class="flex gap-5 flex-wrap px-3.5 py-2.5 border-2 border-gold rounded-sm bg-white">
             <label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="sex" value="Male" required>Male</label>
             <label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="sex" value="Female" required>Female</label>
           </div>
+          <p id="error-sex" class="hidden text-red-600 text-[12.5px] mt-0.5"></p>
         </fieldset>
       </div>
 
@@ -121,10 +124,12 @@
         <label class="flex flex-col gap-1.5">
           <span class="text-[13px] font-semibold text-navydeep">Phone<em class="text-golddim not-italic">*</em></span>
           <input type="tel" name="phone" required autocomplete="tel" pattern="(\+?1[\-.\s]?)?\(?\d{3}\)?[\-.\s]?\d{3}[\-.\s]?\d{4}" title="Enter a 10-digit phone number, e.g. 780-123-4567" placeholder="780-123-4567" class="text-[14.5px] px-3.5 py-2.5 border-2 border-gold rounded-sm bg-white w-full">
+          <p id="error-phone" class="hidden text-red-600 text-[12.5px] mt-0.5"></p>
         </label>
         <label class="flex flex-col gap-1.5">
           <span class="text-[13px] font-semibold text-navydeep">Email<em class="text-golddim not-italic">*</em></span>
           <input type="email" name="email" required autocomplete="email" class="text-[14.5px] px-3.5 py-2.5 border-2 border-gold rounded-sm bg-white w-full">
+          <p id="error-email" class="hidden text-red-600 text-[12.5px] mt-0.5"></p>
         </label>
       </div>
 
@@ -236,10 +241,11 @@
       <div class="grid sm:grid-cols-2 gap-5 mb-5">
         <fieldset class="flex flex-col gap-1.5">
           <legend class="text-[13px] font-semibold text-navydeep mb-1">Do you use tobacco or nicotine products?<em class="text-golddim not-italic">*</em></legend>
-          <div class="flex gap-5 px-3.5 py-2.5 border-2 border-gold rounded-sm bg-white">
+          <div id="box-tobacco" class="flex gap-5 px-3.5 py-2.5 border-2 border-gold rounded-sm bg-white">
             <label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="tobacco" value="Yes" required>Yes</label>
             <label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="tobacco" value="No" required>No</label>
           </div>
+          <p id="error-tobacco" class="hidden text-red-600 text-[12.5px] mt-0.5"></p>
         </fieldset>
         <fieldset class="flex flex-col gap-1.5">
           <legend class="text-[13px] font-semibold text-navydeep mb-1">Any high-risk activities? (aviation, motorsports, diving, etc.)</legend>
@@ -289,10 +295,11 @@
         <textarea name="additionalNotes" rows="4" class="text-[14.5px] px-3.5 py-2.5 border border-line rounded-sm bg-white w-full"></textarea>
       </label>
 
-      <label class="flex items-start gap-2.5 text-[13.5px] text-inksoft leading-relaxed mb-5 px-4 py-3.5 border-2 border-gold rounded-sm">
+      <label id="box-consent" class="flex items-start gap-2.5 text-[13.5px] text-inksoft leading-relaxed mb-3 px-4 py-3.5 border-2 border-gold rounded-sm">
         <input type="checkbox" name="consent" required class="mt-0.5">
         I understand this information is for planning purposes only and is not an application for insurance.<em class="text-golddim not-italic font-semibold">*</em>
       </label>
+      <p id="error-consent" class="hidden text-red-600 text-[12.5px] -mt-2 mb-3"></p>
 
       <div id="form-status" class="text-[13.5px] mb-3.5 min-h-0" role="status" aria-live="polite"></div>
 

@@ -84,11 +84,120 @@ document.addEventListener('DOMContentLoaded', () => {
     formSections.forEach(sec => spy.observe(sec));
   }
 
-  /* ---------------- Intake form: submit handling (Netlify Forms) ---------------- */
+  /* ---------------- Intake form: inline validation + submit (Netlify Forms) ---------------- */
   const intakeForm = document.getElementById('intake-form');
   if (intakeForm) {
+
+    // One entry per required field. `inputs()` returns the field's input(s)
+    // (a radio group has more than one), `borderEl()` is whatever gets the
+    // gold/red box treatment, and `getMessage()` returns '' when valid or a
+    // specific reason when not.
+    const VALIDATORS = [
+      {
+        inputs: () => [document.querySelector('input[name="fullName"]')],
+        borderEl: () => document.querySelector('input[name="fullName"]'),
+        errorEl: () => document.getElementById('error-fullName'),
+        getMessage: (inputs) => inputs[0].validity.valueMissing ? 'Full name is required.' : ''
+      },
+      {
+        inputs: () => [document.querySelector('input[name="dob"]')],
+        borderEl: () => document.querySelector('input[name="dob"]'),
+        errorEl: () => document.getElementById('error-dob'),
+        getMessage: (inputs) => inputs[0].validity.valueMissing ? 'Date of birth is required.' : ''
+      },
+      {
+        inputs: () => Array.from(document.querySelectorAll('input[name="sex"]')),
+        borderEl: () => document.getElementById('box-sex'),
+        errorEl: () => document.getElementById('error-sex'),
+        getMessage: (inputs) => inputs.some(i => i.checked) ? '' : 'Please select your sex.'
+      },
+      {
+        inputs: () => [document.querySelector('input[name="phone"]')],
+        borderEl: () => document.querySelector('input[name="phone"]'),
+        errorEl: () => document.getElementById('error-phone'),
+        getMessage: (inputs) => {
+          if (inputs[0].validity.valueMissing) return 'Phone number is required.';
+          if (inputs[0].validity.patternMismatch) return 'Enter a valid phone number.';
+          return '';
+        }
+      },
+      {
+        inputs: () => [document.querySelector('input[name="email"]')],
+        borderEl: () => document.querySelector('input[name="email"]'),
+        errorEl: () => document.getElementById('error-email'),
+        getMessage: (inputs) => {
+          if (inputs[0].validity.valueMissing) return 'Email is required.';
+          if (inputs[0].validity.typeMismatch) return 'Enter a valid email address.';
+          return '';
+        }
+      },
+      {
+        inputs: () => Array.from(document.querySelectorAll('input[name="tobacco"]')),
+        borderEl: () => document.getElementById('box-tobacco'),
+        errorEl: () => document.getElementById('error-tobacco'),
+        getMessage: (inputs) => inputs.some(i => i.checked) ? '' : 'Please answer this question.'
+      },
+      {
+        inputs: () => [document.querySelector('input[name="consent"]')],
+        borderEl: () => document.getElementById('box-consent'),
+        errorEl: () => document.getElementById('error-consent'),
+        getMessage: (inputs) => inputs[0].checked ? '' : 'Please confirm to continue.'
+      }
+    ];
+
+    // Checks one field, updates its red message + gold/red box, and returns
+    // whether it's currently valid.
+    function checkField(validator) {
+      const inputs = validator.inputs();
+      if (!inputs[0]) return true;
+      const message = validator.getMessage(inputs);
+      const errorEl = validator.errorEl();
+      if (errorEl) {
+        errorEl.textContent = message;
+        errorEl.classList.toggle('hidden', !message);
+      }
+      const borderEl = validator.borderEl();
+      if (borderEl) {
+        borderEl.classList.toggle('border-red-500', !!message);
+        borderEl.classList.toggle('border-gold', !message);
+      }
+      return !message;
+    }
+
+    function checkAllFields() {
+      let allValid = true;
+      let firstInvalidEl = null;
+      VALIDATORS.forEach(v => {
+        if (!checkField(v)) {
+          allValid = false;
+          if (!firstInvalidEl) firstInvalidEl = v.borderEl();
+        }
+      });
+      return { allValid, firstInvalidEl };
+    }
+
+    // Errors only start appearing after a first submit attempt — nobody
+    // wants a field turning red before they've even had a chance to fill it
+    // in. Once that first attempt happens, each field clears its own error
+    // live as soon as it's fixed, leaving only the ones still wrong.
+    let hasAttemptedSubmit = false;
+    VALIDATORS.forEach(v => {
+      v.inputs().forEach(input => {
+        if (!input) return;
+        input.addEventListener('input', () => { if (hasAttemptedSubmit) checkField(v); });
+        input.addEventListener('change', () => { if (hasAttemptedSubmit) checkField(v); });
+      });
+    });
+
     intakeForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      hasAttemptedSubmit = true;
+      const { allValid, firstInvalidEl } = checkAllFields();
+      if (!allValid) {
+        if (firstInvalidEl) firstInvalidEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+
       const statusEl = document.getElementById('form-status');
       const body = new URLSearchParams(new FormData(intakeForm));
 
