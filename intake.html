@@ -58,7 +58,7 @@
       Confidential &middot; Takes about 8 minutes
     </div>
     <h1 class="font-serif font-semibold text-3xl md:text-4xl text-navydeep mb-3">Client Intake Questionnaire</h1>
-    <p class="text-inksoft text-[15.5px] max-w-xl">The more I know before we sit down, the more useful our first meeting will be. Nothing here is an application for insurance &mdash; it's just context.</p>
+    <p class="text-inksoft text-[15.5px] max-w-xl">Whether you're planning for yourself and your family, or coordinating personal and business coverage, the more I know before we sit down, the more useful our first meeting will be. Nothing here is an application for insurance &mdash; it's just context.</p>
   </div>
 </section>
 
@@ -66,7 +66,7 @@
 
   <nav id="intake-rail" aria-label="Form sections" class="hidden md:flex sticky top-24 flex-col gap-1">
     <a href="#personal" data-section="personal" class="rail-link flex items-center gap-2.5 text-[13.5px] font-medium text-navydeep pl-3.5 py-2 border-l-2 border-gold"><span class="w-1.5 h-1.5 rounded-full bg-gold"></span>Personal Information</a>
-    <a href="#business" data-section="business" class="rail-link flex items-center gap-2.5 text-[13.5px] font-medium text-inksoft pl-3.5 py-2 border-l-2 border-line"><span class="w-1.5 h-1.5 rounded-full bg-line"></span>Business Information</a>
+    <a href="#business" data-section="business" class="business-only rail-link flex items-center gap-2.5 text-[13.5px] font-medium text-inksoft pl-3.5 py-2 border-l-2 border-line"><span class="w-1.5 h-1.5 rounded-full bg-line"></span>Business Information</a>
     <a href="#coverage" data-section="coverage" class="rail-link flex items-center gap-2.5 text-[13.5px] font-medium text-inksoft pl-3.5 py-2 border-l-2 border-line"><span class="w-1.5 h-1.5 rounded-full bg-line"></span>Current Coverage</a>
     <a href="#goals" data-section="goals" class="rail-link flex items-center gap-2.5 text-[13.5px] font-medium text-inksoft pl-3.5 py-2 border-l-2 border-line"><span class="w-1.5 h-1.5 rounded-full bg-line"></span>Goals &amp; Priorities</a>
     <a href="#health" data-section="health" class="rail-link flex items-center gap-2.5 text-[13.5px] font-medium text-inksoft pl-3.5 py-2 border-l-2 border-line"><span class="w-1.5 h-1.5 rounded-full bg-line"></span>Health &amp; Lifestyle</a>
@@ -74,22 +74,47 @@
     <a href="#notes" data-section="notes" class="rail-link flex items-center gap-2.5 text-[13.5px] font-medium text-inksoft pl-3.5 py-2 border-l-2 border-line"><span class="w-1.5 h-1.5 rounded-full bg-line"></span>Additional Notes</a>
   </nav>
 
-  <form id="intake-form" name="intake" method="POST" data-netlify="true" netlify-honeypot="bot-field" class="flex flex-col gap-7 pb-24" novalidate>
+  <form id="intake-form" name="intake" method="POST" data-netlify="true" netlify-honeypot="bot-field" class="flex flex-col gap-7 pb-24">
     <input type="hidden" name="form-name" value="intake">
     <p class="hidden"><label>Don't fill this out if you're human: <input name="bot-field"></label></p>
 
+    <p class="text-[13px] text-inksoft -mb-3"><em class="text-golddim not-italic font-semibold">*</em> Required &mdash; everything else is optional, but every extra detail helps me prepare.</p>
+
+    <fieldset class="bg-white border border-line rounded-sm p-6 md:p-8">
+      <legend class="text-[13px] font-semibold text-navydeep mb-1">Which best describes you?</legend>
+      <p class="text-[13px] text-inksoft mb-4">This just tailors the sections below &mdash; skip anything that doesn't apply to you.</p>
+      <div class="grid sm:grid-cols-2 gap-3">
+        <label class="flex items-start gap-3 border border-line rounded-sm px-4 py-3.5 cursor-pointer text-sm text-inksoft hover:border-gold transition">
+          <input type="radio" name="clientType" value="Individual" class="mt-1">
+          <span><span class="block font-semibold text-navydeep">Personal planning</span>I'm planning for myself and/or my family</span>
+        </label>
+        <label class="flex items-start gap-3 border border-line rounded-sm px-4 py-3.5 cursor-pointer text-sm text-inksoft hover:border-gold transition">
+          <input type="radio" name="clientType" value="Business owner" class="mt-1">
+          <span><span class="block font-semibold text-navydeep">Business + personal planning</span>I'm an incorporated business owner</span>
+        </label>
+      </div>
+    </fieldset>
+
     <section id="personal" class="form-section scroll-mt-28 bg-white border border-line rounded-sm p-8">
-      <div class="flex items-baseline gap-3.5 mb-6"><span class="font-serif font-semibold text-golddim text-sm">01</span><h2 class="font-serif font-semibold text-xl text-navydeep m-0">Personal Information</h2></div>
+      <div class="flex items-baseline gap-3.5 mb-6"><span class="font-serif font-semibold text-golddim text-sm section-number">01</span><h2 class="font-serif font-semibold text-xl text-navydeep m-0">Personal Information</h2></div>
+
+      <label class="flex flex-col gap-1.5 mb-5">
+        <span class="text-[13px] font-semibold text-navydeep">Full legal name<em class="text-golddim not-italic">*</em></span>
+        <input type="text" name="fullName" required autocomplete="name" class="text-[14.5px] px-3.5 py-2.5 border border-line rounded-sm bg-white w-full">
+      </label>
 
       <div class="grid sm:grid-cols-2 gap-5 mb-5">
         <label class="flex flex-col gap-1.5">
-          <span class="text-[13px] font-semibold text-navydeep">Full legal name<em class="text-golddim not-italic">*</em></span>
-          <input type="text" name="fullName" required autocomplete="name" class="text-[14.5px] px-3.5 py-2.5 border border-line rounded-sm bg-white w-full">
+          <span class="text-[13px] font-semibold text-navydeep">Date of birth<em class="text-golddim not-italic">*</em></span>
+          <input type="date" name="dob" required class="text-[14.5px] px-3.5 py-2.5 border border-line rounded-sm bg-white w-full">
         </label>
-        <label class="flex flex-col gap-1.5">
-          <span class="text-[13px] font-semibold text-navydeep">Date of birth</span>
-          <input type="date" name="dob" class="text-[14.5px] px-3.5 py-2.5 border border-line rounded-sm bg-white w-full">
-        </label>
+        <fieldset class="flex flex-col gap-1.5">
+          <legend class="text-[13px] font-semibold text-navydeep mb-1">Sex<em class="text-golddim not-italic">*</em></legend>
+          <div class="flex gap-5 flex-wrap pt-1">
+            <label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="sex" value="Male" required>Male</label>
+            <label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="sex" value="Female" required>Female</label>
+          </div>
+        </fieldset>
       </div>
 
       <div class="grid sm:grid-cols-2 gap-5 mb-5">
@@ -102,11 +127,6 @@
           <input type="email" name="email" required autocomplete="email" class="text-[14.5px] px-3.5 py-2.5 border border-line rounded-sm bg-white w-full">
         </label>
       </div>
-
-      <label class="flex flex-col gap-1.5 mb-5">
-        <span class="text-[13px] font-semibold text-navydeep">Mailing address</span>
-        <input type="text" name="address" autocomplete="street-address" class="text-[14.5px] px-3.5 py-2.5 border border-line rounded-sm bg-white w-full">
-      </label>
 
       <div class="grid sm:grid-cols-2 gap-5">
         <fieldset class="flex flex-col gap-1.5">
@@ -128,8 +148,8 @@
       </div>
     </section>
 
-    <section id="business" class="form-section scroll-mt-28 bg-white border border-line rounded-sm p-8">
-      <div class="flex items-baseline gap-3.5 mb-6"><span class="font-serif font-semibold text-golddim text-sm">02</span><h2 class="font-serif font-semibold text-xl text-navydeep m-0">Business Information</h2></div>
+    <section id="business" class="business-only form-section scroll-mt-28 bg-white border border-line rounded-sm p-8">
+      <div class="flex items-baseline gap-3.5 mb-6"><span class="font-serif font-semibold text-golddim text-sm section-number">02</span><h2 class="font-serif font-semibold text-xl text-navydeep m-0">Business Information</h2></div>
 
       <div class="grid sm:grid-cols-2 gap-5 mb-5">
         <label class="flex flex-col gap-1.5">
@@ -175,29 +195,29 @@
     </section>
 
     <section id="coverage" class="form-section scroll-mt-28 bg-white border border-line rounded-sm p-8">
-      <div class="flex items-baseline gap-3.5 mb-2"><span class="font-serif font-semibold text-golddim text-sm">03</span><h2 class="font-serif font-semibold text-xl text-navydeep m-0">Current Coverage</h2></div>
+      <div class="flex items-baseline gap-3.5 mb-2"><span class="font-serif font-semibold text-golddim text-sm section-number">03</span><h2 class="font-serif font-semibold text-xl text-navydeep m-0">Current Coverage</h2></div>
       <p class="text-[13.5px] text-inksoft mb-5">Quick yes/no is fine &mdash; we'll go through details together.</p>
 
-      <div class="flex flex-col">
-        <div class="flex justify-between items-center py-3.5 border-b border-line text-[14.5px]"><span>Personal life insurance</span><div class="flex gap-5"><label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="covLife" value="Yes">Yes</label><label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="covLife" value="No">No</label></div></div>
-        <div class="flex justify-between items-center py-3.5 border-b border-line text-[14.5px]"><span>Critical illness insurance</span><div class="flex gap-5"><label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="covCI" value="Yes">Yes</label><label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="covCI" value="No">No</label></div></div>
-        <div class="flex justify-between items-center py-3.5 border-b border-line text-[14.5px]"><span>Disability insurance</span><div class="flex gap-5"><label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="covDisability" value="Yes">Yes</label><label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="covDisability" value="No">No</label></div></div>
-        <div class="flex justify-between items-center py-3.5 border-b border-line text-[14.5px]"><span>Key person insurance (business)</span><div class="flex gap-5"><label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="covKeyPerson" value="Yes">Yes</label><label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="covKeyPerson" value="No">No</label></div></div>
-        <div class="flex justify-between items-center py-3.5 border-b border-line text-[14.5px]"><span>Funded buy-sell agreement</span><div class="flex gap-5"><label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="covBuySell" value="Yes">Yes</label><label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="covBuySell" value="No">No</label></div></div>
-        <div class="flex justify-between items-center py-3.5 text-[14.5px]"><span>Group benefits through your business</span><div class="flex gap-5"><label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="covGroup" value="Yes">Yes</label><label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="covGroup" value="No">No</label></div></div>
+      <div class="flex flex-col divide-y divide-line">
+        <div class="flex justify-between items-center py-3.5 text-[14.5px]"><span>Personal life insurance</span><div class="flex gap-5"><label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="covLife" value="Yes">Yes</label><label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="covLife" value="No">No</label></div></div>
+        <div class="flex justify-between items-center py-3.5 text-[14.5px]"><span>Critical illness insurance</span><div class="flex gap-5"><label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="covCI" value="Yes">Yes</label><label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="covCI" value="No">No</label></div></div>
+        <div class="flex justify-between items-center py-3.5 text-[14.5px]"><span>Disability insurance</span><div class="flex gap-5"><label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="covDisability" value="Yes">Yes</label><label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="covDisability" value="No">No</label></div></div>
+        <div class="business-only flex justify-between items-center py-3.5 text-[14.5px]"><span>Key person insurance (business)</span><div class="flex gap-5"><label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="covKeyPerson" value="Yes">Yes</label><label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="covKeyPerson" value="No">No</label></div></div>
+        <div class="business-only flex justify-between items-center py-3.5 text-[14.5px]"><span>Funded buy-sell agreement</span><div class="flex gap-5"><label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="covBuySell" value="Yes">Yes</label><label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="covBuySell" value="No">No</label></div></div>
+        <div class="business-only flex justify-between items-center py-3.5 text-[14.5px]"><span>Group benefits through your business</span><div class="flex gap-5"><label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="covGroup" value="Yes">Yes</label><label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="covGroup" value="No">No</label></div></div>
       </div>
     </section>
 
     <section id="goals" class="form-section scroll-mt-28 bg-white border border-line rounded-sm p-8">
-      <div class="flex items-baseline gap-3.5 mb-2"><span class="font-serif font-semibold text-golddim text-sm">04</span><h2 class="font-serif font-semibold text-xl text-navydeep m-0">Goals &amp; Priorities</h2></div>
+      <div class="flex items-baseline gap-3.5 mb-2"><span class="font-serif font-semibold text-golddim text-sm section-number">04</span><h2 class="font-serif font-semibold text-xl text-navydeep m-0">Goals &amp; Priorities</h2></div>
       <p class="text-[13.5px] text-inksoft mb-5">Select everything relevant &mdash; we'll prioritize together.</p>
 
       <div class="grid sm:grid-cols-2 gap-x-5 gap-y-3">
         <label class="flex items-center gap-2 text-sm text-inksoft"><input type="checkbox" name="goals" value="Tax-efficient wealth transfer">Tax-efficient wealth transfer</label>
         <label class="flex items-center gap-2 text-sm text-inksoft"><input type="checkbox" name="goals" value="Estate planning">Estate planning</label>
-        <label class="flex items-center gap-2 text-sm text-inksoft"><input type="checkbox" name="goals" value="Business succession planning">Business succession planning</label>
-        <label class="flex items-center gap-2 text-sm text-inksoft"><input type="checkbox" name="goals" value="Key person protection">Key person protection</label>
-        <label class="flex items-center gap-2 text-sm text-inksoft"><input type="checkbox" name="goals" value="Buy-sell agreement funding">Buy-sell agreement funding</label>
+        <label class="business-only flex items-center gap-2 text-sm text-inksoft"><input type="checkbox" name="goals" value="Business succession planning">Business succession planning</label>
+        <label class="business-only flex items-center gap-2 text-sm text-inksoft"><input type="checkbox" name="goals" value="Key person protection">Key person protection</label>
+        <label class="business-only flex items-center gap-2 text-sm text-inksoft"><input type="checkbox" name="goals" value="Buy-sell agreement funding">Buy-sell agreement funding</label>
         <label class="flex items-center gap-2 text-sm text-inksoft"><input type="checkbox" name="goals" value="Retirement income planning">Retirement income planning</label>
         <label class="flex items-center gap-2 text-sm text-inksoft"><input type="checkbox" name="goals" value="Family income protection">Family income protection</label>
         <label class="flex items-center gap-2 text-sm text-inksoft"><input type="checkbox" name="goals" value="Debt / mortgage protection">Debt / mortgage protection</label>
@@ -210,15 +230,15 @@
     </section>
 
     <section id="health" class="form-section scroll-mt-28 bg-white border border-line rounded-sm p-8">
-      <div class="flex items-baseline gap-3.5 mb-2"><span class="font-serif font-semibold text-golddim text-sm">05</span><h2 class="font-serif font-semibold text-xl text-navydeep m-0">Health &amp; Lifestyle</h2></div>
+      <div class="flex items-baseline gap-3.5 mb-2"><span class="font-serif font-semibold text-golddim text-sm section-number">05</span><h2 class="font-serif font-semibold text-xl text-navydeep m-0">Health &amp; Lifestyle</h2></div>
       <p class="text-[13.5px] text-inksoft mb-5">High level only &mdash; full detail happens during underwriting, not here.</p>
 
       <div class="grid sm:grid-cols-2 gap-5 mb-5">
         <fieldset class="flex flex-col gap-1.5">
-          <legend class="text-[13px] font-semibold text-navydeep mb-1">Do you use tobacco or nicotine products?</legend>
+          <legend class="text-[13px] font-semibold text-navydeep mb-1">Do you use tobacco or nicotine products?<em class="text-golddim not-italic">*</em></legend>
           <div class="flex gap-5 pt-1">
-            <label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="tobacco" value="Yes">Yes</label>
-            <label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="tobacco" value="No">No</label>
+            <label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="tobacco" value="Yes" required>Yes</label>
+            <label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="tobacco" value="No" required>No</label>
           </div>
         </fieldset>
         <fieldset class="flex flex-col gap-1.5">
@@ -237,7 +257,7 @@
     </section>
 
     <section id="family" class="form-section scroll-mt-28 bg-white border border-line rounded-sm p-8">
-      <div class="flex items-baseline gap-3.5 mb-6"><span class="font-serif font-semibold text-golddim text-sm">06</span><h2 class="font-serif font-semibold text-xl text-navydeep m-0">Family &amp; Beneficiaries</h2></div>
+      <div class="flex items-baseline gap-3.5 mb-6"><span class="font-serif font-semibold text-golddim text-sm section-number">06</span><h2 class="font-serif font-semibold text-xl text-navydeep m-0">Family &amp; Beneficiaries</h2></div>
 
       <div class="grid sm:grid-cols-2 gap-5 mb-5">
         <label class="flex flex-col gap-1.5">
@@ -263,7 +283,7 @@
     </section>
 
     <section id="notes" class="form-section scroll-mt-28 bg-white border border-line rounded-sm p-8">
-      <div class="flex items-baseline gap-3.5 mb-6"><span class="font-serif font-semibold text-golddim text-sm">07</span><h2 class="font-serif font-semibold text-xl text-navydeep m-0">Additional Notes</h2></div>
+      <div class="flex items-baseline gap-3.5 mb-6"><span class="font-serif font-semibold text-golddim text-sm section-number">07</span><h2 class="font-serif font-semibold text-xl text-navydeep m-0">Additional Notes</h2></div>
       <label class="flex flex-col gap-1.5 mb-5">
         <span class="text-[13px] font-semibold text-navydeep">Anything else you'd like me to know before we meet?</span>
         <textarea name="additionalNotes" rows="4" class="text-[14.5px] px-3.5 py-2.5 border border-line rounded-sm bg-white w-full"></textarea>
@@ -287,7 +307,7 @@
     <div class="flex flex-wrap justify-between gap-10 pb-9 border-b border-white/10">
       <div class="max-w-xs">
         <img src="assets/logo.png" alt="Marchand Wealth logo" class="h-8 w-auto mb-3.5 brightness-0 invert">
-        <p class="text-white/55 text-sm m-0">Tax-efficient insurance and wealth planning for Alberta business owners.</p>
+        <p class="text-white/55 text-sm m-0">Tax-efficient insurance and wealth planning for Alberta individuals, families, and business owners.</p>
       </div>
       <div>
         <h4 class="text-white text-[15px] mb-3.5">Site</h4>

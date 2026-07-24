@@ -29,6 +29,34 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  /* ---------------- Intake form: personal vs. business toggle ---------------- */
+  const clientTypeInputs = document.querySelectorAll('input[name="clientType"]');
+  if (clientTypeInputs.length) {
+    const businessOnlyEls = document.querySelectorAll('.business-only');
+
+    // Keeps the "01, 02, 03..." badges sequential when a section is hidden,
+    // so it never looks like a step went missing.
+    const renumberSections = () => {
+      let n = 1;
+      document.querySelectorAll('.form-section').forEach(section => {
+        if (!section.hidden) {
+          const badge = section.querySelector('.section-number');
+          if (badge) badge.textContent = String(n).padStart(2, '0');
+          n++;
+        }
+      });
+    };
+
+    const applyClientType = () => {
+      const checked = document.querySelector('input[name="clientType"]:checked');
+      const isIndividual = checked ? checked.value === 'Individual' : false;
+      businessOnlyEls.forEach(el => { el.hidden = isIndividual; });
+      renumberSections();
+    };
+
+    clientTypeInputs.forEach(input => input.addEventListener('change', applyClientType));
+  }
+
   /* ---------------- Intake form: scroll-spy rail ---------------- */
   const railLinks = document.querySelectorAll('.rail-link');
   const formSections = document.querySelectorAll('.form-section');

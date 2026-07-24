@@ -22,7 +22,8 @@
       "Bash(/tmp/tailwindcss-v3 -i ./src/tailwind.css -o ./assets/css/site.css --config ./tailwind.config.js --minify)",
       "Bash(grep -o \".\\\\{0,20\\\\}13px.\\\\{0,20\\\\}\" assets/css/site.css)",
       "Bash(echo \"exit: $?\")",
-      "Bash(/tmp/tailwindcss-v3 -i ./src/tailwind.css -o ./assets/css/site.css --config ./tailwind.config.js --minify 2>&1 | tail -3 *)"
+      "Bash(/tmp/tailwindcss-v3 -i ./src/tailwind.css -o ./assets/css/site.css --config ./tailwind.config.js --minify 2>&1 | tail -3 *)",
+      "Bash(curl -sL -o /tmp/tailwindcss-v3 --max-time 30 \"https://github.com/tailwindlabs/tailwindcss/releases/download/v3.4.17/tailwindcss-macos-arm64\")"
     ]
   }
 }
