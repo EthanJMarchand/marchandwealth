@@ -23,7 +23,16 @@
       "Bash(grep -o \".\\\\{0,20\\\\}13px.\\\\{0,20\\\\}\" assets/css/site.css)",
       "Bash(echo \"exit: $?\")",
       "Bash(/tmp/tailwindcss-v3 -i ./src/tailwind.css -o ./assets/css/site.css --config ./tailwind.config.js --minify 2>&1 | tail -3 *)",
-      "Bash(curl -sL -o /tmp/tailwindcss-v3 --max-time 30 \"https://github.com/tailwindlabs/tailwindcss/releases/download/v3.4.17/tailwindcss-macos-arm64\")"
+      "Bash(curl -sL -o /tmp/tailwindcss-v3 --max-time 30 \"https://github.com/tailwindlabs/tailwindcss/releases/download/v3.4.17/tailwindcss-macos-arm64\")",
+      "Bash(npm run *)",
+      "Bash(pkill -f \"http.server 8934\")",
+      "Bash(python3 -m http.server 8934 --directory /Users/ethanmarchand/Downloads/marchand-site)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8934/tfsa-calculator.html)",
+      "Read(//Users/ethanmarchand/**)",
+      "Read(//usr/local/bin/**)",
+      "Read(//opt/homebrew/bin/**)",
+      "Bash(command -v brew)",
+      "Read(//usr/local/**)"
     ]
   }
 }

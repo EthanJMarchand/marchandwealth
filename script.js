@@ -243,6 +243,11 @@ document.addEventListener('DOMContentLoaded', () => {
       balance: document.getElementById('tfsa-balance'),
       years: document.getElementById('tfsa-years'),
       yearsVal: document.getElementById('tfsa-years-val'),
+      yearsHint: document.getElementById('tfsa-years-hint'),
+      headlineLabel: document.getElementById('tfsa-headline-label'),
+      catchupLine: document.getElementById('tfsa-catchup-line'),
+      maxedLine: document.getElementById('tfsa-maxed-line'),
+      maintainLine: document.getElementById('tfsa-maintain-line'),
       monthlyNeeded: document.getElementById('tfsa-monthly-needed'),
       catchupDate: document.getElementById('tfsa-catchup-date'),
       catchupAge: document.getElementById('tfsa-catchup-age'),
@@ -329,16 +334,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // while catching up — so the monthly figure accounts for room the CRA
     // keeps adding along the way, not just today's snapshot. Once caught
     // up, contributions drop to that year's newly projected room only.
+    //
+    // If there's no available room right now, the user is already fully
+    // maxed out — there's nothing to catch up on, so the catch-up window
+    // collapses to 0 years and every row is just that year's new room.
     function buildContributionSchedule(currentAge, retireAge, availableRoomNow, catchUpYearsRequested) {
       const currentYear = new Date().getFullYear();
       const totalYears = Math.max(1, retireAge - currentAge);
-      const n = Math.max(1, Math.min(catchUpYearsRequested, totalYears));
+      const isAlreadyMaxed = availableRoomNow <= 0;
+      const n = isAlreadyMaxed ? 0 : Math.max(1, Math.min(catchUpYearsRequested, totalYears));
 
       let incomingDuringCatchUp = 0;
       for (let k = 1; k <= n; k++) incomingDuringCatchUp += projectedLimitForYear(currentYear + k);
 
       const totalToAbsorb = Math.max(0, availableRoomNow) + incomingDuringCatchUp;
-      const catchUpAnnual = totalToAbsorb / n;
+      const catchUpAnnual = n > 0 ? totalToAbsorb / n : 0;
 
       const rows = [];
       for (let k = 1; k <= totalYears; k++) {
@@ -356,11 +366,12 @@ document.addEventListener('DOMContentLoaded', () => {
       return {
         rows,
         effectiveCatchUpYears: n,
+        isAlreadyMaxed,
         catchUpAnnual,
         catchUpMonthly: catchUpAnnual / 12,
         catchUpYear: currentYear + n,
         catchUpAge: currentAge + n,
-        maintainMonthlyStart: rows.length > n ? rows[n].monthlyContribution : catchUpAnnual / 12
+        maintainMonthlyStart: rows.length > n ? rows[n].monthlyContribution : rows[0].monthlyContribution
       };
     }
 
@@ -486,7 +497,6 @@ document.addEventListener('DOMContentLoaded', () => {
       el.years.max = maxCatchUpYears;
       if (parseInt(el.years.value, 10) > maxCatchUpYears) el.years.value = maxCatchUpYears;
       const catchUpYearsRequested = parseInt(el.years.value, 10);
-      el.yearsVal.textContent = catchUpYearsRequested;
 
       const rateAccum = parseFloat(el.rateAccum.value);
       el.rateAccumVal.textContent = rateAccum;
@@ -495,10 +505,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // ---- Step 1: catching up ----
       const schedule = buildContributionSchedule(age, retireAge, room, catchUpYearsRequested);
-      el.monthlyNeeded.textContent = currency(schedule.catchUpMonthly);
       el.catchupDate.textContent = schedule.catchUpYear;
       el.catchupAge.textContent = schedule.catchUpAge;
       el.maintainMonthly.textContent = currency(schedule.maintainMonthlyStart);
+
+      // No available room right now means there's nothing to catch up on —
+      // swap the "catch up" framing for a "you're already maxed out" one,
+      // and disable the now-irrelevant catch-up window slider.
+      el.years.disabled = schedule.isAlreadyMaxed;
+      if (schedule.isAlreadyMaxed) {
+        el.monthlyNeeded.textContent = currency(schedule.maintainMonthlyStart);
+        el.headlineLabel.textContent = "You're already maxed out";
+        el.catchupLine.classList.add('hidden');
+        el.maxedLine.classList.remove('hidden');
+        el.maintainLine.classList.add('hidden');
+        el.yearsVal.textContent = 'N/A';
+        el.yearsHint.textContent = "You're already fully caught up, so there's no catch-up window needed right now.";
+      } else {
+        el.monthlyNeeded.textContent = currency(schedule.catchUpMonthly);
+        el.headlineLabel.textContent = 'You need to save';
+        el.catchupLine.classList.remove('hidden');
+        el.maxedLine.classList.add('hidden');
+        el.maintainLine.classList.remove('hidden');
+        el.yearsVal.textContent = catchUpYearsRequested;
+        el.yearsHint.textContent = "New room keeps arriving while you catch up too — the target below already accounts for it.";
+      }
       el.increaseEstimate.textContent = Math.round(ANNUAL_INCREASE_ESTIMATE);
       renderScheduleTable(schedule.rows);
 
@@ -545,6 +576,19 @@ document.addEventListener('DOMContentLoaded', () => {
     [el.age, el.room, el.balance, el.years, el.retireAge, el.rateAccum, el.rateRetire].forEach(input => {
       input.addEventListener('input', recompute);
     });
+
+    // ---------------- TFSA calculator: "See Results" button ----------------
+    // Results already update live from the input listeners above. This button
+    // does no calculation of its own — it just scrolls to the results, since
+    // people expect a submit-style button even when the tool is already live.
+    const calcBtn = document.getElementById('tfsa-calculate-btn');
+    const resultsEl = document.getElementById('tfsa-results');
+
+    if (calcBtn && resultsEl) {
+      calcBtn.addEventListener('click', () => {
+        resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
 
     // ---------------- TFSA calculator: keep the FAQ current ----------------
     // These two answers depend on "today's year" and the data in
