@@ -1,11 +1,12 @@
+// Hand-coded by Ethan Marchand. No annuities, no outsourcing, just me and too much coffee.
 document.addEventListener('DOMContentLoaded', () => {
 
-  /* ---------------- Footer year ---------------- */
+  // Auto-updates the copyright year so I don't have to remember to, like flossing.
   document.querySelectorAll('#year').forEach(el => {
     el.textContent = new Date().getFullYear();
   });
 
-  /* ---------------- Mobile nav toggle ---------------- */
+  // Hamburger menu. Not the food kind, unfortunately.
   const navToggle = document.getElementById('nav-toggle');
   const mobileMenu = document.getElementById('mobile-menu');
   if (navToggle && mobileMenu) {
@@ -21,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  /* ---------------- FAQ accordion ---------------- */
+  // Click to expand. Kind of like my client meetings.
   document.querySelectorAll('.faq-toggle').forEach(btn => {
     btn.addEventListener('click', () => {
       const item = btn.closest('.faq-item');
@@ -29,13 +30,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  /* ---------------- Intake form: personal vs. business toggle ---------------- */
+  // Swaps sections depending on who you are. I contain multitudes; so does this form.
   const clientTypeInputs = document.querySelectorAll('input[name="clientType"]');
   if (clientTypeInputs.length) {
     const businessOnlyEls = document.querySelectorAll('.business-only');
 
-    // Keeps the "01, 02, 03..." badges sequential when a section is hidden,
-    // so it never looks like a step went missing.
     const renumberSections = () => {
       let n = 1;
       document.querySelectorAll('.form-section').forEach(section => {
@@ -57,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
     clientTypeInputs.forEach(input => input.addEventListener('change', applyClientType));
   }
 
-  /* ---------------- Intake form: scroll-spy rail ---------------- */
+  // Tracks where you are in the form. Wish something like this existed for my inbox.
   const railLinks = document.querySelectorAll('.rail-link');
   const formSections = document.querySelectorAll('.form-section');
   if (railLinks.length && formSections.length) {
@@ -84,14 +83,10 @@ document.addEventListener('DOMContentLoaded', () => {
     formSections.forEach(sec => spy.observe(sec));
   }
 
-  /* ---------------- Intake form: inline validation + submit (Netlify Forms) ---------------- */
+  // Makes sure you didn't forget a field. I would never do that to you. Probably.
   const intakeForm = document.getElementById('intake-form');
   if (intakeForm) {
 
-    // One entry per required field. `inputs()` returns the field's input(s)
-    // (a radio group has more than one), `borderEl()` is whatever gets the
-    // gold/red box treatment, and `getMessage()` returns '' when valid or a
-    // specific reason when not.
     const VALIDATORS = [
       {
         inputs: () => [document.querySelector('input[name="fullName"]')],
@@ -145,8 +140,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     ];
 
-    // Checks one field, updates its red message + gold/red box, and returns
-    // whether it's currently valid.
     function checkField(validator) {
       const inputs = validator.inputs();
       if (!inputs[0]) return true;
@@ -176,10 +169,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return { allValid, firstInvalidEl };
     }
 
-    // Errors only start appearing after a first submit attempt — nobody
-    // wants a field turning red before they've even had a chance to fill it
-    // in. Once that first attempt happens, each field clears its own error
-    // live as soon as it's fixed, leaving only the ones still wrong.
     let hasAttemptedSubmit = false;
     VALIDATORS.forEach(v => {
       v.inputs().forEach(input => {
@@ -221,7 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  /* ---------------- Schedule page: iframe / fallback swap ---------------- */
+  // Shows the calendar, or a backup plan if Google's having a day.
   const gcalFrame = document.getElementById('gcal-embed');
   const gcalFallback = document.getElementById('gcal-fallback');
   if (gcalFrame && gcalFallback) {
@@ -233,7 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  /* ---------------- TFSA calculator ---------------- */
+  // The whole TFSA calculator lives below. Built by hand, checked by caffeine.
   const tfsaAgeInput = document.getElementById('tfsa-age');
   if (tfsaAgeInput && typeof TFSA_ANNUAL_LIMITS !== 'undefined') {
 
@@ -285,16 +274,12 @@ document.addEventListener('DOMContentLoaded', () => {
       return '$' + Math.round(n);
     };
 
-    // Years present in tfsa-limits.js, sorted ascending
+    // The engine room. More reliable than my New Year's resolutions.
     const knownYears = Object.keys(TFSA_ANNUAL_LIMITS).map(Number).sort((a, b) => a - b);
     const firstKnownYear = knownYears[0];
     const lastKnownYear = knownYears[knownYears.length - 1];
     const lastKnownLimit = TFSA_ANNUAL_LIMITS[lastKnownYear];
 
-    // "Guesses" how much the CRA raises the TFSA limit per year, based on
-    // the trailing average of up to the last 10 real year-over-year changes
-    // in tfsa-limits.js. This automatically improves as Ethan adds real
-    // years — it only fills in years nobody has entered yet.
     function estimateAnnualIncrease() {
       const windowSize = Math.min(10, knownYears.length - 1);
       if (windowSize <= 0) return 0;
@@ -307,10 +292,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const ANNUAL_INCREASE_ESTIMATE = estimateAnnualIncrease();
 
-    // Returns the real limit for any year already in tfsa-limits.js. For a
-    // year beyond the last entry, projects it forward using the estimated
-    // annual increase, rounded to the nearest $500 (the CRA only ever moves
-    // the TFSA limit in $500 steps).
     function projectedLimitForYear(year) {
       if (TFSA_ANNUAL_LIMITS[year] != null) return TFSA_ANNUAL_LIMITS[year];
       if (year < firstKnownYear) return TFSA_ANNUAL_LIMITS[firstKnownYear];
@@ -328,16 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return total;
     }
 
-    // Builds the full year-by-year contribution plan from today to
-    // retirement. During the requested catch-up window, the plan absorbs
-    // BOTH today's available room AND every new year of room that arrives
-    // while catching up — so the monthly figure accounts for room the CRA
-    // keeps adding along the way, not just today's snapshot. Once caught
-    // up, contributions drop to that year's newly projected room only.
-    //
-    // If there's no available room right now, the user is already fully
-    // maxed out — there's nothing to catch up on, so the catch-up window
-    // collapses to 0 years and every row is just that year's new room.
+    // If you're already maxed out, congratulations — nothing to catch up on here.
     function buildContributionSchedule(currentAge, retireAge, availableRoomNow, catchUpYearsRequested) {
       const currentYear = new Date().getFullYear();
       const totalYears = Math.max(1, retireAge - currentAge);
@@ -392,8 +364,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }).join('');
     }
 
-    // Builds a year-by-year balance series straight from the contribution
-    // schedule above, so the growth chart always matches the plan exactly.
     function buildProjectionSeries(currentAge, startBalance, scheduleRows, annualRatePct) {
       const monthlyRate = (annualRatePct / 100) / 12;
       let balance = startBalance;
@@ -409,8 +379,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return series;
     }
 
-    // Monthly payment that fully draws a balance down to zero over `years`,
-    // growing at `annualRatePct` along the way (standard annuity payout).
     function monthlyIncomeFromBalance(balance, annualRatePct, years) {
       const monthlyRate = (annualRatePct / 100) / 12;
       const n = Math.max(1, Math.round(years * 12));
@@ -482,17 +450,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function recompute() {
-      const age = Math.max(18, Math.min(90, parseInt(el.age.value, 10) || 18));
+      const rawAge = parseInt(el.age.value, 10);
+      const age = Math.max(18, Math.min(150, isNaN(rawAge) ? 18 : rawAge));
+      // Nobody's client has hit 150 yet, but I like to plan for every contingency.
+      if (rawAge > 150) el.age.value = 150;
       const room = Math.max(0, parseFloat(el.room.value) || 0);
       const balance = Math.max(0, parseFloat(el.balance.value) || 0);
 
-      // Keep the retirement-age slider valid relative to current age
       el.retireAge.min = age + 1;
-      if (parseInt(el.retireAge.value, 10) <= age) el.retireAge.value = Math.min(85, age + 30);
+      el.retireAge.max = Math.max(85, age + 1);
+      if (parseInt(el.retireAge.value, 10) <= age) el.retireAge.value = Math.min(el.retireAge.max, age + 30);
       const retireAge = parseInt(el.retireAge.value, 10);
       el.retireAgeVal.textContent = retireAge;
 
-      // Keep the catch-up slider from asking for more years than remain until retirement
       const maxCatchUpYears = Math.max(1, Math.min(10, retireAge - age));
       el.years.max = maxCatchUpYears;
       if (parseInt(el.years.value, 10) > maxCatchUpYears) el.years.value = maxCatchUpYears;
@@ -503,15 +473,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const rateRetire = parseFloat(el.rateRetire.value);
       el.rateRetireVal.textContent = rateRetire;
 
-      // ---- Step 1: catching up ----
+      // Step 1: how much catching up you've got to do. Hopefully less than me at the gym.
       const schedule = buildContributionSchedule(age, retireAge, room, catchUpYearsRequested);
       el.catchupDate.textContent = schedule.catchUpYear;
       el.catchupAge.textContent = schedule.catchUpAge;
       el.maintainMonthly.textContent = currency(schedule.maintainMonthlyStart);
 
-      // No available room right now means there's nothing to catch up on —
-      // swap the "catch up" framing for a "you're already maxed out" one,
-      // and disable the now-irrelevant catch-up window slider.
       el.years.disabled = schedule.isAlreadyMaxed;
       if (schedule.isAlreadyMaxed) {
         el.monthlyNeeded.textContent = currency(schedule.maintainMonthlyStart);
@@ -543,7 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
       el.availableDisplay.textContent = currency(room);
       el.progressBar.style.width = Math.min(100, contributedPct) + '%';
 
-      // ---- Step 2: retirement projection ----
+      // Step 2: what it could grow into. This part I like better than my own RRSP statements.
       const series = buildProjectionSeries(age, balance, schedule.rows, rateAccum);
       const final = series[series.length - 1];
       const fvTotal = final.total;
@@ -577,10 +544,7 @@ document.addEventListener('DOMContentLoaded', () => {
       input.addEventListener('input', recompute);
     });
 
-    // ---------------- TFSA calculator: "See Results" button ----------------
-    // Results already update live from the input listeners above. This button
-    // does no calculation of its own — it just scrolls to the results, since
-    // people expect a submit-style button even when the tool is already live.
+    // The numbers already updated themselves. This button just makes you feel better about it.
     const calcBtn = document.getElementById('tfsa-calculate-btn');
     const resultsEl = document.getElementById('tfsa-results');
 
@@ -590,11 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // ---------------- TFSA calculator: keep the FAQ current ----------------
-    // These two answers depend on "today's year" and the data in
-    // tfsa-limits.js, so they're generated here instead of hand-edited —
-    // add a new year to tfsa-limits.js and both the visible FAQ text and
-    // its FAQPage schema update on their own, no further edits needed.
+    // Keeps the FAQ current every year, so I don't have to remember to.
     function updateTfsaFaq() {
       const currentYear = new Date().getFullYear();
       const currentLimit = projectedLimitForYear(currentYear);
@@ -609,7 +569,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const lifetimeEl = document.getElementById('faq-lifetime-max');
       if (lifetimeEl) lifetimeEl.textContent = currency(lifetimeMax);
 
-      // Keep the FAQPage structured data in sync with the visible answers above
       const schemaEl = document.getElementById('faq-schema');
       if (schemaEl) {
         try {
@@ -624,7 +583,7 @@ document.addEventListener('DOMContentLoaded', () => {
             perYearQuestion.acceptedAnswer.text = `The CRA sets a new annual TFSA dollar limit each year, usually indexed to inflation and rounded to the nearest $500. For ${currentYear}, that limit is ${currency(currentLimit)}. Unused room carries forward indefinitely, so your total available room is usually larger than just one year's limit.`;
           }
           schemaEl.textContent = JSON.stringify(schema);
-        } catch (e) { /* malformed schema block — leave the static fallback in place */ }
+        } catch (e) { /* shrug */ }
       }
     }
 
