@@ -39,7 +39,14 @@
       "Bash(sed -i '' 's/>Intake Form</>Contact</g' index.html tfsa-calculator.html schedule.html)",
       "Bash(sed -i '' 's/>Start Intake Questionnaire</>Contact Me</g' index.html tfsa-calculator.html)",
       "Bash(sed -i '' 's/Already filled out your intake questionnaire? Even better/Already filled out the contact form? Even better/' schedule.html)",
-      "Bash(sed -i '' 's/Fill out the <a href=\"contact.html\" class=\"text-golddim underline\">intake questionnaire<\\\\/a> beforehand/Fill out the <a href=\"contact.html\" class=\"text-golddim underline\">contact form<\\\\/a> beforehand/' schedule.html)"
+      "Bash(sed -i '' 's/Fill out the <a href=\"contact.html\" class=\"text-golddim underline\">intake questionnaire<\\\\/a> beforehand/Fill out the <a href=\"contact.html\" class=\"text-golddim underline\">contact form<\\\\/a> beforehand/' schedule.html)",
+      "WebFetch(domain:www.marchandwealth.com)",
+      "WebFetch(domain:marchandwealth.com)",
+      "Bash(dig +short marchandwealth.com A)",
+      "Bash(dig +short marchandwealth.com NS)",
+      "Bash(dig +short www.marchandwealth.com)",
+      "Bash(timeout 8 whois marchandwealth.com)",
+      "Bash(whois marchandwealth.com)"
     ]
   }
 }
