@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://www.marchandwealth.com/sitemap.xml
+Sitemap: https://marchandwealth.ca/sitemap.xml

@@ -200,11 +200,11 @@ document.addEventListener('DOMContentLoaded', () => {
           body: body.toString()
         });
         if (!res.ok) throw new Error('Submission failed');
-        statusEl.textContent = 'Thank you — your questionnaire has been submitted.';
+        statusEl.textContent = 'Thank you — your contact form has been submitted.';
         statusEl.className = 'text-[13.5px] mb-3.5 text-green-700';
         intakeForm.reset();
       } catch (err) {
-        statusEl.textContent = 'Something went wrong submitting this. Please email ethan@marchandwealth.com directly.';
+        statusEl.textContent = 'Something went wrong submitting this. Please email ethan@marchandwealth.ca directly.';
         statusEl.className = 'text-[13.5px] mb-3.5 text-red-700';
       }
     });

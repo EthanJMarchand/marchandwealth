@@ -46,7 +46,10 @@
       "Bash(dig +short marchandwealth.com NS)",
       "Bash(dig +short www.marchandwealth.com)",
       "Bash(timeout 8 whois marchandwealth.com)",
-      "Bash(whois marchandwealth.com)"
+      "Bash(whois marchandwealth.com)",
+      "Bash(sed -i '' 's#https://www\\\\.marchandwealth\\\\.com#https://marchandwealth.ca#g' index.html contact.html schedule.html tfsa-calculator.html robots.txt README.md)",
+      "Bash(sed -i '' 's#ethan@marchandwealth\\\\.com#ethan@marchandwealth.ca#g' index.html contact.html schedule.html tfsa-calculator.html README.md)",
+      "Bash(node --check script.js)"
     ]
   }
 }

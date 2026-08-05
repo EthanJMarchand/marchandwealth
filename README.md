@@ -2,7 +2,7 @@
 
 The marketing site, contact form, meeting scheduler, and TFSA calculator for **Marchand Wealth** (legal name: Marchand Financial Solutions Inc.), an independent insurance and wealth planning practice serving incorporated business owners in Sherwood Park and the greater Edmonton region.
 
-**Live site:** [marchandwealth.com](https://www.marchandwealth.com)
+**Live site:** [marchandwealth.ca](https://marchandwealth.ca)
 
 ---
 
