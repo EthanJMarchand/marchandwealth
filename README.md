@@ -1,6 +1,6 @@
 # Marchand Wealth
 
-The marketing site, client intake questionnaire, meeting scheduler, and TFSA calculator for **Marchand Wealth** (legal name: Marchand Financial Solutions Inc.), an independent insurance and wealth planning practice serving incorporated business owners in Sherwood Park and the greater Edmonton region.
+The marketing site, contact form, meeting scheduler, and TFSA calculator for **Marchand Wealth** (legal name: Marchand Financial Solutions Inc.), an independent insurance and wealth planning practice serving incorporated business owners in Sherwood Park and the greater Edmonton region.
 
 **Live site:** [marchandwealth.com](https://www.marchandwealth.com)
 
@@ -12,7 +12,7 @@ The marketing site, client intake questionnaire, meeting scheduler, and TFSA cal
 |---|---|
 | [`index.html`](index.html) | Homepage — services, why-independent pitch, about, FAQ |
 | [`tfsa-calculator.html`](tfsa-calculator.html) | Free public tool: monthly TFSA catch-up savings, year-by-year contribution schedule, retirement growth projection |
-| [`intake.html`](intake.html) | Client intake questionnaire, submitted via Netlify Forms |
+| [`contact.html`](contact.html) | Contact page — advisor intro up top, detailed contact form below, submitted via Netlify Forms |
 | [`schedule.html`](schedule.html) | Meeting booking, embedded Google Calendar appointment scheduler |
 
 No framework, no JS bundler. Every page is a standalone HTML file. The only build step is compiling Tailwind's CSS — see [Local development](#local-development) below.
@@ -36,10 +36,10 @@ No framework, no JS bundler. Every page is a standalone HTML file. The only buil
 ```
 marchand-site/
 ├── index.html              Homepage
-├── intake.html              Client intake questionnaire (Netlify Forms)
+├── contact.html              Contact page — advisor intro + contact form (Netlify Forms)
 ├── schedule.html             Meeting scheduler (Google Calendar embed)
 ├── tfsa-calculator.html        TFSA contribution & retirement calculator
-├── script.js                Shared JS — nav, FAQ accordions, intake submission,
+├── script.js                Shared JS — nav, FAQ accordions, contact form submission,
 │                            schedule fallback, entire TFSA calculator engine
 ├── tfsa-limits.js             TFSA annual contribution limits — see below
 ├── tailwind.config.js          Brand colors, fonts, and content-scan paths
@@ -111,7 +111,7 @@ Logos:
 
 ## Forms
 
-The intake form ([`intake.html`](intake.html)) submits via **Netlify Forms** — no external service, no API keys. It's wired up with:
+The contact form ([`contact.html`](contact.html)) submits via **Netlify Forms** — no external service, no API keys. Internally it's still registered with Netlify under the form name `intake` (unchanged, so existing submission history and any dashboard notifications keep working). It's wired up with:
 
 - `data-netlify="true"` and a matching hidden `form-name` field
 - A honeypot field (`netlify-honeypot="bot-field"`) for basic spam filtering

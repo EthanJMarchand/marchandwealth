@@ -32,7 +32,14 @@
       "Read(//usr/local/bin/**)",
       "Read(//opt/homebrew/bin/**)",
       "Bash(command -v brew)",
-      "Read(//usr/local/**)"
+      "Read(//usr/local/**)",
+      "Bash(find /Users/ethanmarchand/Downloads /Users/ethanmarchand/Desktop '/Users/ethanmarchand/Library/Application Support' -maxdepth 6 -type f '\\(' -iname *.png -o -iname *.jpg -o -iname *.jpeg '\\)' -mmin -60)",
+      "Bash(sips -g pixelWidth -g pixelHeight assets/ethan-headshot.png)",
+      "Bash(git rm *)",
+      "Bash(sed -i '' 's/>Intake Form</>Contact</g' index.html tfsa-calculator.html schedule.html)",
+      "Bash(sed -i '' 's/>Start Intake Questionnaire</>Contact Me</g' index.html tfsa-calculator.html)",
+      "Bash(sed -i '' 's/Already filled out your intake questionnaire? Even better/Already filled out the contact form? Even better/' schedule.html)",
+      "Bash(sed -i '' 's/Fill out the <a href=\"contact.html\" class=\"text-golddim underline\">intake questionnaire<\\\\/a> beforehand/Fill out the <a href=\"contact.html\" class=\"text-golddim underline\">contact form<\\\\/a> beforehand/' schedule.html)"
     ]
   }
 }
