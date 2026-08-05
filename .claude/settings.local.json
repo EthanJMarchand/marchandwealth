@@ -65,7 +65,9 @@
       "Bash(sed -i '' 's#<img src=\"assets/icon\\\\.png\" alt=\"\" class=\"\\\\\\([^\"]*\\\\\\)\">#<img src=\"assets/icon.png\" alt=\"\" width=\"543\" height=\"600\" class=\"\\\\1\">#g' index.html)",
       "Bash(sed -i '' 's#<img src=\"assets/logo\\\\.png\" alt=\"Marchand Wealth logo\" class=\"\\\\\\([^\"]*\\\\\\)\">#<img src=\"assets/logo.png\" alt=\"Marchand Wealth logo\" width=\"700\" height=\"161\" class=\"\\\\1\">#g' index.html contact.html schedule.html tfsa-calculator.html)",
       "Bash(sed -i '' 's#<img src=\"assets/logo\\\\.png\" alt=\"Marchand Wealth shield mark\" class=\"\\\\\\([^\"]*\\\\\\)\">#<img src=\"assets/logo.png\" alt=\"Marchand Wealth shield mark\" width=\"700\" height=\"161\" class=\"\\\\1\">#g' index.html)",
-      "Bash(pkill -f \"static-server.js\")"
+      "Bash(pkill -f \"static-server.js\")",
+      "Bash(node /Users/ethanmarchand/Downloads/marchand-site/.claude/static-server.js 8934)",
+      "Bash(curl -s -o /dev/null -w \"index.html: %{http_code}\\\\n\" http://localhost:8934/)"
     ]
   }
 }
