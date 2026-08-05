@@ -49,7 +49,22 @@
       "Bash(whois marchandwealth.com)",
       "Bash(sed -i '' 's#https://www\\\\.marchandwealth\\\\.com#https://marchandwealth.ca#g' index.html contact.html schedule.html tfsa-calculator.html robots.txt README.md)",
       "Bash(sed -i '' 's#ethan@marchandwealth\\\\.com#ethan@marchandwealth.ca#g' index.html contact.html schedule.html tfsa-calculator.html README.md)",
-      "Bash(node --check script.js)"
+      "Bash(node --check script.js)",
+      "Bash(sips -g pixelWidth -g pixelHeight assets/logo.png assets/icon.png assets/ethan-headshot.png)",
+      "Bash(sips --help)",
+      "Bash(sips -s formatOptions help assets/icon.png)",
+      "Bash(sips --formats)",
+      "Bash(sips -g hasAlpha assets/logo.png assets/icon.png assets/ethan-headshot.png)",
+      "Bash(sips -g pixelWidth -g pixelHeight assets/icon.png)",
+      "Bash(sips -Z 320 assets/ethan-headshot.png --out /tmp/headshot-resized.png)",
+      "Bash(sips -s format jpeg -s formatOptions 85 /tmp/headshot-resized.png --out assets/ethan-headshot.jpg)",
+      "Bash(sips -Z 700 assets/logo.png --out assets/logo.png)",
+      "Bash(sips -Z 600 assets/icon.png --out assets/icon.png)",
+      "Bash(sips -g pixelWidth -g pixelHeight assets/ethan-headshot.jpg assets/logo.png assets/icon.png)",
+      "Bash(sed -i '' 's#<img src=\"assets/ethan-headshot\\\\.jpg\" alt=\"Ethan Marchand\" class=\"\\\\\\([^\"]*\\\\\\)\">#<img src=\"assets/ethan-headshot.jpg\" alt=\"Ethan Marchand\" width=\"320\" height=\"320\" class=\"\\\\1\">#g' index.html contact.html schedule.html tfsa-calculator.html)",
+      "Bash(sed -i '' 's#<img src=\"assets/icon\\\\.png\" alt=\"\" class=\"\\\\\\([^\"]*\\\\\\)\">#<img src=\"assets/icon.png\" alt=\"\" width=\"543\" height=\"600\" class=\"\\\\1\">#g' index.html)",
+      "Bash(sed -i '' 's#<img src=\"assets/logo\\\\.png\" alt=\"Marchand Wealth logo\" class=\"\\\\\\([^\"]*\\\\\\)\">#<img src=\"assets/logo.png\" alt=\"Marchand Wealth logo\" width=\"700\" height=\"161\" class=\"\\\\1\">#g' index.html contact.html schedule.html tfsa-calculator.html)",
+      "Bash(sed -i '' 's#<img src=\"assets/logo\\\\.png\" alt=\"Marchand Wealth shield mark\" class=\"\\\\\\([^\"]*\\\\\\)\">#<img src=\"assets/logo.png\" alt=\"Marchand Wealth shield mark\" width=\"700\" height=\"161\" class=\"\\\\1\">#g' index.html)"
     ]
   }
 }
