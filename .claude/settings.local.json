@@ -67,7 +67,16 @@
       "Bash(sed -i '' 's#<img src=\"assets/logo\\\\.png\" alt=\"Marchand Wealth shield mark\" class=\"\\\\\\([^\"]*\\\\\\)\">#<img src=\"assets/logo.png\" alt=\"Marchand Wealth shield mark\" width=\"700\" height=\"161\" class=\"\\\\1\">#g' index.html)",
       "Bash(pkill -f \"static-server.js\")",
       "Bash(node /Users/ethanmarchand/Downloads/marchand-site/.claude/static-server.js 8934)",
-      "Bash(curl -s -o /dev/null -w \"index.html: %{http_code}\\\\n\" http://localhost:8934/)"
+      "Bash(curl -s -o /dev/null -w \"index.html: %{http_code}\\\\n\" http://localhost:8934/)",
+      "Bash(node --check tfsa-limits.js)",
+      "WebFetch(domain:www.canada.ca)",
+      "WebFetch(domain:www.alberta.ca)",
+      "WebFetch(domain:www.wealthsimple.com)",
+      "WebFetch(domain:turbotax.intuit.ca)",
+      "Bash(node -e ' *)",
+      "Bash(grep -n \"recompute\\(\\);\\\\s*$\\\\|updateTfsaFaq\\(\\);\\\\s*$\\\\|^  }\\\\s*$\" /Users/ethanmarchand/Downloads/marchand-site/script.js)",
+      "Bash(node --check /Users/ethanmarchand/Downloads/marchand-site/script.js)",
+      "Bash(npx tailwindcss *)"
     ]
   }
 }
