@@ -115,7 +115,7 @@
       Free Canadian TFSA Calculator
     </div>
     <h1 class="font-serif font-semibold text-4xl md:text-5xl leading-[1.1] text-navydeep mb-5">TFSA Contribution &amp; Max-Out Calculator</h1>
-    <p class="text-inksoft text-[15.5px] max-w-lg mx-auto">A free Canadian TFSA calculator that shows exactly how much to save each month to max out your Tax-Free Savings Account, how long it'll take to get there, and roughly what that account could look like &mdash; and pay you &mdash; by the time you retire.</p>
+    <p class="text-inksoft text-[15.5px] max-w-lg mx-auto">A free Canadian TFSA calculator that shows exactly how much to save each month to max out your Tax-Free Savings Account, how long it'll take to get there, and roughly what that account could look like &mdash; and pay you &mdash; by the time you retire, including how it stacks up against putting that same money into an RRSP instead.</p>
   </div>
 </section>
 
@@ -389,6 +389,100 @@
     </div>
 
     <p class="text-[12px] text-inksoft leading-relaxed">This illustration is for education only, not personalized tax or financial advice. It assumes every RRSP contribution's tax refund is reinvested back into the RRSP, that your current TFSA balance carries over unchanged as an RRSP starting balance, and that your income and tax brackets both rise with the cost of living, so your marginal rate today holds in real terms throughout. Tax bracket figures are historical estimates projected forward and may not reflect actual CRA or Alberta rates for any given year &mdash; confirm current figures with a professional before making a decision. It also assumes a constant rate of return and no other retirement income sources like CPP or OAS. <a href="schedule.html" class="text-golddim underline">Book a meeting</a> to run your actual numbers.</p>
+  </div>
+</section>
+
+<!-- Turning "here's my plan" into "let's talk about my plan." -->
+<section class="py-16 md:py-20 bg-paperdim border-t border-line" id="tfsa-consult">
+  <div class="max-w-3xl mx-auto px-6 md:px-8">
+    <div class="text-center max-w-xl mx-auto mb-10">
+      <div class="flex items-center justify-center gap-2 text-[12px] font-semibold tracking-[0.16em] uppercase text-golddim mb-4">
+        <svg width="18" height="14" viewBox="0 0 20 16" fill="none"><path d="M1 2 L10 14 L19 2" stroke="currentColor" stroke-width="2.4"/></svg>
+        Ready to talk it through?
+      </div>
+      <h2 class="font-serif font-semibold text-3xl md:text-4xl text-navydeep mb-4">Send me your results</h2>
+      <p class="text-inksoft text-[15.5px]">Send the plan you just built straight to me, along with the best way to reach you, and I'll follow up to talk through your options &mdash; no obligation.</p>
+    </div>
+
+    <div class="bg-white border-2 border-gold rounded-sm p-6 md:p-10 shadow-lg">
+      <form id="tfsa-consult-form" name="tfsa-consultation" method="POST" data-netlify="true" netlify-honeypot="bot-field" class="flex flex-col gap-5" novalidate>
+        <input type="hidden" name="form-name" value="tfsa-consultation">
+        <p class="hidden"><label>Don't fill this out if you're human: <input name="bot-field"></label></p>
+
+        <input type="hidden" name="resultsAge" id="results-age">
+        <input type="hidden" name="resultsRetireAge" id="results-retire-age">
+        <input type="hidden" name="resultsTfsaRoom" id="results-tfsa-room">
+        <input type="hidden" name="resultsTfsaBalance" id="results-tfsa-balance">
+        <input type="hidden" name="resultsMonthlySavingsNeeded" id="results-monthly-needed">
+        <input type="hidden" name="resultsProjectedTfsaValue" id="results-fv-total">
+        <input type="hidden" name="resultsProjectedRrspValue" id="results-rrsp-equivalent">
+        <input type="hidden" name="resultsTfsaMonthlyIncome" id="results-tfsa-monthly-income">
+        <input type="hidden" name="resultsRrspMonthlyIncome" id="results-rrsp-monthly-income">
+        <input type="hidden" name="resultsWinner" id="results-winner">
+
+        <p class="text-[13px] text-inksoft -mb-1 flex items-start gap-2">
+          <span class="inline-block w-3.5 h-3.5 rounded-sm border-2 border-gold flex-shrink-0 mt-0.5"></span>
+          <span>Fields boxed in gold (<em class="text-golddim not-italic font-semibold">*</em>) are required.</span>
+        </p>
+
+        <label class="flex flex-col gap-1.5">
+          <span class="text-[13px] font-semibold text-navydeep">Full name<em class="text-golddim not-italic">*</em></span>
+          <input type="text" name="fullName" required autocomplete="name" class="text-[14.5px] px-3.5 py-2.5 border-2 border-gold rounded-sm bg-white w-full">
+          <p id="tfsa-error-fullName" class="hidden text-red-600 text-[12.5px] mt-0.5"></p>
+        </label>
+
+        <fieldset class="flex flex-col gap-1.5">
+          <legend class="text-[13px] font-semibold text-navydeep mb-1">Preferred contact method<em class="text-golddim not-italic">*</em></legend>
+          <div id="tfsa-box-contact-method" class="flex gap-5 flex-wrap px-3.5 py-2.5 border-2 border-gold rounded-sm bg-white">
+            <label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="contactMethod" value="Call" required>Call</label>
+            <label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="contactMethod" value="Text" required>Text</label>
+            <label class="flex items-center gap-2 text-sm text-inksoft"><input type="radio" name="contactMethod" value="Email" required>Email</label>
+          </div>
+          <p id="tfsa-error-contact-method" class="hidden text-red-600 text-[12.5px] mt-0.5"></p>
+        </fieldset>
+
+        <div class="grid sm:grid-cols-2 gap-5">
+          <label class="flex flex-col gap-1.5">
+            <span class="text-[13px] font-semibold text-navydeep">Phone number</span>
+            <input type="tel" name="phone" autocomplete="tel" pattern="(\+?1[\-.\s]?)?\(?\d{3}\)?[\-.\s]?\d{3}[\-.\s]?\d{4}" title="Enter a 10-digit phone number, e.g. 780-123-4567" placeholder="780-123-4567" class="text-[14.5px] px-3.5 py-2.5 border-2 border-gold rounded-sm bg-white w-full">
+            <p class="text-[12px] text-inksoft">Required if Call or Text is selected above.</p>
+            <p id="tfsa-error-phone" class="hidden text-red-600 text-[12.5px] mt-0.5"></p>
+          </label>
+          <label class="flex flex-col gap-1.5">
+            <span class="text-[13px] font-semibold text-navydeep">Email</span>
+            <input type="email" name="email" autocomplete="email" class="text-[14.5px] px-3.5 py-2.5 border-2 border-gold rounded-sm bg-white w-full">
+            <p class="text-[12px] text-inksoft">Required if Email is selected above.</p>
+            <p id="tfsa-error-email" class="hidden text-red-600 text-[12.5px] mt-0.5"></p>
+          </label>
+        </div>
+
+        <label class="flex flex-col gap-1.5">
+          <span class="text-[13px] font-semibold text-navydeep">Province<em class="text-golddim not-italic">*</em></span>
+          <select name="province" required class="text-[14.5px] px-3.5 py-2.5 border-2 border-gold rounded-sm bg-white w-full h-12">
+            <option value="">Select your province</option>
+            <option>Alberta</option>
+            <option>British Columbia</option>
+            <option>Manitoba</option>
+            <option>New Brunswick</option>
+            <option>Newfoundland and Labrador</option>
+            <option>Northwest Territories</option>
+            <option>Nova Scotia</option>
+            <option>Nunavut</option>
+            <option>Ontario</option>
+            <option>Prince Edward Island</option>
+            <option>Quebec</option>
+            <option>Saskatchewan</option>
+            <option>Yukon</option>
+          </select>
+          <p id="tfsa-error-province" class="hidden text-red-600 text-[12.5px] mt-0.5"></p>
+        </label>
+
+        <div id="tfsa-consult-status" class="text-[13.5px] min-h-0" role="status" aria-live="polite"></div>
+
+        <button type="submit" class="w-full py-4 rounded-sm bg-navydeep text-white text-[15px] font-semibold hover:bg-navy transition">Send My Results</button>
+        <p class="text-[12px] text-inksoft leading-relaxed">This isn't an application for anything &mdash; just a way to get your calculated plan in front of me so our first conversation starts somewhere useful.</p>
+      </form>
+    </div>
   </div>
 </section>
 

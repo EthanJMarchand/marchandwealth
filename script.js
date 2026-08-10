@@ -340,45 +340,40 @@ document.addEventListener('DOMContentLoaded', () => {
     // are both projected forward using the same COST_OF_LIVING_RATE, so a
     // person's marginal rate holds steady in real terms for the whole
     // projection instead of drifting on two independently-fitted trends.
-    const hasTaxData = typeof TAX_BRACKETS_BY_YEAR !== 'undefined' && typeof COST_OF_LIVING_RATE !== 'undefined';
-    let projectedBracketsForYear = () => [];
-    let marginalRateForIncome = () => 0;
-    let taxOnIncome = () => 0;
+    // TAX_BRACKETS_BY_YEAR and COST_OF_LIVING_RATE ship in the same
+    // tfsa-limits.js file as TFSA_ANNUAL_LIMITS, already required above.
+    const taxYears = Object.keys(TAX_BRACKETS_BY_YEAR).map(Number).sort((a, b) => a - b);
+    const firstTaxYear = taxYears[0];
+    const lastTaxYear = taxYears[taxYears.length - 1];
+    const lastBrackets = TAX_BRACKETS_BY_YEAR[lastTaxYear];
 
-    if (hasTaxData) {
-      const taxYears = Object.keys(TAX_BRACKETS_BY_YEAR).map(Number).sort((a, b) => a - b);
-      const firstTaxYear = taxYears[0];
-      const lastTaxYear = taxYears[taxYears.length - 1];
-      const lastBrackets = TAX_BRACKETS_BY_YEAR[lastTaxYear];
+    function projectedBracketsForYear(year) {
+      if (TAX_BRACKETS_BY_YEAR[year]) return TAX_BRACKETS_BY_YEAR[year];
+      if (year < firstTaxYear) return TAX_BRACKETS_BY_YEAR[firstTaxYear];
+      const factor = Math.pow(1 + COST_OF_LIVING_RATE, year - lastTaxYear);
+      return lastBrackets.map(b => ({
+        upTo: b.upTo === Infinity ? Infinity : Math.round(b.upTo * factor / 50) * 50,
+        rate: b.rate
+      }));
+    }
 
-      projectedBracketsForYear = function(year) {
-        if (TAX_BRACKETS_BY_YEAR[year]) return TAX_BRACKETS_BY_YEAR[year];
-        if (year < firstTaxYear) return TAX_BRACKETS_BY_YEAR[firstTaxYear];
-        const factor = Math.pow(1 + COST_OF_LIVING_RATE, year - lastTaxYear);
-        return lastBrackets.map(b => ({
-          upTo: b.upTo === Infinity ? Infinity : Math.round(b.upTo * factor / 50) * 50,
-          rate: b.rate
-        }));
-      };
+    function marginalRateForIncome(year, income) {
+      const brackets = projectedBracketsForYear(year);
+      for (const b of brackets) if (income <= b.upTo) return b.rate;
+      return brackets[brackets.length - 1].rate;
+    }
 
-      marginalRateForIncome = function(year, income) {
-        const brackets = projectedBracketsForYear(year);
-        for (const b of brackets) if (income <= b.upTo) return b.rate;
-        return brackets[brackets.length - 1].rate;
-      };
-
-      // Full progressive tax on a given income, assumed to be someone's only income that year.
-      taxOnIncome = function(year, income) {
-        const brackets = projectedBracketsForYear(year);
-        let tax = 0, lower = 0;
-        for (const b of brackets) {
-          if (income <= lower) break;
-          tax += (Math.min(income, b.upTo) - lower) * (b.rate / 100);
-          lower = b.upTo;
-          if (income <= b.upTo) break;
-        }
-        return tax;
-      };
+    // Full progressive tax on a given income, assumed to be someone's only income that year.
+    function taxOnIncome(year, income) {
+      const brackets = projectedBracketsForYear(year);
+      let tax = 0, lower = 0;
+      for (const b of brackets) {
+        if (income <= lower) break;
+        tax += (Math.min(income, b.upTo) - lower) * (b.rate / 100);
+        lower = b.upTo;
+        if (income <= b.upTo) break;
+      }
+      return tax;
     }
 
     // Same contribution stream as the TFSA, grossed up by reinvesting each
@@ -482,22 +477,22 @@ document.addEventListener('DOMContentLoaded', () => {
       return points;
     }
 
-    function drawChart(series, rrspSeries) {
-      const svg = el.chart;
-      const ns = 'http://www.w3.org/2000/svg';
-      svg.innerHTML = '';
+    // Shared layout/scales/drawing helpers for both SVG charts below — same
+    // canvas size, gridlines, and baseline axis, just different data on top.
+    const CHART_LAYOUT = { W: 640, H: 260, padL: 46, padR: 10, padT: 14, padB: 10 };
 
-      const W = 640, H = 260, padL = 46, padR = 10, padT = 14, padB = 10;
+    function chartScales(minAge, maxAge, maxVal) {
+      const { W, H, padL, padR, padT, padB } = CHART_LAYOUT;
       const chartW = W - padL - padR;
       const chartH = H - padT - padB;
-      const minAge = series[0].age;
-      const maxAge = series[series.length - 1].age;
-      const maxVal = Math.max(1, series[series.length - 1].total, rrspSeries ? rrspSeries[rrspSeries.length - 1].total : 0);
+      return {
+        x: (age) => padL + (maxAge === minAge ? 0 : (age - minAge) / (maxAge - minAge)) * chartW,
+        y: (val) => padT + chartH - (val / maxVal) * chartH
+      };
+    }
 
-      const x = (age) => padL + (maxAge === minAge ? 0 : (age - minAge) / (maxAge - minAge)) * chartW;
-      const y = (val) => padT + chartH - (val / maxVal) * chartH;
-      const baselineY = y(0);
-
+    function drawChartGrid(svg, ns, maxVal, y) {
+      const { W, padL, padR } = CHART_LAYOUT;
       const gridSteps = 4;
       for (let i = 0; i <= gridSteps; i++) {
         const val = (maxVal / gridSteps) * i;
@@ -515,6 +510,33 @@ document.addEventListener('DOMContentLoaded', () => {
         label.textContent = formatCompact(val);
         svg.appendChild(label);
       }
+    }
+
+    function drawChartAxis(svg, ns, baselineY) {
+      const { W, padL, padR } = CHART_LAYOUT;
+      const axis = document.createElementNS(ns, 'line');
+      axis.setAttribute('x1', padL); axis.setAttribute('x2', W - padR);
+      axis.setAttribute('y1', baselineY); axis.setAttribute('y2', baselineY);
+      axis.setAttribute('stroke', '#565f6c'); axis.setAttribute('stroke-width', '1.5');
+      svg.appendChild(axis);
+    }
+
+    function linePath(points) {
+      return points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+    }
+
+    function drawChart(series, rrspSeries) {
+      const svg = el.chart;
+      const ns = 'http://www.w3.org/2000/svg';
+      svg.innerHTML = '';
+
+      const minAge = series[0].age;
+      const maxAge = series[series.length - 1].age;
+      const maxVal = Math.max(1, series[series.length - 1].total, rrspSeries ? rrspSeries[rrspSeries.length - 1].total : 0);
+      const { x, y } = chartScales(minAge, maxAge, maxVal);
+      const baselineY = y(0);
+
+      drawChartGrid(svg, ns, maxVal, y);
 
       const principalPoints = series.map(p => ({ x: x(p.age), y: y(p.principal) }));
       const totalPoints = series.map(p => ({ x: x(p.age), y: y(p.total) }));
@@ -539,19 +561,14 @@ document.addEventListener('DOMContentLoaded', () => {
       svg.appendChild(growthPath);
 
       if (rrspSeries) {
-        const rrspPoints = rrspSeries.map(p => ({ x: x(p.age), y: y(p.total) }));
         const rrspLine = document.createElementNS(ns, 'path');
-        rrspLine.setAttribute('d', rrspPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' '));
+        rrspLine.setAttribute('d', linePath(rrspSeries.map(p => ({ x: x(p.age), y: y(p.total) }))));
         rrspLine.setAttribute('fill', 'none'); rrspLine.setAttribute('stroke', '#232a35');
         rrspLine.setAttribute('stroke-width', '2.5'); rrspLine.setAttribute('stroke-dasharray', '5 4');
         svg.appendChild(rrspLine);
       }
 
-      const axis = document.createElementNS(ns, 'line');
-      axis.setAttribute('x1', padL); axis.setAttribute('x2', W - padR);
-      axis.setAttribute('y1', baselineY); axis.setAttribute('y2', baselineY);
-      axis.setAttribute('stroke', '#565f6c'); axis.setAttribute('stroke-width', '1.5');
-      svg.appendChild(axis);
+      drawChartAxis(svg, ns, baselineY);
     }
 
     // TFSA vs. RRSP over the full age-to-95 span — accumulation then
@@ -562,40 +579,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const ns = 'http://www.w3.org/2000/svg';
       svg.innerHTML = '';
 
-      const W = 640, H = 260, padL = 46, padR = 10, padT = 14, padB = 10;
-      const chartW = W - padL - padR;
-      const chartH = H - padT - padB;
       const minAge = tfsaSeries[0].age;
       const maxAge = tfsaSeries[tfsaSeries.length - 1].age;
       const maxVal = Math.max(1, ...tfsaSeries.map(p => p.total), ...rrspSeries.map(p => p.total));
-
-      const x = (age) => padL + (maxAge === minAge ? 0 : (age - minAge) / (maxAge - minAge)) * chartW;
-      const y = (val) => padT + chartH - (val / maxVal) * chartH;
+      const { x, y } = chartScales(minAge, maxAge, maxVal);
       const baselineY = y(0);
 
-      const gridSteps = 4;
-      for (let i = 0; i <= gridSteps; i++) {
-        const val = (maxVal / gridSteps) * i;
-        const gy = y(val);
-        const line = document.createElementNS(ns, 'line');
-        line.setAttribute('x1', padL); line.setAttribute('x2', W - padR);
-        line.setAttribute('y1', gy); line.setAttribute('y2', gy);
-        line.setAttribute('stroke', '#ddd7ca'); line.setAttribute('stroke-width', '1');
-        if (i !== 0) line.setAttribute('stroke-dasharray', '3 4');
-        svg.appendChild(line);
-
-        const label = document.createElementNS(ns, 'text');
-        label.setAttribute('x', padL - 6); label.setAttribute('y', gy + 4);
-        label.setAttribute('text-anchor', 'end'); label.setAttribute('font-size', '11'); label.setAttribute('fill', '#565f6c');
-        label.textContent = formatCompact(val);
-        svg.appendChild(label);
-      }
-
-      function linePath(points) {
-        return points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-      }
+      drawChartGrid(svg, ns, maxVal, y);
 
       if (retireAge > minAge && retireAge < maxAge) {
+        const { padT } = CHART_LAYOUT;
         const retireX = x(retireAge);
         const retireLine = document.createElementNS(ns, 'line');
         retireLine.setAttribute('x1', retireX); retireLine.setAttribute('x2', retireX);
@@ -639,7 +632,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dot.setAttribute('fill', '#9c4a3c');
         svg.appendChild(dot);
 
-        const nearRightEdge = dropX > W - padR - 70;
+        const nearRightEdge = dropX > CHART_LAYOUT.W - CHART_LAYOUT.padR - 70;
         const label = document.createElementNS(ns, 'text');
         label.setAttribute('x', nearRightEdge ? dropX - 6 : dropX + 6);
         label.setAttribute('y', (topY + bottomY) / 2);
@@ -649,11 +642,7 @@ document.addEventListener('DOMContentLoaded', () => {
         svg.appendChild(label);
       }
 
-      const axis = document.createElementNS(ns, 'line');
-      axis.setAttribute('x1', padL); axis.setAttribute('x2', W - padR);
-      axis.setAttribute('y1', baselineY); axis.setAttribute('y2', baselineY);
-      axis.setAttribute('stroke', '#565f6c'); axis.setAttribute('stroke-width', '1.5');
-      svg.appendChild(axis);
+      drawChartAxis(svg, ns, baselineY);
     }
 
     function recompute() {
@@ -886,8 +875,159 @@ document.addEventListener('DOMContentLoaded', () => {
     const defaultRoom = parseFloat(el.room.value) || 0;
     el.balance.value = Math.max(0, lifetimeRoomForAge(defaultAge) - defaultRoom);
 
+    // Beginning default for "Your current annual income": the Alberta
+    // average for the current year, escalated from the latest known year
+    // at the same COST_OF_LIVING_RATE used everywhere else — stays correct
+    // automatically as Ethan adds new years to AVERAGE_INCOME_BY_YEAR.
+    const incomeYears = Object.keys(AVERAGE_INCOME_BY_YEAR).map(Number).sort((a, b) => a - b);
+    const lastIncomeYear = incomeYears[incomeYears.length - 1];
+    const defaultIncomeYear = new Date().getFullYear();
+    cmp.income.value = AVERAGE_INCOME_BY_YEAR[defaultIncomeYear] != null
+      ? AVERAGE_INCOME_BY_YEAR[defaultIncomeYear]
+      : Math.round(AVERAGE_INCOME_BY_YEAR[lastIncomeYear] * Math.pow(1 + COST_OF_LIVING_RATE, defaultIncomeYear - lastIncomeYear) / 500) * 500;
+
     recompute();
     updateTfsaFaq();
+  }
+
+  // "Send me your results" — same validation pattern as the main contact
+  // form (gold box → red box on a missed required field), plus a snapshot
+  // of the calculator's current numbers tucked into hidden fields on submit.
+  const tfsaConsultForm = document.getElementById('tfsa-consult-form');
+  if (tfsaConsultForm) {
+
+    const TFSA_CONSULT_VALIDATORS = [
+      {
+        inputs: () => [document.querySelector('#tfsa-consult-form input[name="fullName"]')],
+        borderEl: () => document.querySelector('#tfsa-consult-form input[name="fullName"]'),
+        errorEl: () => document.getElementById('tfsa-error-fullName'),
+        getMessage: (inputs) => inputs[0].validity.valueMissing ? 'Full name is required.' : ''
+      },
+      {
+        inputs: () => Array.from(document.querySelectorAll('#tfsa-consult-form input[name="contactMethod"]')),
+        borderEl: () => document.getElementById('tfsa-box-contact-method'),
+        errorEl: () => document.getElementById('tfsa-error-contact-method'),
+        getMessage: (inputs) => inputs.some(i => i.checked) ? '' : 'Please select a contact method.'
+      },
+      {
+        inputs: () => [document.querySelector('#tfsa-consult-form input[name="phone"]')],
+        borderEl: () => document.querySelector('#tfsa-consult-form input[name="phone"]'),
+        errorEl: () => document.getElementById('tfsa-error-phone'),
+        getMessage: (inputs) => {
+          const method = document.querySelector('#tfsa-consult-form input[name="contactMethod"]:checked');
+          const needsPhone = !!method && (method.value === 'Call' || method.value === 'Text');
+          if (!needsPhone) return '';
+          if (!inputs[0].value.trim()) return 'Phone number is required for a call or text.';
+          if (inputs[0].validity.patternMismatch) return 'Enter a valid phone number.';
+          return '';
+        }
+      },
+      {
+        inputs: () => [document.querySelector('#tfsa-consult-form input[name="email"]')],
+        borderEl: () => document.querySelector('#tfsa-consult-form input[name="email"]'),
+        errorEl: () => document.getElementById('tfsa-error-email'),
+        getMessage: (inputs) => {
+          const method = document.querySelector('#tfsa-consult-form input[name="contactMethod"]:checked');
+          const needsEmail = !!method && method.value === 'Email';
+          if (!needsEmail) return '';
+          if (!inputs[0].value.trim()) return 'Email is required.';
+          if (inputs[0].validity.typeMismatch) return 'Enter a valid email address.';
+          return '';
+        }
+      },
+      {
+        inputs: () => [document.querySelector('#tfsa-consult-form select[name="province"]')],
+        borderEl: () => document.querySelector('#tfsa-consult-form select[name="province"]'),
+        errorEl: () => document.getElementById('tfsa-error-province'),
+        getMessage: (inputs) => inputs[0].validity.valueMissing ? 'Please select your province.' : ''
+      }
+    ];
+
+    function checkTfsaConsultField(validator) {
+      const inputs = validator.inputs();
+      if (!inputs[0]) return true;
+      const message = validator.getMessage(inputs);
+      const errorEl = validator.errorEl();
+      if (errorEl) {
+        errorEl.textContent = message;
+        errorEl.classList.toggle('hidden', !message);
+      }
+      const borderEl = validator.borderEl();
+      if (borderEl) {
+        borderEl.classList.toggle('border-red-500', !!message);
+        borderEl.classList.toggle('border-gold', !message);
+      }
+      return !message;
+    }
+
+    function checkAllTfsaConsultFields() {
+      let allValid = true;
+      let firstInvalidEl = null;
+      TFSA_CONSULT_VALIDATORS.forEach(v => {
+        if (!checkTfsaConsultField(v)) {
+          allValid = false;
+          if (!firstInvalidEl) firstInvalidEl = v.borderEl();
+        }
+      });
+      return { allValid, firstInvalidEl };
+    }
+
+    // Re-validating every field (not just the one that changed) on any
+    // input keeps phone/email in sync when the contact method flips.
+    let tfsaConsultAttemptedSubmit = false;
+    TFSA_CONSULT_VALIDATORS.forEach(v => {
+      v.inputs().forEach(input => {
+        if (!input) return;
+        input.addEventListener('input', () => { if (tfsaConsultAttemptedSubmit) checkAllTfsaConsultFields(); });
+        input.addEventListener('change', () => { if (tfsaConsultAttemptedSubmit) checkAllTfsaConsultFields(); });
+      });
+    });
+
+    tfsaConsultForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      tfsaConsultAttemptedSubmit = true;
+      const { allValid, firstInvalidEl } = checkAllTfsaConsultFields();
+      if (!allValid) {
+        if (firstInvalidEl) firstInvalidEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+
+      // Snapshot the calculator's current results into the hidden fields
+      // right before submitting, so they're sent along with the contact info.
+      const getVal = (id) => { const target = document.getElementById(id); return target ? target.value : ''; };
+      const getText = (id) => { const target = document.getElementById(id); return target ? target.textContent : ''; };
+      document.getElementById('results-age').value = getVal('tfsa-age');
+      document.getElementById('results-retire-age').value = getVal('tfsa-retire-age');
+      document.getElementById('results-tfsa-room').value = getVal('tfsa-room');
+      document.getElementById('results-tfsa-balance').value = getVal('tfsa-balance');
+      document.getElementById('results-monthly-needed').value = getText('tfsa-monthly-needed');
+      document.getElementById('results-fv-total').value = getText('tfsa-fv-total');
+      document.getElementById('results-rrsp-equivalent').value = getText('tfsa-rrsp-equivalent');
+      document.getElementById('results-tfsa-monthly-income').value = getText('tfsa-monthly-income');
+      document.getElementById('results-rrsp-monthly-income').value = getText('tfsa-rrsp-monthly-income');
+      document.getElementById('results-winner').value = getText('cmp-winner-headline');
+
+      const statusEl = document.getElementById('tfsa-consult-status');
+      const body = new URLSearchParams(new FormData(tfsaConsultForm));
+
+      statusEl.textContent = 'Submitting…';
+      statusEl.className = 'text-[13.5px] min-h-0 text-inksoft';
+
+      try {
+        const res = await fetch(window.location.pathname, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: body.toString()
+        });
+        if (!res.ok) throw new Error('Submission failed');
+        statusEl.textContent = 'Thank you — your results have been sent. I\'ll be in touch soon.';
+        statusEl.className = 'text-[13.5px] min-h-0 text-green-700';
+        tfsaConsultForm.reset();
+      } catch (err) {
+        statusEl.textContent = 'Something went wrong submitting this. Please email ethan@marchandwealth.ca directly.';
+        statusEl.className = 'text-[13.5px] min-h-0 text-red-700';
+      }
+    });
   }
 
 });
