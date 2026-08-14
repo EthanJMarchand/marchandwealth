@@ -11,6 +11,7 @@ The marketing site, contact form, meeting scheduler, and TFSA calculator for **M
 | Page | Purpose |
 |---|---|
 | [`index.html`](index.html) | Homepage — services, why-independent pitch, about, FAQ |
+| [`life-insurance-quote.html`](life-insurance-quote.html) | Free instant life insurance quote tool — Compulife quoter embedded in an iframe, plus SEO content and FAQ |
 | [`tfsa-calculator.html`](tfsa-calculator.html) | Free public tool: monthly TFSA catch-up savings, year-by-year contribution schedule, retirement growth projection |
 | [`insights.html`](insights.html) | Blog index — article cards rendered from [`insights-data.js`](insights-data.js) |
 | [`insight.html`](insight.html) | Blog post template — renders whichever post matches the URL, also from `insights-data.js` |
@@ -91,6 +92,14 @@ Nothing else in the codebase needs to be touched:
 
 - The calculator, the FAQ text, and the FAQ's structured data all read from this file directly.
 - For any year you *haven't* added yet, the calculator automatically **projects** a future limit using the trailing average of the last ~10 real year-over-year increases (rounded to the nearest $500, matching how the CRA actually moves the limit) — so the tool never breaks, it just gets more accurate the more years you add.
+
+---
+
+## The life insurance quote tool
+
+[`life-insurance-quote.html`](life-insurance-quote.html) embeds a third-party quoter — [Compulife](https://www.compulife.org) — in an iframe (`https://www.compulife.org/website/833/quoter.html`, Ethan's account). Compulife doesn't provide a resize/postMessage bridge and the site is cross-origin, so the parent page can't read the iframe's content height to auto-resize it. Instead, the iframe height is set with `clamp(640px, 85vh, 1000px)` — comfortably tall on both mobile and desktop without wasting space on the bare form, while relying on the iframe's own native scrollbar for the (long, 30-50+ row) results list. A "prefer to open in a new tab" link sits under the iframe as a fallback for anyone who has trouble with the embed.
+
+Because search engines don't meaningfully index cross-origin iframe content, all the actual SEO copy — the explainer section and FAQ — lives in the surrounding page HTML, not inside the iframe.
 
 ---
 

@@ -14,6 +14,71 @@
 //   <h3 class="font-serif font-semibold text-lg text-navydeep mt-7 mb-3">...</h3>
 const INSIGHTS_POSTS = [
   {
+    slug: 'cra-tax-instalment-interest-2026',
+    title: 'CRA Tax Instalments: What You Owe at 7%, and What They Actually Pay You',
+    subtitle: "The rate CRA charges you and the rate CRA pays you aren't the same number",
+    category: 'Tax Planning',
+    metaDescription: "Miss a CRA tax instalment and you're charged 7% interest in 2026. Overpay one and CRA credits you back — but not at 7%, and not in cash. Here's how it actually works.",
+    keywords: 'CRA tax instalments, CRA instalment interest rate 2026, do I have to pay tax instalments Canada, CRA prescribed interest rate, CRA instalment penalty, overpaid tax instalment interest',
+    author: 'Ethan Marchand',
+    datePublished: '2026-08-14',
+    dateModified: '2026-08-14',
+    readTime: '7 min read',
+    excerpt: "CRA charges 7% interest on a late or underpaid tax instalment in 2026. A lot of people assume overpaying pays that same 7% back to them. It doesn't work that way — here's what actually happens.",
+    content: `
+      <p class="text-[15.5px] text-inksoft leading-relaxed mb-5">Every year I get some version of the same question from clients who are new to paying tax instalments: "If CRA charges interest when I'm late, do they pay me interest if I overpay?" The honest answer is yes, technically &mdash; but the details surprise almost everyone, and the two rates involved aren't the same number. In 2026, CRA charges <strong>7%</strong> on a late or insufficient instalment payment. What they pay you back is a different, lower rate, and for instalments specifically, it usually isn't paid to you in cash at all. Worth understanding clearly before you assume either direction works the way you think it does.</p>
+
+      <h2 class="font-serif font-semibold text-2xl md:text-[26px] text-navydeep mt-10 mb-4">Who actually has to pay instalments</h2>
+      <p class="text-[15.5px] text-inksoft leading-relaxed mb-5">Tax instalments are quarterly payments toward the tax bill you'd otherwise pay in one lump sum the following April &mdash; the same idea as an employer withholding tax from every paycheque, just handled by you instead. They typically apply to self-employed income, rental or investment income, certain pension income, or income from more than one job where not enough tax is being withheld at the source.</p>
+      <p class="text-[15.5px] text-inksoft leading-relaxed mb-5">CRA's actual test is a two-part one, and both parts have to be true: your <strong>net tax owing for 2026</strong> has to be more than $3,000 ($1,800 in Quebec), <em>and</em> your net tax owing was also more than that amount in either 2025 or 2024. If either of those two conditions isn't met, you're not required to pay instalments for 2026, even if CRA sends you a reminder suggesting an amount.</p>
+      <p class="text-[15.5px] text-inksoft leading-relaxed mb-5">CRA sends two instalment reminders (form INNS1) if their records suggest you'll need to pay: one in February, covering the March and June payments, and one in August, covering the September and December payments. If you get a reminder but your actual 2026 net tax owing turns out to be $3,000 or less, you don't have to pay &mdash; the reminder is based on your last assessed return, not a final determination.</p>
+
+      <h2 class="font-serif font-semibold text-2xl md:text-[26px] text-navydeep mt-10 mb-4">The four due dates</h2>
+      <p class="text-[15.5px] text-inksoft leading-relaxed mb-5">Instalments are due <strong>March 15, June 15, September 15, and December 15</strong> every year. The one exception is farmers and fishers, whose main income comes from farming or fishing, who have a single combined due date of December 31 instead of four separate payments.</p>
+
+      <h2 class="font-serif font-semibold text-2xl md:text-[26px] text-navydeep mt-10 mb-4">Three ways to calculate what you owe</h2>
+      <ul class="space-y-3 mb-6">
+        <li class="flex items-start gap-3 text-[15px] text-inksoft leading-relaxed"><svg class="mt-1 flex-shrink-0 text-olive" width="14" height="11" viewBox="0 0 20 16" fill="none"><path d="M1 2 L10 14 L19 2" stroke="currentColor" stroke-width="2.4"/></svg><span><strong>No-calculation option</strong> &mdash; CRA tells you the amount, based on your latest assessed return. Best if your income is fairly stable year to year, and it's the one option where CRA won't charge interest or a penalty even if it turns out to be too low.</span></li>
+        <li class="flex items-start gap-3 text-[15px] text-inksoft leading-relaxed"><svg class="mt-1 flex-shrink-0 text-olive" width="14" height="11" viewBox="0 0 20 16" fill="none"><path d="M1 2 L10 14 L19 2" stroke="currentColor" stroke-width="2.4"/></svg><span><strong>Prior-year option</strong> &mdash; you calculate the amount based on your 2025 return. Best when 2026 looks similar to 2025 but different from 2024.</span></li>
+        <li class="flex items-start gap-3 text-[15px] text-inksoft leading-relaxed"><svg class="mt-1 flex-shrink-0 text-olive" width="14" height="11" viewBox="0 0 20 16" fill="none"><path d="M1 2 L10 14 L19 2" stroke="currentColor" stroke-width="2.4"/></svg><span><strong>Current-year option</strong> &mdash; you estimate 2026 directly. Best when this year is genuinely different from the last two, but it's also the riskiest: underestimate, and you're exposed to interest on the shortfall.</span></li>
+      </ul>
+      <p class="text-[15.5px] text-inksoft leading-relaxed mb-5">Whichever option you use, paying in full by each due date under the prior-year or current-year methods avoids interest and penalties &mdash; unless your estimate turns out to be too low.</p>
+
+      <h2 class="font-serif font-semibold text-2xl md:text-[26px] text-navydeep mt-10 mb-4">What 7% actually costs you</h2>
+      <p class="text-[15.5px] text-inksoft leading-relaxed mb-5">If you miss an instalment, pay late, or pay less than required, CRA charges <strong>instalment interest</strong>, compounded daily, at the prescribed rate &mdash; currently 7% for the third quarter of 2026 (July 1 to September 30). That rate is reset every calendar quarter and can move, so it's worth checking the current rate rather than assuming it stays fixed all year.</p>
+
+      <div class="grid sm:grid-cols-2 gap-5 my-8">
+        <div class="bg-white border border-line rounded-sm p-6 text-center">
+          <p class="text-[12px] font-semibold tracking-[0.14em] uppercase text-golddim mb-2">What CRA charges you</p>
+          <p class="font-serif font-semibold text-4xl text-navydeep mb-1">7%</p>
+          <p class="text-[13.5px] text-inksoft m-0">On late or insufficient instalments &mdash; Q3 2026, compounded daily</p>
+        </div>
+        <div class="bg-white border border-line rounded-sm p-6 text-center">
+          <p class="text-[12px] font-semibold tracking-[0.14em] uppercase text-golddim mb-2">What CRA pays individuals</p>
+          <p class="font-serif font-semibold text-4xl text-navydeep mb-1">5%</p>
+          <p class="text-[13.5px] text-inksoft m-0">On non-corporate overpayments &mdash; Q3 2026 (corporations: 3%)</p>
+        </div>
+      </div>
+
+      <p class="text-[15.5px] text-inksoft leading-relaxed mb-5">On top of the interest, CRA can also charge an <strong>instalment penalty</strong>, but only if your total instalment interest for the year exceeds $1,000. When it applies, the penalty is half the amount by which your actual instalment interest exceeds the greater of $1,000 or 25% of the interest you'd have owed had you made no instalment payments at all. In practice, that means the penalty is reserved for meaningful, sustained shortfalls &mdash; not a single payment that's a few days late.</p>
+
+      <h2 class="font-serif font-semibold text-2xl md:text-[26px] text-navydeep mt-10 mb-4">The part most people get wrong: overpaying doesn't pay you cash</h2>
+      <p class="text-[15.5px] text-inksoft leading-relaxed mb-5">Here's the nuance that trips people up. CRA's own guidance says you can reduce or eliminate instalment interest and penalties by overpaying your next instalment or paying it early &mdash; doing so earns you <strong>instalment credit interest</strong>. It sounds like the mirror image of being charged interest for paying late. It isn't, in two important ways.</p>
+
+      <div class="bg-paperdim border-l-4 border-l-gold rounded-sm p-6 my-8">
+        <p class="font-serif font-semibold text-navydeep text-[15px] mb-1">Key takeaway</p>
+        <p class="text-[14.5px] text-inksoft leading-relaxed m-0">Instalment credit interest is <strong>not refundable</strong> and can <strong>only be used to offset instalment interest charges on a late or insufficient payment within that same tax year.</strong> If you don't end up with any instalment interest to offset, the credit simply isn't paid out &mdash; it doesn't carry forward, and it doesn't show up as cash in your pocket or a bigger refund.</p>
+      </div>
+
+      <p class="text-[15.5px] text-inksoft leading-relaxed mb-5">In other words, overpaying an instalment on purpose to "earn interest" from CRA isn't really a strategy &mdash; at best it cancels out interest you'd otherwise owe on a different late payment the same year. It's genuinely useful if your instalment amounts are uneven quarter to quarter, but it isn't a way to make money off CRA.</p>
+      <p class="text-[15.5px] text-inksoft leading-relaxed mb-5">The separate 5% figure above &mdash; what CRA pays non-corporate taxpayers on overpayments generally &mdash; is the rate that applies more broadly, including refund interest once your return is assessed. It's real, it is paid out, and it's set the same way the 7% debit rate is: quarterly, and it can change. But it's consistently the lower of the two numbers, which is really the whole point of this article: the arrangement is not symmetrical, and CRA's cost of money to you is always higher than its cost of money to CRA.</p>
+
+      <h2 class="font-serif font-semibold text-2xl md:text-[26px] text-navydeep mt-10 mb-4">The practical takeaway</h2>
+      <p class="text-[15.5px] text-inksoft leading-relaxed mb-5">Given the asymmetry, the better goal usually isn't chasing instalment credit interest &mdash; it's simply picking the calculation option that fits your situation closely enough that you avoid the 7% charge in the first place. If your income is genuinely unpredictable year to year (common for the self-employed and incorporated business owners I work with), that usually means checking in partway through the year rather than setting an estimate in January and forgetting about it, so a swing in income doesn't turn into an instalment shortfall by September.</p>
+      <p class="text-[15.5px] text-inksoft leading-relaxed mb-5">If a big part of why your instalments are unpredictable is business income flowing through a corporation, that's also exactly the kind of thing worth coordinating with your broader tax and compensation plan &mdash; not treated as a separate, once-a-quarter chore.</p>
+    `,
+  },
+  {
     slug: 'tfsa-underutilized-retirement-vehicle',
     title: "The TFSA Is Canada's Most Underused Retirement Account",
     subtitle: "Here's why that needs to change",

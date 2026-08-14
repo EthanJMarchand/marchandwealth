@@ -77,7 +77,8 @@
       "Bash(grep -n \"recompute\\(\\);\\\\s*$\\\\|updateTfsaFaq\\(\\);\\\\s*$\\\\|^  }\\\\s*$\" /Users/ethanmarchand/Downloads/marchand-site/script.js)",
       "Bash(node --check /Users/ethanmarchand/Downloads/marchand-site/script.js)",
       "Bash(npx tailwindcss *)",
-      "Bash(grep -v \"CHART_LAYOUT\\\\|const { W, H, padL, padR, padT, padB }\\\\|const { W, padL, padR }\\\\|const { padT }\")"
+      "Bash(grep -v \"CHART_LAYOUT\\\\|const { W, H, padL, padR, padT, padB }\\\\|const { W, padL, padR }\\\\|const { padT }\")",
+      "Bash(curl -s -D - -o /dev/null \"https://www.compulife.org/website/833/quoter.html\")"
     ]
   }
 }
