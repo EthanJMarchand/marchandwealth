@@ -6,3 +6,8 @@
   from = "/intake.html"
   to = "/contact.html"
   status = 301
+
+[[redirects]]
+  from = "/insights/*"
+  to = "/insight.html"
+  status = 200

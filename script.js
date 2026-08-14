@@ -30,6 +30,143 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // Insights (blog) — reads from insights-data.js, renders on insights.html and insight.html.
+  // No backend: add a post to INSIGHTS_POSTS and it shows up here on the next page load.
+  const insightsGrid = document.getElementById('insights-grid');
+  const postArticle = document.getElementById('post-article');
+  if ((insightsGrid || postArticle) && typeof INSIGHTS_POSTS !== 'undefined') {
+
+    const formatPostDate = (iso) => new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(iso + 'T00:00:00'));
+    const sortedPosts = [...INSIGHTS_POSTS].sort((a, b) => new Date(b.datePublished) - new Date(a.datePublished));
+
+    const postCardHtml = (post) => `
+      <a href="/insights/${post.slug}" class="block bg-white border border-line rounded-sm p-8 hover:-translate-y-1 hover:shadow-lg transition">
+        <div class="text-[12px] font-semibold tracking-[0.14em] uppercase text-golddim mb-3">${post.category}</div>
+        <h3 class="font-serif font-semibold text-xl text-navydeep mb-3 leading-snug">${post.title}</h3>
+        <p class="text-[14.5px] text-inksoft leading-relaxed mb-5">${post.excerpt}</p>
+        <div class="flex items-center justify-between text-[12.5px] text-inksoft">
+          <span>${formatPostDate(post.datePublished)} &middot; ${post.readTime}</span>
+          <span class="text-navydeep font-semibold">Read article &rarr;</span>
+        </div>
+      </a>`;
+
+    // Article grid on insights.html
+    if (insightsGrid) {
+      if (sortedPosts.length) {
+        insightsGrid.innerHTML = sortedPosts.map(postCardHtml).join('');
+      } else {
+        const emptyEl = document.getElementById('insights-empty');
+        if (emptyEl) emptyEl.classList.remove('hidden');
+      }
+
+      const blogSchemaEl = document.getElementById('blog-schema');
+      if (blogSchemaEl) {
+        try {
+          const schema = JSON.parse(blogSchemaEl.textContent);
+          schema.blogPost = sortedPosts.map(post => ({
+            '@type': 'BlogPosting',
+            headline: post.title,
+            url: `https://marchandwealth.ca/insights/${post.slug}`,
+            datePublished: post.datePublished,
+            dateModified: post.dateModified
+          }));
+          blogSchemaEl.textContent = JSON.stringify(schema);
+        } catch (e) { /* leave the static schema as-is */ }
+      }
+    }
+
+    // Single article on insight.html — slug comes from /insights/<slug> (Netlify rewrite)
+    // or ?post=<slug> as a local-dev fallback.
+    if (postArticle) {
+      const params = new URLSearchParams(window.location.search);
+      let slug = params.get('post');
+      if (!slug) {
+        const pathParts = window.location.pathname.split('/').filter(Boolean);
+        const idx = pathParts.indexOf('insights');
+        if (idx !== -1 && pathParts[idx + 1]) slug = decodeURIComponent(pathParts[idx + 1]);
+      }
+
+      const post = sortedPosts.find(p => p.slug === slug);
+      const notFoundEl = document.getElementById('post-not-found');
+
+      if (!post) {
+        if (notFoundEl) notFoundEl.classList.remove('hidden');
+        document.title = 'Article Not Found | Marchand Wealth';
+        const robotsMeta = document.createElement('meta');
+        robotsMeta.name = 'robots';
+        robotsMeta.content = 'noindex, follow';
+        document.head.appendChild(robotsMeta);
+      } else {
+        const postUrl = `https://marchandwealth.ca/insights/${post.slug}`;
+
+        document.title = `${post.title} | Marchand Wealth`;
+        const titleTag = document.getElementById('post-title-tag');
+        if (titleTag) titleTag.textContent = document.title;
+
+        const metaDesc = document.getElementById('post-meta-description');
+        if (metaDesc) metaDesc.setAttribute('content', post.metaDescription);
+
+        const canonical = document.getElementById('post-canonical');
+        if (canonical) canonical.setAttribute('href', postUrl);
+
+        const ogTitle = document.getElementById('post-og-title');
+        if (ogTitle) ogTitle.setAttribute('content', post.title);
+        const ogDesc = document.getElementById('post-og-description');
+        if (ogDesc) ogDesc.setAttribute('content', post.metaDescription);
+        const ogUrl = document.getElementById('post-og-url');
+        if (ogUrl) ogUrl.setAttribute('content', postUrl);
+
+        const categoryEl = document.getElementById('post-category');
+        if (categoryEl) categoryEl.innerHTML = `<svg width="18" height="14" viewBox="0 0 20 16" fill="none"><path d="M1 2 L10 14 L19 2" stroke="currentColor" stroke-width="2.4"/></svg>${post.category}`;
+
+        const titleEl = document.getElementById('post-title');
+        if (titleEl) titleEl.textContent = post.title;
+
+        const subtitleEl = document.getElementById('post-subtitle');
+        if (subtitleEl) subtitleEl.textContent = post.subtitle || '';
+
+        const breadcrumbEl = document.getElementById('post-breadcrumb-current');
+        if (breadcrumbEl) breadcrumbEl.textContent = post.title;
+
+        const metaEl = document.getElementById('post-meta');
+        if (metaEl) metaEl.innerHTML = `<span>${post.author}</span><span class="text-line">&middot;</span><span>${formatPostDate(post.datePublished)}</span><span class="text-line">&middot;</span><span>${post.readTime}</span>`;
+
+        const contentEl = document.getElementById('post-content');
+        if (contentEl) contentEl.innerHTML = post.content;
+
+        const relatedEl = document.getElementById('post-related');
+        if (relatedEl) {
+          relatedEl.innerHTML = sortedPosts.filter(p => p.slug !== post.slug).slice(0, 2).map(postCardHtml).join('');
+        }
+
+        const schemaEl = document.getElementById('post-schema');
+        if (schemaEl) {
+          try {
+            const schema = JSON.parse(schemaEl.textContent);
+            schema.headline = post.title;
+            schema.description = post.metaDescription;
+            schema.datePublished = post.datePublished;
+            schema.dateModified = post.dateModified;
+            schema.mainEntityOfPage['@id'] = postUrl;
+            schemaEl.textContent = JSON.stringify(schema);
+          } catch (e) { /* leave static schema as-is */ }
+        }
+
+        const breadcrumbSchemaEl = document.getElementById('post-breadcrumb-schema');
+        if (breadcrumbSchemaEl) {
+          try {
+            const schema = JSON.parse(breadcrumbSchemaEl.textContent);
+            schema.itemListElement[2].name = post.title;
+            schema.itemListElement[2].item = postUrl;
+            breadcrumbSchemaEl.textContent = JSON.stringify(schema);
+          } catch (e) { /* leave static schema as-is */ }
+        }
+
+        postArticle.classList.remove('hidden');
+      }
+    }
+  }
+
   // Swaps sections depending on who you are. I contain multitudes; so does this form.
   const clientTypeInputs = document.querySelectorAll('input[name="clientType"]');
   if (clientTypeInputs.length) {

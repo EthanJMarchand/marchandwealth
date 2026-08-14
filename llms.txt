@@ -1,0 +1,20 @@
+# Marchand Wealth
+
+> Ethan Marchand is an independent Insurance & Wealth Advisor based in Sherwood Park, Alberta, serving individuals, families, and business owners across Alberta with tax-efficient insurance and wealth planning.
+
+Marchand Wealth (legal name: Marchand Financial Solutions Inc.) provides corporate and personal life insurance, critical illness and disability insurance, estate planning, business succession and buy-sell agreement funding, and retirement/tax planning including TFSA and RRSP strategy. Ethan is an independent advisor, not tied to a single insurance carrier's product lineup. Before insurance and wealth advisory, he spent 10 years as a realtor (2015-2025) and has traded stocks, bonds, and options since 2015.
+
+## Pages
+
+- [Home](https://marchandwealth.ca/): Overview of services, plus an FAQ on corporate-owned life insurance, estate planning, buy-sell agreements, and business succession for Alberta business owners.
+- [TFSA Calculator](https://marchandwealth.ca/tfsa-calculator.html): Free interactive Canadian TFSA contribution calculator. Computes the monthly savings needed to max out contribution room, a year-by-year contribution schedule, projected value at retirement, and a full RRSP comparison including tax-refund reinvestment, progressive tax on retirement withdrawals, and the lump-sum tax cost of needing the money early. Includes an FAQ on TFSA contribution limits and rules.
+- [Insights](https://marchandwealth.ca/insights.html): Articles on tax, insurance, and retirement planning, including TFSA retirement strategy, corporate-owned life insurance and the Capital Dividend Account, and the pay-yourself-first savings habit.
+- [Contact](https://marchandwealth.ca/contact.html): Contact form and direct phone/email to reach Ethan Marchand.
+- [Schedule](https://marchandwealth.ca/schedule.html): Book a free consultation.
+
+## Contact
+
+- Phone/Text: 780-868-0552
+- Email: ethan@marchandwealth.ca
+- Location: Sherwood Park, Alberta, Canada
+- Service area: Sherwood Park, Edmonton, and Alberta-wide

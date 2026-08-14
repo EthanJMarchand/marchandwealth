@@ -12,6 +12,8 @@ The marketing site, contact form, meeting scheduler, and TFSA calculator for **M
 |---|---|
 | [`index.html`](index.html) | Homepage — services, why-independent pitch, about, FAQ |
 | [`tfsa-calculator.html`](tfsa-calculator.html) | Free public tool: monthly TFSA catch-up savings, year-by-year contribution schedule, retirement growth projection |
+| [`insights.html`](insights.html) | Blog index — article cards rendered from [`insights-data.js`](insights-data.js) |
+| [`insight.html`](insight.html) | Blog post template — renders whichever post matches the URL, also from `insights-data.js` |
 | [`contact.html`](contact.html) | Contact page — advisor intro up top, detailed contact form below, submitted via Netlify Forms |
 | [`schedule.html`](schedule.html) | Meeting booking, embedded Google Calendar appointment scheduler |
 
@@ -39,8 +41,11 @@ marchand-site/
 ├── contact.html              Contact page — advisor intro + contact form (Netlify Forms)
 ├── schedule.html             Meeting scheduler (Google Calendar embed)
 ├── tfsa-calculator.html        TFSA contribution & retirement calculator
+├── insights.html              Blog index (article cards)
+├── insight.html               Blog post template (renders one post by URL)
+├── insights-data.js           Blog post content — see below
 ├── script.js                Shared JS — nav, FAQ accordions, contact form submission,
-│                            schedule fallback, entire TFSA calculator engine
+│                            schedule fallback, entire TFSA calculator engine, blog rendering
 ├── tfsa-limits.js             TFSA annual contribution limits — see below
 ├── tailwind.config.js          Brand colors, fonts, and content-scan paths
 ├── src/
@@ -86,6 +91,24 @@ Nothing else in the codebase needs to be touched:
 
 - The calculator, the FAQ text, and the FAQ's structured data all read from this file directly.
 - For any year you *haven't* added yet, the calculator automatically **projects** a future limit using the trailing average of the last ~10 real year-over-year increases (rounded to the nearest $500, matching how the CRA actually moves the limit) — so the tool never breaks, it just gets more accurate the more years you add.
+
+---
+
+## The blog (Insights)
+
+No CMS, no backend — blog posts are just entries in an array in [`insights-data.js`](insights-data.js), read fresh by the browser on every page load, the same pattern `tfsa-limits.js` uses for TFSA limits.
+
+**To add a post:** copy an existing object in `insights-data.js`, give it a unique `slug`, fill in the fields, and add it to the array. Nothing else needs to change — both `insights.html` (the index) and `insight.html` (the single-post template) read from that file automatically and re-render on load.
+
+**How the two pages work:**
+- [`insights.html`](insights.html) lists every post as a card, newest first, and injects a `Blog` JSON-LD schema built from the same data.
+- [`insight.html`](insight.html) is a single template shared by every post. It reads the slug out of the URL, finds the matching post in `insights-data.js`, and fills in the title, meta description, canonical tag, Open Graph tags, and `BlogPosting` JSON-LD schema client-side — then renders the post's HTML content into the page.
+
+**Clean URLs without a backend:** posts are linked as `/insights/<slug>` rather than `insight.html?post=<slug>`. That's a Netlify rewrite (see [`netlify.toml`](netlify.toml): `/insights/*` → `/insight.html`, status 200) — the URL in the address bar stays clean, but it's still the same static `insight.html` file underneath, with JS reading the slug from `window.location.pathname`. Because the browser treats `/insights/<slug>` as a nested path, every asset reference inside `insight.html` (CSS, logo, `script.js`, nav links) is root-absolute (`/assets/...`) rather than relative — a relative path would resolve against the fake `/insights/` directory and 404.
+
+**Local preview:** [`.claude/static-server.js`](.claude/static-server.js) mirrors the same `/insights/*` → `/insight.html` rewrite so clean post URLs work when previewing locally, not just after a Netlify deploy.
+
+**Remember to add new posts to [`sitemap.xml`](sitemap.xml)** — they're plain static entries, not generated automatically.
 
 ---
 

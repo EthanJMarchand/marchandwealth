@@ -25,6 +25,9 @@ const MIME = {
 http.createServer((req, res) => {
   let urlPath = decodeURIComponent(req.url.split('?')[0]);
   if (urlPath === '/') urlPath = '/index.html';
+  // Mirrors the /insights/* -> /insight.html rewrite in netlify.toml, so
+  // clean blog-post URLs can be previewed locally too.
+  if (urlPath.startsWith('/insights/')) urlPath = '/insight.html';
   const filePath = path.join(ROOT, urlPath);
 
   if (!filePath.startsWith(ROOT)) {
