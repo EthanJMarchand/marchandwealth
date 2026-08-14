@@ -78,7 +78,14 @@
       "Bash(node --check /Users/ethanmarchand/Downloads/marchand-site/script.js)",
       "Bash(npx tailwindcss *)",
       "Bash(grep -v \"CHART_LAYOUT\\\\|const { W, H, padL, padR, padT, padB }\\\\|const { W, padL, padR }\\\\|const { padT }\")",
-      "Bash(curl -s -D - -o /dev/null \"https://www.compulife.org/website/833/quoter.html\")"
+      "Bash(curl -s -D - -o /dev/null \"https://www.compulife.org/website/833/quoter.html\")",
+      "Bash(awk '/const tfsaAgeInput/,/^  \\\\}\\\\n\\\\n  \\\\/\\\\/ \"Send me your results\"/' script.js)",
+      "Bash(python3 -c ' *)",
+      "Bash(grep -c '`' insights-data.js)",
+      "Bash(node -e \"require\\('./insights-data.js'\\); console.log\\('parsed OK, posts:', INSIGHTS_POSTS.length\\);\")",
+      "Bash(node --check insights-data.js)",
+      "Bash(read -r fn)",
+      "Bash(grep -c '\\\\b__TRACKED_VAR__\\\\b' script.js)"
     ]
   }
 }

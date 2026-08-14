@@ -365,28 +365,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const el = {
       age: tfsaAgeInput,
-      room: document.getElementById('tfsa-room'),
+      currentBalance: document.getElementById('tfsa-current-balance'),
       balance: document.getElementById('tfsa-balance'),
-      years: document.getElementById('tfsa-years'),
-      yearsVal: document.getElementById('tfsa-years-val'),
-      yearsHint: document.getElementById('tfsa-years-hint'),
-      headlineLabel: document.getElementById('tfsa-headline-label'),
-      catchupLine: document.getElementById('tfsa-catchup-line'),
-      maxedLine: document.getElementById('tfsa-maxed-line'),
-      maintainLine: document.getElementById('tfsa-maintain-line'),
-      monthlyNeeded: document.getElementById('tfsa-monthly-needed'),
-      catchupDate: document.getElementById('tfsa-catchup-date'),
-      catchupAge: document.getElementById('tfsa-catchup-age'),
-      maintainMonthly: document.getElementById('tfsa-maintain-monthly'),
-      increaseEstimate: document.getElementById('tfsa-increase-estimate'),
+      balanceError: document.getElementById('tfsa-error-contributions'),
+      contribution: document.getElementById('tfsa-contribution'),
+      contributionNote: document.getElementById('tfsa-contribution-note'),
       scheduleBody: document.getElementById('tfsa-schedule-body'),
       lifetimeRoom: document.getElementById('tfsa-lifetime-room'),
       contributedEst: document.getElementById('tfsa-contributed-est'),
-      contributedPct: document.getElementById('tfsa-contributed-pct'),
-      progressBar: document.getElementById('tfsa-progress-bar'),
-      availableDisplay: document.getElementById('tfsa-available-display'),
       retireAge: document.getElementById('tfsa-retire-age'),
       retireAgeVal: document.getElementById('tfsa-retire-age-val'),
+      summaryRetireAge: document.getElementById('tfsa-summary-retire-age'),
       rateAccum: document.getElementById('tfsa-rate-accum'),
       rateAccumVal: document.getElementById('tfsa-rate-accum-val'),
       rateRetire: document.getElementById('tfsa-rate-retire'),
@@ -395,39 +384,14 @@ document.addEventListener('DOMContentLoaded', () => {
       fvContribPct: document.getElementById('tfsa-fv-contrib-pct'),
       fvGrowthPct: document.getElementById('tfsa-fv-growth-pct'),
       monthlyIncome: document.getElementById('tfsa-monthly-income'),
+      catchupNote: document.getElementById('tfsa-catchup-note'),
+      increaseEstimate: document.getElementById('tfsa-increase-estimate'),
       donutContrib: document.getElementById('donut-contrib'),
       donutGrowth: document.getElementById('donut-growth'),
       donutTotal: document.getElementById('donut-total'),
       chart: document.getElementById('tfsa-area-chart'),
       chartStartLabel: document.getElementById('chart-age-start-label'),
-      chartEndLabel: document.getElementById('chart-age-end-label'),
-      rrspEquivalent: document.getElementById('tfsa-rrsp-equivalent'),
-      rrspFvContribPct: document.getElementById('tfsa-rrsp-fv-contrib-pct'),
-      rrspFvGrowthPct: document.getElementById('tfsa-rrsp-fv-growth-pct'),
-      donutRrspContrib: document.getElementById('donut-rrsp-contrib'),
-      donutRrspGrowth: document.getElementById('donut-rrsp-growth'),
-      donutRrspTotal: document.getElementById('donut-rrsp-total'),
-      rrspMonthlyIncome: document.getElementById('tfsa-rrsp-monthly-income')
-    };
-
-    // The RRSP-equivalent scenario lives in the comparison section below,
-    // but it's computed here too since "Projected TFSA value at retirement"
-    // now illustrates the RRSP side by side with it.
-    const cmp = {
-      income: document.getElementById('cmp-income'),
-      incomeVal: document.getElementById('cmp-income-val'),
-      needAge: document.getElementById('cmp-need-age'),
-      needAgeVal: document.getElementById('cmp-need-age-val'),
-      whatifAgeEcho: document.getElementById('cmp-whatif-age-echo'),
-      whatifRrspCost: document.getElementById('cmp-whatif-rrsp-cost'),
-      whatifRrspPct: document.getElementById('cmp-whatif-rrsp-pct'),
-      winnerHeadline: document.getElementById('cmp-winner-headline'),
-      currentRate: document.getElementById('cmp-current-rate'),
-      retireRate: document.getElementById('cmp-retire-rate'),
-      retireYear: document.getElementById('cmp-retire-year'),
-      chart: document.getElementById('cmp-chart'),
-      chartStartLabel: document.getElementById('cmp-chart-start-label'),
-      chartEndLabel: document.getElementById('cmp-chart-end-label')
+      chartEndLabel: document.getElementById('chart-age-end-label')
     };
 
     const currency = (n) => new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(Math.max(0, Math.round(n || 0)));
@@ -473,105 +437,93 @@ document.addEventListener('DOMContentLoaded', () => {
       return total;
     }
 
-    // Tax-bracket engine for the RRSP side. Income and bracket thresholds
-    // are both projected forward using the same COST_OF_LIVING_RATE, so a
-    // person's marginal rate holds steady in real terms for the whole
-    // projection instead of drifting on two independently-fitted trends.
-    // TAX_BRACKETS_BY_YEAR and COST_OF_LIVING_RATE ship in the same
-    // tfsa-limits.js file as TFSA_ANNUAL_LIMITS, already required above.
-    const taxYears = Object.keys(TAX_BRACKETS_BY_YEAR).map(Number).sort((a, b) => a - b);
-    const firstTaxYear = taxYears[0];
-    const lastTaxYear = taxYears[taxYears.length - 1];
-    const lastBrackets = TAX_BRACKETS_BY_YEAR[lastTaxYear];
-
-    function projectedBracketsForYear(year) {
-      if (TAX_BRACKETS_BY_YEAR[year]) return TAX_BRACKETS_BY_YEAR[year];
-      if (year < firstTaxYear) return TAX_BRACKETS_BY_YEAR[firstTaxYear];
-      const factor = Math.pow(1 + COST_OF_LIVING_RATE, year - lastTaxYear);
-      return lastBrackets.map(b => ({
-        upTo: b.upTo === Infinity ? Infinity : Math.round(b.upTo * factor / 50) * 50,
-        rate: b.rate
-      }));
-    }
-
-    function marginalRateForIncome(year, income) {
-      const brackets = projectedBracketsForYear(year);
-      for (const b of brackets) if (income <= b.upTo) return b.rate;
-      return brackets[brackets.length - 1].rate;
-    }
-
-    // Full progressive tax on a given income, assumed to be someone's only income that year.
-    function taxOnIncome(year, income) {
-      const brackets = projectedBracketsForYear(year);
-      let tax = 0, lower = 0;
-      for (const b of brackets) {
-        if (income <= lower) break;
-        tax += (Math.min(income, b.upTo) - lower) * (b.rate / 100);
-        lower = b.upTo;
-        if (income <= b.upTo) break;
-      }
-      return tax;
-    }
-
-    // Same contribution stream as the TFSA, grossed up by reinvesting each
-    // year's RRSP tax refund back in — the closed form of C + Cr + Cr² + …
-    // (contribute the refund, get a refund on the refund, forever).
-    function rrspContributionRows(scheduleRows, marginalRatePct) {
-      const factor = 1 / (1 - marginalRatePct / 100);
-      return scheduleRows.map(row => ({ age: row.age, monthlyContribution: row.monthlyContribution * factor }));
-    }
-
-    // If you're already maxed out, congratulations — nothing to catch up on here.
-    function buildContributionSchedule(currentAge, retireAge, availableRoomNow, catchUpYearsRequested) {
+    // The whole point of this tool: given how much someone can actually
+    // contribute each month, figure out — year by year — whether that pace
+    // ever fully absorbs their unused room (backlog + newly added room),
+    // and what happens to their contribution once it does. CRA never lets
+    // anyone contribute more than the room that actually exists, so once
+    // the backlog hits zero, the schedule automatically drops the
+    // contribution down to that year's new limit — that's the "reduction."
+    function buildContributionSchedule(currentAge, retireAge, availableRoomNow, plannedMonthlyContribution, keepMaxedOut) {
       const currentYear = new Date().getFullYear();
       const totalYears = Math.max(1, retireAge - currentAge);
-      const isAlreadyMaxed = availableRoomNow <= 0;
-      const n = isAlreadyMaxed ? 0 : Math.max(1, Math.min(catchUpYearsRequested, totalYears));
+      const plannedAnnual = keepMaxedOut ? Infinity : Math.max(0, plannedMonthlyContribution) * 12;
 
-      let incomingDuringCatchUp = 0;
-      for (let k = 1; k <= n; k++) incomingDuringCatchUp += projectedLimitForYear(currentYear + k);
+      // If the elected pace alone is more than everything available right
+      // now (before any future room even arrives), contributions can't
+      // realistically continue at that pace once this year's room runs
+      // out — they pause and pick back up next year with fresh room.
+      const pausedThisYear = !keepMaxedOut && plannedAnnual > availableRoomNow + 0.5;
 
-      const totalToAbsorb = Math.max(0, availableRoomNow) + incomingDuringCatchUp;
-      const catchUpAnnual = n > 0 ? totalToAbsorb / n : 0;
+      let backlog = Math.max(0, availableRoomNow);
+      let maxedOutCalendarYear = null;
+      let maxedOutAge = null;
+      let reducedMonthlyAfterCatchup = null;
 
+      // If this year's room runs out mid-pace, model this year on its own:
+      // contributions actually stop the moment the available room is used
+      // up, so the schedule (and everything projected from it) shows the
+      // real capped amount for this year instead of silently carrying the
+      // full attempted pace into next year's numbers.
+      let currentYearContribution = null;
+      let fullMonthsThisYear = 0;
+      let finalPartialMonth = 0;
       const rows = [];
+      if (pausedThisYear) {
+        currentYearContribution = backlog;
+        if (plannedMonthlyContribution > 0) {
+          fullMonthsThisYear = Math.min(12, Math.floor(backlog / plannedMonthlyContribution + 1e-9));
+          finalPartialMonth = Math.round((backlog - fullMonthsThisYear * plannedMonthlyContribution) * 100) / 100;
+          if (finalPartialMonth < 0.5) finalPartialMonth = 0;
+        }
+        rows.push({ year: currentYear, age: currentAge, monthlyContribution: currentYearContribution / 12, capped: true });
+        backlog = 0;
+      }
+
       for (let k = 1; k <= totalYears; k++) {
         const year = currentYear + k;
         const age = currentAge + k;
-        const annualLimit = projectedLimitForYear(year);
-        const isCatchUp = k <= n;
-        const annualContribution = isCatchUp ? catchUpAnnual : annualLimit;
-        rows.push({
-          year, age, phase: isCatchUp ? 'catchup' : 'maintain',
-          annualLimit, annualContribution, monthlyContribution: annualContribution / 12
-        });
+        const newRoomThisYear = projectedLimitForYear(year);
+        const availableThisYear = backlog + newRoomThisYear;
+        const annualContribution = Math.min(plannedAnnual, availableThisYear);
+        const capped = !keepMaxedOut && annualContribution < plannedAnnual - 0.01;
+
+        backlog = Math.max(0, availableThisYear - annualContribution);
+
+        if (maxedOutCalendarYear === null && backlog <= 0 && annualContribution >= newRoomThisYear - 0.01) {
+          maxedOutCalendarYear = year;
+          maxedOutAge = age;
+          reducedMonthlyAfterCatchup = newRoomThisYear / 12;
+        }
+
+        rows.push({ year, age, monthlyContribution: annualContribution / 12, capped });
       }
 
       return {
         rows,
-        effectiveCatchUpYears: n,
-        isAlreadyMaxed,
-        catchUpAnnual,
-        catchUpMonthly: catchUpAnnual / 12,
-        catchUpYear: currentYear + n,
-        catchUpAge: currentAge + n,
-        maintainMonthlyStart: rows.length > n ? rows[n].monthlyContribution : rows[0].monthlyContribution
+        everCatchesUp: maxedOutCalendarYear !== null,
+        maxedOutCalendarYear,
+        maxedOutAge,
+        reducedMonthlyAfterCatchup,
+        remainingBacklogAtRetirement: backlog,
+        pausedThisYear,
+        currentYearContribution,
+        fullMonthsThisYear,
+        finalPartialMonth
       };
     }
 
     function renderScheduleTable(rows) {
+      if (!el.scheduleBody) return;
       el.scheduleBody.innerHTML = rows.map(row => {
-        const isCatchUp = row.phase === 'catchup';
-        const dotClass = isCatchUp ? 'bg-gold' : 'bg-olive';
-        const textClass = isCatchUp ? 'text-golddim' : 'text-olive';
-        const label = isCatchUp ? 'Catching Up' : 'Maintaining';
+        const dotClass = row.capped ? 'bg-olive' : 'bg-gold';
+        const textClass = row.capped ? 'text-olive' : 'text-golddim';
+        const label = row.capped ? 'Capped by available room' : 'At your pace';
         return `<tr>
           <td class="px-4 py-2 text-inksoft">${row.year}</td>
           <td class="px-4 py-2 text-inksoft">${row.age}</td>
-          <td class="px-4 py-2"><span class="inline-flex items-center gap-1.5 text-[12px] font-semibold ${textClass}"><span class="w-1.5 h-1.5 rounded-full ${dotClass} inline-block"></span>${label}</span></td>
-          <td class="px-4 py-2 text-right text-inksoft">${currency(row.annualLimit)}</td>
-          <td class="px-4 py-2 text-right font-semibold text-navydeep">${currency(row.annualContribution)}</td>
-          <td class="px-4 py-2 text-right text-inksoft">${currency(row.monthlyContribution)}</td>
+          <td class="px-4 py-2 text-right font-semibold text-navydeep">${currency(row.monthlyContribution)}/mo</td>
+          <td class="px-4 py-2"><span class="inline-flex items-center gap-1.5 text-[11.5px] font-semibold ${textClass}"><span class="w-1.5 h-1.5 rounded-full ${dotClass} inline-block"></span>${label}</span></td>
         </tr>`;
       }).join('');
     }
@@ -598,24 +550,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return balance * monthlyRate / (1 - Math.pow(1 + monthlyRate, -n));
     }
 
-    // Draws a balance down to (roughly) zero by drawEndAge, withdrawing the
-    // same fixed monthly amount monthlyIncomeFromBalance already computed
-    // for that balance/rate/horizon — so the chart matches the income figures.
-    function buildDecumulationSeries(startAge, drawEndAge, startBalance, annualRatePct, monthlyWithdrawal) {
-      const monthlyRate = (annualRatePct / 100) / 12;
-      let balance = startBalance;
-      const points = [{ age: startAge, total: Math.max(0, balance) }];
-      for (let a = startAge; a < drawEndAge; a++) {
-        for (let m = 0; m < 12; m++) {
-          balance = balance * (1 + monthlyRate) - monthlyWithdrawal;
-        }
-        points.push({ age: a + 1, total: Math.max(0, balance) });
-      }
-      return points;
-    }
-
-    // Shared layout/scales/drawing helpers for both SVG charts below — same
-    // canvas size, gridlines, and baseline axis, just different data on top.
+    // Shared layout/scales/drawing helpers for the SVG chart below.
     const CHART_LAYOUT = { W: 640, H: 260, padL: 46, padR: 10, padT: 14, padB: 10 };
 
     function chartScales(minAge, maxAge, maxVal) {
@@ -658,18 +593,14 @@ document.addEventListener('DOMContentLoaded', () => {
       svg.appendChild(axis);
     }
 
-    function linePath(points) {
-      return points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-    }
-
-    function drawChart(series, rrspSeries) {
+    function drawChart(series) {
       const svg = el.chart;
       const ns = 'http://www.w3.org/2000/svg';
       svg.innerHTML = '';
 
       const minAge = series[0].age;
       const maxAge = series[series.length - 1].age;
-      const maxVal = Math.max(1, series[series.length - 1].total, rrspSeries ? rrspSeries[rrspSeries.length - 1].total : 0);
+      const maxVal = Math.max(1, series[series.length - 1].total);
       const { x, y } = chartScales(minAge, maxAge, maxVal);
       const baselineY = y(0);
 
@@ -697,89 +628,12 @@ document.addEventListener('DOMContentLoaded', () => {
       growthPath.setAttribute('fill', '#6d6650'); growthPath.setAttribute('fill-opacity', '0.85');
       svg.appendChild(growthPath);
 
-      if (rrspSeries) {
-        const rrspLine = document.createElementNS(ns, 'path');
-        rrspLine.setAttribute('d', linePath(rrspSeries.map(p => ({ x: x(p.age), y: y(p.total) }))));
-        rrspLine.setAttribute('fill', 'none'); rrspLine.setAttribute('stroke', '#232a35');
-        rrspLine.setAttribute('stroke-width', '2.5'); rrspLine.setAttribute('stroke-dasharray', '5 4');
-        svg.appendChild(rrspLine);
-      }
-
       drawChartAxis(svg, ns, baselineY);
     }
 
-    // TFSA vs. RRSP over the full age-to-95 span — accumulation then
-    // drawdown for both — with a "what if" drop annotation showing the RRSP
-    // curve taking a lump-sum tax hit wherever needAge lands on that timeline.
-    function drawComparisonChart(tfsaSeries, rrspSeries, needAge, currentAge, retireAge, atNeedBalance, atNeedTax) {
-      const svg = cmp.chart;
-      const ns = 'http://www.w3.org/2000/svg';
-      svg.innerHTML = '';
-
-      const minAge = tfsaSeries[0].age;
-      const maxAge = tfsaSeries[tfsaSeries.length - 1].age;
-      const maxVal = Math.max(1, ...tfsaSeries.map(p => p.total), ...rrspSeries.map(p => p.total));
-      const { x, y } = chartScales(minAge, maxAge, maxVal);
-      const baselineY = y(0);
-
-      drawChartGrid(svg, ns, maxVal, y);
-
-      if (retireAge > minAge && retireAge < maxAge) {
-        const { padT } = CHART_LAYOUT;
-        const retireX = x(retireAge);
-        const retireLine = document.createElementNS(ns, 'line');
-        retireLine.setAttribute('x1', retireX); retireLine.setAttribute('x2', retireX);
-        retireLine.setAttribute('y1', padT); retireLine.setAttribute('y2', baselineY);
-        retireLine.setAttribute('stroke', '#a8a294'); retireLine.setAttribute('stroke-width', '1'); retireLine.setAttribute('stroke-dasharray', '2 3');
-        svg.appendChild(retireLine);
-
-        const retireLabel = document.createElementNS(ns, 'text');
-        retireLabel.setAttribute('x', retireX + 5); retireLabel.setAttribute('y', padT + 10);
-        retireLabel.setAttribute('font-size', '10.5'); retireLabel.setAttribute('fill', '#8a8473');
-        retireLabel.textContent = 'Retire';
-        svg.appendChild(retireLabel);
-      }
-
-      const rrspLine = document.createElementNS(ns, 'path');
-      rrspLine.setAttribute('d', linePath(rrspSeries.map(p => ({ x: x(p.age), y: y(p.total) }))));
-      rrspLine.setAttribute('fill', 'none'); rrspLine.setAttribute('stroke', '#6d6650');
-      rrspLine.setAttribute('stroke-width', '2.5'); rrspLine.setAttribute('stroke-dasharray', '5 4');
-      svg.appendChild(rrspLine);
-
-      const tfsaLine = document.createElementNS(ns, 'path');
-      tfsaLine.setAttribute('d', linePath(tfsaSeries.map(p => ({ x: x(p.age), y: y(p.total) }))));
-      tfsaLine.setAttribute('fill', 'none'); tfsaLine.setAttribute('stroke', '#c1a57b');
-      tfsaLine.setAttribute('stroke-width', '3');
-      svg.appendChild(tfsaLine);
-
-      if (atNeedTax > 0) {
-        const dropX = x(needAge);
-        const topY = y(atNeedBalance);
-        const bottomY = y(Math.max(0, atNeedBalance - atNeedTax));
-
-        const dropLine = document.createElementNS(ns, 'line');
-        dropLine.setAttribute('x1', dropX); dropLine.setAttribute('x2', dropX);
-        dropLine.setAttribute('y1', topY); dropLine.setAttribute('y2', bottomY);
-        dropLine.setAttribute('stroke', '#9c4a3c'); dropLine.setAttribute('stroke-width', '2.5');
-        dropLine.setAttribute('stroke-dasharray', '4 3');
-        svg.appendChild(dropLine);
-
-        const dot = document.createElementNS(ns, 'circle');
-        dot.setAttribute('cx', dropX); dot.setAttribute('cy', bottomY); dot.setAttribute('r', '4');
-        dot.setAttribute('fill', '#9c4a3c');
-        svg.appendChild(dot);
-
-        const nearRightEdge = dropX > CHART_LAYOUT.W - CHART_LAYOUT.padR - 70;
-        const label = document.createElementNS(ns, 'text');
-        label.setAttribute('x', nearRightEdge ? dropX - 6 : dropX + 6);
-        label.setAttribute('y', (topY + bottomY) / 2);
-        label.setAttribute('text-anchor', nearRightEdge ? 'end' : 'start');
-        label.setAttribute('font-size', '11'); label.setAttribute('font-weight', '600'); label.setAttribute('fill', '#9c4a3c');
-        label.textContent = '-' + formatCompact(atNeedTax);
-        svg.appendChild(label);
-      }
-
-      drawChartAxis(svg, ns, baselineY);
+    function getContributionMode() {
+      const checked = document.querySelector('input[name="tfsa-contribution-mode"]:checked');
+      return checked ? checked.value : 'amount';
     }
 
     function recompute() {
@@ -787,64 +641,90 @@ document.addEventListener('DOMContentLoaded', () => {
       const age = Math.max(18, Math.min(150, isNaN(rawAge) ? 18 : rawAge));
       // Nobody's client has hit 150 yet, but I like to plan for every contingency.
       if (rawAge > 150) el.age.value = 150;
-      const room = Math.max(0, parseFloat(el.room.value) || 0);
-      const balance = Math.max(0, parseFloat(el.balance.value) || 0);
 
       el.retireAge.min = age + 1;
       el.retireAge.max = Math.max(85, age + 1);
       if (parseInt(el.retireAge.value, 10) <= age) el.retireAge.value = Math.min(el.retireAge.max, age + 30);
       const retireAge = parseInt(el.retireAge.value, 10);
       el.retireAgeVal.textContent = retireAge;
-
-      const maxCatchUpYears = Math.max(1, Math.min(10, retireAge - age));
-      el.years.max = maxCatchUpYears;
-      if (parseInt(el.years.value, 10) > maxCatchUpYears) el.years.value = maxCatchUpYears;
-      const catchUpYearsRequested = parseInt(el.years.value, 10);
+      if (el.summaryRetireAge) el.summaryRetireAge.textContent = retireAge;
 
       const rateAccum = parseFloat(el.rateAccum.value);
       el.rateAccumVal.textContent = rateAccum;
       const rateRetire = parseFloat(el.rateRetire.value);
       el.rateRetireVal.textContent = rateRetire;
 
-      // Step 1: how much catching up you've got to do. Hopefully less than me at the gym.
-      const schedule = buildContributionSchedule(age, retireAge, room, catchUpYearsRequested);
-      el.catchupDate.textContent = schedule.catchUpYear;
-      el.catchupAge.textContent = schedule.catchUpAge;
-      el.maintainMonthly.textContent = currency(schedule.maintainMonthlyStart);
+      // Catch an over-contribution: nobody can have contributed more than
+      // the total room that's existed since they turned 18.
+      const lifetimeRoom = lifetimeRoomForAge(age);
+      const rawContributed = Math.max(0, parseFloat(el.balance.value) || 0);
+      const isOverContributed = rawContributed > lifetimeRoom;
 
-      el.years.disabled = schedule.isAlreadyMaxed;
-      if (schedule.isAlreadyMaxed) {
-        el.monthlyNeeded.textContent = currency(schedule.maintainMonthlyStart);
-        el.headlineLabel.textContent = "You're already maxed out";
-        el.catchupLine.classList.add('hidden');
-        el.maxedLine.classList.remove('hidden');
-        el.maintainLine.classList.add('hidden');
-        el.yearsVal.textContent = 'N/A';
-        el.yearsHint.textContent = "You're already fully caught up, so there's no catch-up window needed right now.";
-      } else {
-        el.monthlyNeeded.textContent = currency(schedule.catchUpMonthly);
-        el.headlineLabel.textContent = 'You need to save';
-        el.catchupLine.classList.remove('hidden');
-        el.maxedLine.classList.add('hidden');
-        el.maintainLine.classList.remove('hidden');
-        el.yearsVal.textContent = catchUpYearsRequested;
-        el.yearsHint.textContent = "New room keeps arriving while you catch up too — the target below already accounts for it.";
+      if (el.balanceError) {
+        if (isOverContributed) {
+          el.balanceError.textContent = `That's more than the estimated ${currency(lifetimeRoom)} someone age ${age} could have contributed by now — double check the number, or your exact room in CRA My Account.`;
+          el.balanceError.classList.remove('hidden');
+          el.balance.classList.add('border-red-500');
+          el.balance.classList.remove('border-line');
+        } else {
+          el.balanceError.classList.add('hidden');
+          el.balance.classList.remove('border-red-500');
+          el.balance.classList.add('border-line');
+        }
       }
+
+      const contributed = Math.min(rawContributed, lifetimeRoom);
+      const availableRoomNow = Math.max(0, lifetimeRoom - contributed);
+      el.lifetimeRoom.textContent = currency(lifetimeRoom);
+      el.contributedEst.textContent = currency(contributed);
+
+      // The actual account value (contributions + any growth) is what
+      // compounds forward — "contributed" above is only used for the room
+      // math, since CRA tracks room off deposits, not market value.
+      const startBalance = Math.max(0, parseFloat(el.currentBalance.value) || 0);
+
+      const keepMaxedOut = getContributionMode() === 'max';
+      el.contribution.disabled = keepMaxedOut;
+      el.contribution.classList.toggle('opacity-50', keepMaxedOut);
+      const plannedMonthly = Math.max(0, parseFloat(el.contribution.value) || 0);
+
+      // Step 1: does this pace ever catch up, and does the illustration
+      // need to show it pausing this year and resuming next once the room
+      // runs out? CRA never lets anyone contribute more than the room that
+      // actually exists, so the schedule caps every year at what's real.
+      const schedule = buildContributionSchedule(age, retireAge, availableRoomNow, plannedMonthly, keepMaxedOut);
       el.increaseEstimate.textContent = Math.round(ANNUAL_INCREASE_ESTIMATE);
       renderScheduleTable(schedule.rows);
 
-      const lifetimeRoom = lifetimeRoomForAge(age);
-      const contributedEst = Math.max(0, lifetimeRoom - room);
-      const contributedPct = lifetimeRoom > 0 ? Math.round((contributedEst / lifetimeRoom) * 100) : 0;
+      if (el.contributionNote) {
+        if (schedule.pausedThisYear) {
+          const paceParts = [];
+          if (schedule.fullMonthsThisYear > 0) {
+            paceParts.push(`${schedule.fullMonthsThisYear} month${schedule.fullMonthsThisYear === 1 ? '' : 's'} at ${currency(plannedMonthly)}`);
+          }
+          if (schedule.finalPartialMonth > 0) {
+            paceParts.push(`one final payment of ${currency(schedule.finalPartialMonth)}`);
+          }
+          const paceDescription = paceParts.length ? paceParts.join(', then ') : `a single ${currency(schedule.currentYearContribution)} contribution`;
+          el.contributionNote.textContent = `That's more than you're allowed to contribute right now — only ${currency(availableRoomNow)} of room is available this year. At ${currency(plannedMonthly)}/mo, that covers ${paceDescription}, for ${currency(schedule.currentYearContribution)} total this year. We've modeled contributions resuming next year once fresh room becomes available.`;
+          el.contributionNote.classList.remove('hidden');
+        } else {
+          el.contributionNote.classList.add('hidden');
+        }
+      }
 
-      el.lifetimeRoom.textContent = currency(lifetimeRoom);
-      el.contributedEst.textContent = currency(contributedEst);
-      el.contributedPct.textContent = contributedPct;
-      el.availableDisplay.textContent = currency(room);
-      el.progressBar.style.width = Math.min(100, contributedPct) + '%';
+      if (el.catchupNote) {
+        if (keepMaxedOut) {
+          el.catchupNote.innerHTML = `You've chosen to keep your TFSA maxed out every year &mdash; each year above uses that year's full available room automatically, so there's no separate catch-up date to hit.`;
+        } else if (schedule.everCatchesUp) {
+          el.catchupNote.innerHTML = `At ${currency(plannedMonthly)}/mo, you'll be fully caught up and maxing out your TFSA by <strong class="text-white">${schedule.maxedOutCalendarYear}</strong> (age <strong class="text-white">${schedule.maxedOutAge}</strong>) &mdash; after that, CRA only adds new room each year, so you'd need to drop to roughly <strong class="text-white">${currency(schedule.reducedMonthlyAfterCatchup)}/mo</strong> to match it exactly.`;
+        } else {
+          el.catchupNote.innerHTML = `At ${currency(plannedMonthly)}/mo, you won't fully catch up on your available room before age ${retireAge} &mdash; you'd still have about <strong class="text-white">${currency(schedule.remainingBacklogAtRetirement)}</strong> of unused room left.`;
+        }
+      }
 
       // Step 2: what it could grow into. This part I like better than my own RRSP statements.
-      const series = buildProjectionSeries(age, balance, schedule.rows, rateAccum);
+      const series = buildProjectionSeries(age, startBalance, schedule.rows, rateAccum);
       const final = series[series.length - 1];
       const fvTotal = final.total;
       const fvPrincipal = final.principal;
@@ -870,95 +750,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       el.chartStartLabel.textContent = 'Age ' + age;
       el.chartEndLabel.textContent = 'Age ' + retireAge;
-
-      // RRSP-equivalent scenario: same contributions, same starting balance,
-      // same rates of return — just grossed up by reinvesting the tax
-      // refund each contribution triggers, and taxed as ordinary income on
-      // the way out instead of being tax-free.
-      const currentYear = new Date().getFullYear();
-      const income = Math.max(0, parseFloat(cmp.income.value) || 0);
-      cmp.incomeVal.textContent = currency(income);
-
-      const marginalRate = marginalRateForIncome(currentYear, income);
-      cmp.currentRate.textContent = marginalRate + '%';
-
-      const rrspRows = rrspContributionRows(schedule.rows, marginalRate);
-      const rrspSeries = buildProjectionSeries(age, balance, rrspRows, rateAccum);
-      drawChart(series, rrspSeries);
-      const rrspFinal = rrspSeries[rrspSeries.length - 1];
-      const rrspTotal = rrspFinal.total;
-      const rrspPrincipal = rrspFinal.principal;
-      const rrspContribPct = rrspTotal > 0 ? Math.round((rrspPrincipal / rrspTotal) * 100) : 0;
-      const rrspGrowthPct = 100 - rrspContribPct;
-
-      el.rrspEquivalent.textContent = currency(rrspTotal);
-      el.rrspFvContribPct.textContent = rrspContribPct;
-      el.rrspFvGrowthPct.textContent = rrspGrowthPct;
-      el.donutRrspTotal.textContent = formatCompact(rrspTotal);
-      el.donutRrspContrib.style.strokeDasharray = `${circumference}`;
-      el.donutRrspContrib.style.strokeDashoffset = `${circumference * (1 - rrspContribPct / 100)}`;
-      el.donutRrspGrowth.style.strokeDasharray = `${circumference}`;
-      el.donutRrspGrowth.style.strokeDashoffset = `${circumference * (1 - rrspGrowthPct / 100)}`;
-      el.donutRrspGrowth.style.transform = `rotate(${rrspContribPct * 3.6}deg)`;
-      el.donutRrspGrowth.style.transformOrigin = '60px 60px';
-
-      const retireYear = currentYear + (retireAge - age);
-      const rrspAnnualWithdrawal = monthlyIncomeFromBalance(rrspTotal, rateRetire, payoutYears) * 12;
-      const rrspWithdrawalTax = taxOnIncome(retireYear, rrspAnnualWithdrawal);
-      const rrspNetMonthly = Math.max(0, (rrspAnnualWithdrawal - rrspWithdrawalTax) / 12);
-      el.rrspMonthlyIncome.textContent = currency(rrspNetMonthly);
-
-      const retireMarginalRate = marginalRateForIncome(retireYear, rrspAnnualWithdrawal);
-      cmp.retireRate.textContent = retireMarginalRate + '%';
-      cmp.retireYear.textContent = retireYear;
-
-      const monthlyDiff = Math.abs(monthlyIncome - rrspNetMonthly);
-      if (monthlyDiff < 5) {
-        cmp.winnerHeadline.textContent = "It's close to a wash";
-      } else if (monthlyIncome > rrspNetMonthly) {
-        cmp.winnerHeadline.textContent = 'TFSA wins by ' + currency(monthlyDiff) + '/mo';
-      } else {
-        cmp.winnerHeadline.textContent = 'RRSP wins by ' + currency(monthlyDiff) + '/mo';
-      }
-
-      // Full lifetime picture: accumulate to retirement, then draw both
-      // accounts down at the same monthly income already shown above, all
-      // the way to age 95 — so "what if" can land anywhere in between.
-      const tfsaDecum = buildDecumulationSeries(retireAge, 95, fvTotal, rateRetire, monthlyIncome);
-      const rrspGrossMonthly = rrspAnnualWithdrawal / 12;
-      const rrspDecum = buildDecumulationSeries(retireAge, 95, rrspTotal, rateRetire, rrspGrossMonthly);
-      const tfsaLifeSeries = series.concat(tfsaDecum.slice(1));
-      const rrspLifeSeries = rrspSeries.concat(rrspDecum.slice(1));
-
-      // What if: the whole remaining RRSP balance needed as a lump sum at
-      // "needAge" — whether that's before retirement (still saving) or
-      // after (mid-drawdown) — instead of continuing as planned income.
-      cmp.needAge.min = age + 1;
-      cmp.needAge.max = 95;
-      if (parseInt(cmp.needAge.value, 10) > 95 || parseInt(cmp.needAge.value, 10) <= age) cmp.needAge.value = retireAge;
-      const needAge = parseInt(cmp.needAge.value, 10);
-      cmp.needAgeVal.textContent = needAge;
-      cmp.whatifAgeEcho.textContent = needAge;
-
-      const atNeedRrsp = rrspLifeSeries[needAge - age] ? rrspLifeSeries[needAge - age].total : 0;
-      const needYear = currentYear + (needAge - age);
-      // Before retirement, "other income" that year is projected employment
-      // income; from retirement on, it's the RRIF income already flowing —
-      // the remaining balance stacks on top of that in the year you pass.
-      const otherIncomeAtNeed = needAge <= retireAge
-        ? income * Math.pow(1 + COST_OF_LIVING_RATE, needAge - age)
-        : rrspAnnualWithdrawal;
-      const rrspLumpSumTax = taxOnIncome(needYear, otherIncomeAtNeed + atNeedRrsp) - taxOnIncome(needYear, otherIncomeAtNeed);
-      cmp.whatifRrspCost.textContent = currency(rrspLumpSumTax);
-      cmp.whatifRrspPct.textContent = atNeedRrsp > 0 ? Math.round((rrspLumpSumTax / atNeedRrsp) * 100) : 0;
-
-      cmp.chartStartLabel.textContent = 'Age ' + age;
-      cmp.chartEndLabel.textContent = 'Age 95';
-      drawComparisonChart(tfsaLifeSeries, rrspLifeSeries, needAge, age, retireAge, atNeedRrsp, rrspLumpSumTax);
+      drawChart(series);
     }
 
-    [el.age, el.room, el.balance, el.years, el.retireAge, el.rateAccum, el.rateRetire, cmp.income, cmp.needAge].forEach(input => {
+    [el.age, el.currentBalance, el.balance, el.contribution, el.retireAge, el.rateAccum, el.rateRetire].forEach(input => {
       input.addEventListener('input', recompute);
+    });
+
+    document.querySelectorAll('input[name="tfsa-contribution-mode"]').forEach(input => {
+      input.addEventListener('change', recompute);
     });
 
     // The numbers already updated themselves. This button just makes you feel better about it.
@@ -1003,25 +803,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { /* shrug */ }
       }
     }
-
-    // Beginning default for "Current TFSA balance": assume everything except
-    // today's available room has already been contributed, using the same
-    // stored TFSA-limit data as the rest of the calculator — stays correct
-    // automatically as Ethan adds new years to TFSA_ANNUAL_LIMITS.
-    const defaultAge = parseInt(el.age.value, 10);
-    const defaultRoom = parseFloat(el.room.value) || 0;
-    el.balance.value = Math.max(0, lifetimeRoomForAge(defaultAge) - defaultRoom);
-
-    // Beginning default for "Your current annual income": the Alberta
-    // average for the current year, escalated from the latest known year
-    // at the same COST_OF_LIVING_RATE used everywhere else — stays correct
-    // automatically as Ethan adds new years to AVERAGE_INCOME_BY_YEAR.
-    const incomeYears = Object.keys(AVERAGE_INCOME_BY_YEAR).map(Number).sort((a, b) => a - b);
-    const lastIncomeYear = incomeYears[incomeYears.length - 1];
-    const defaultIncomeYear = new Date().getFullYear();
-    cmp.income.value = AVERAGE_INCOME_BY_YEAR[defaultIncomeYear] != null
-      ? AVERAGE_INCOME_BY_YEAR[defaultIncomeYear]
-      : Math.round(AVERAGE_INCOME_BY_YEAR[lastIncomeYear] * Math.pow(1 + COST_OF_LIVING_RATE, defaultIncomeYear - lastIncomeYear) / 500) * 500;
 
     recompute();
     updateTfsaFaq();
@@ -1135,14 +916,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const getText = (id) => { const target = document.getElementById(id); return target ? target.textContent : ''; };
       document.getElementById('results-age').value = getVal('tfsa-age');
       document.getElementById('results-retire-age').value = getVal('tfsa-retire-age');
-      document.getElementById('results-tfsa-room').value = getVal('tfsa-room');
+      document.getElementById('results-tfsa-current-balance').value = getVal('tfsa-current-balance');
       document.getElementById('results-tfsa-balance').value = getVal('tfsa-balance');
-      document.getElementById('results-monthly-needed').value = getText('tfsa-monthly-needed');
+      const contribModeChecked = document.querySelector('input[name="tfsa-contribution-mode"]:checked');
+      document.getElementById('results-contribution-mode').value = contribModeChecked ? contribModeChecked.value : 'amount';
+      document.getElementById('results-monthly-contribution').value = getVal('tfsa-contribution');
       document.getElementById('results-fv-total').value = getText('tfsa-fv-total');
-      document.getElementById('results-rrsp-equivalent').value = getText('tfsa-rrsp-equivalent');
       document.getElementById('results-tfsa-monthly-income').value = getText('tfsa-monthly-income');
-      document.getElementById('results-rrsp-monthly-income').value = getText('tfsa-rrsp-monthly-income');
-      document.getElementById('results-winner').value = getText('cmp-winner-headline');
 
       const statusEl = document.getElementById('tfsa-consult-status');
       const body = new URLSearchParams(new FormData(tfsaConsultForm));

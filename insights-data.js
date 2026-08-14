@@ -14,6 +14,85 @@
 //   <h3 class="font-serif font-semibold text-lg text-navydeep mt-7 mb-3">...</h3>
 const INSIGHTS_POSTS = [
   {
+    slug: 'is-a-financial-advisor-worth-it',
+    title: 'Is a Financial Advisor Worth the Money?',
+    subtitle: "It's the same question as hiring a painter instead of doing it yourself",
+    category: 'Financial Planning',
+    metaDescription: "Financial advisor fees are visible, but so are a paint job's. The real question isn't whether you *can* manage your own money — it's whether you actually will, every year, for decades.",
+    keywords: 'is a financial advisor worth it, do I need a financial advisor, financial advisor fees worth it, DIY investing vs financial advisor, value of a financial advisor Canada',
+    author: 'Ethan Marchand',
+    datePublished: '2026-08-14',
+    dateModified: '2026-08-14',
+    readTime: '6 min read',
+    excerpt: "You can paint your own house. You can also manage your own money. Both are genuinely possible — the question is whether you have the time, discipline, and research habit that doing it properly actually takes.",
+    content: `
+      <p class="text-[15.5px] text-inksoft leading-relaxed mb-5">Hiring someone to manage your wealth is a lot like hiring a painter to paint your house. Nobody needs a painter — painting a house is not a mystery. Buy the right primer, tape the trim, put on two coats, and most people can get a perfectly good result. The same is true of managing your own money: nothing about a TFSA, an index fund, or a term life policy is secretly unlearnable. Both are genuinely DIY-able. The honest question was never "can I do this myself" &mdash; it's whether you actually will, correctly, every year, for the next thirty years.</p>
+
+      <h2 class="font-serif font-semibold text-2xl md:text-[26px] text-navydeep mt-10 mb-4">What painting your own house actually takes</h2>
+      <p class="text-[15.5px] text-inksoft leading-relaxed mb-5">Not just paint and a Saturday. Proper prep work &mdash; scraping, sanding, patching, priming &mdash; that takes longer than the painting itself and is the part people skip. Knowing which primer stops a stain from bleeding through. Cutting a straight line by hand instead of leaning on tape. Most DIY paint jobs that look "off" don't fail because someone chose the wrong color &mdash; they fail because of the unglamorous prep work nobody budgeted time for.</p>
+
+      <h2 class="font-serif font-semibold text-2xl md:text-[26px] text-navydeep mt-10 mb-4">What DIY investing actually takes</h2>
+      <p class="text-[15.5px] text-inksoft leading-relaxed mb-5">The equivalent "prep work" in personal finance is a lot less visible, and there's more of it than people expect going in.</p>
+      <ul class="space-y-3 mb-6">
+        <li class="flex items-start gap-3 text-[15px] text-inksoft leading-relaxed"><svg class="mt-1 flex-shrink-0 text-olive" width="14" height="11" viewBox="0 0 20 16" fill="none"><path d="M1 2 L10 14 L19 2" stroke="currentColor" stroke-width="2.4"/></svg><span><strong>Discipline in a downturn</strong> &mdash; the plan that looks great on paper has to survive the one week a year it's genuinely tested, when everything you own is down and every instinct says to do something about it.</span></li>
+        <li class="flex items-start gap-3 text-[15px] text-inksoft leading-relaxed"><svg class="mt-1 flex-shrink-0 text-olive" width="14" height="11" viewBox="0 0 20 16" fill="none"><path d="M1 2 L10 14 L19 2" stroke="currentColor" stroke-width="2.4"/></svg><span><strong>Staying current</strong> &mdash; contribution limits change every year, capital gains rules get revised, new account types get introduced. None of it is announced loudly, and missing an update can be an expensive way to find out.</span></li>
+        <li class="flex items-start gap-3 text-[15px] text-inksoft leading-relaxed"><svg class="mt-1 flex-shrink-0 text-olive" width="14" height="11" viewBox="0 0 20 16" fill="none"><path d="M1 2 L10 14 L19 2" stroke="currentColor" stroke-width="2.4"/></svg><span><strong>Coordinating the pieces</strong> &mdash; your TFSA, RRSP, insurance, and (if you're incorporated) your corporate accounts aren't separate projects. A decision in one almost always has consequences in another, and it's easy to optimize one account while quietly working against yourself in the next.</span></li>
+        <li class="flex items-start gap-3 text-[15px] text-inksoft leading-relaxed"><svg class="mt-1 flex-shrink-0 text-olive" width="14" height="11" viewBox="0 0 20 16" fill="none"><path d="M1 2 L10 14 L19 2" stroke="currentColor" stroke-width="2.4"/></svg><span><strong>Actually reviewing it</strong> &mdash; a plan built once at 30 and never revisited isn't really a plan by 50. Life changes; the portfolio and coverage built around the old version of your life usually don't change with it unless someone makes that a standing habit.</span></li>
+      </ul>
+
+      <h2 class="font-serif font-semibold text-2xl md:text-[26px] text-navydeep mt-10 mb-4">Where the analogy stops holding</h2>
+      <p class="text-[15.5px] text-inksoft leading-relaxed mb-5">A bad paint job is obvious the next morning, and it's fixable next weekend. A bad money decision usually isn't obvious for years, and by the time it is, it's often too late to fully undo. Panic-selling during a downturn, letting a policy lapse, missing that a beneficiary designation was never updated after a divorce &mdash; these mistakes are quiet. They don't announce themselves the way a streaky wall does. That's really the core difference: painting mistakes are visible and cheap to fix; money mistakes are invisible and compound for decades.</p>
+
+      <div class="bg-paperdim border-l-4 border-l-gold rounded-sm p-6 my-8">
+        <p class="font-serif font-semibold text-navydeep text-[15px] mb-1">Key takeaway</p>
+        <p class="text-[14.5px] text-inksoft leading-relaxed m-0">A lot of an advisor's actual value isn't picking better investments &mdash; it's being the person who stops you from making an emotional decision at exactly the worst moment to make one, and who's still checking the plan against your real life five, ten, and twenty years later.</p>
+      </div>
+
+      <h2 class="font-serif font-semibold text-2xl md:text-[26px] text-navydeep mt-10 mb-4">What you're actually paying for</h2>
+      <p class="text-[15.5px] text-inksoft leading-relaxed mb-5">Not a magic ability to pick winning stocks. What you're paying for is time you don't have to spend, technical knowledge that spans tax, insurance, and estate planning at once instead of in isolation, someone accountable for reviewing the plan against a life that keeps changing, and &mdash; underrated &mdash; the discipline that keeps a plan alive in practice, not just on the page it was written on.</p>
+
+      <h2 class="font-serif font-semibold text-2xl md:text-[26px] text-navydeep mt-10 mb-4">When doing it yourself genuinely makes sense</h2>
+      <p class="text-[15.5px] text-inksoft leading-relaxed mb-5">Plenty of people paint their own homes well, and plenty of people manage their own money well. It tends to come down to the same three things: you have a real, ongoing interest in the subject rather than a one-time burst of motivation; you actually have the time to keep it current, not just set it up once; and you can act calmly with your own money in a genuinely bad year, not just a hypothetical one. If all three are true, DIY is a completely legitimate choice. If one of them usually isn't, that's the gap advice is actually filling.</p>
+
+      <p class="text-[15.5px] text-inksoft leading-relaxed mb-5">Either way, it's worth being honest with yourself about which situation you're actually in &mdash; not the one you'd like to be in on your best week. If you're not sure which side of that line you're on, that's a reasonable thing to talk through before deciding either way.</p>
+    `,
+  },
+  {
+    slug: 'life-insurance-insurability-convertibility',
+    title: "Life Insurance Isn't Just a Payout — It's Also an Option You're Buying",
+    subtitle: 'Insurability and convertibility are worth more than the price tag suggests',
+    category: 'Insurance Planning',
+    metaDescription: "Comparing life insurance on price alone misses two features that often matter more: insurability, and the option to convert term coverage to permanent later without new underwriting.",
+    keywords: 'life insurance insurability, convertible term life insurance, term to permanent conversion, guaranteed insurability rider, life insurance features beyond death benefit',
+    author: 'Ethan Marchand',
+    datePublished: '2026-08-14',
+    dateModified: '2026-08-14',
+    readTime: '6 min read',
+    excerpt: "Most people compare life insurance quotes on one number: the premium for a given death benefit. That's only one of three things a good policy is actually giving you.",
+    content: `
+      <p class="text-[15.5px] text-inksoft leading-relaxed mb-5">Most people size up life insurance the same way they size up any other quote: cheapest premium for the coverage amount they need, done. That comparison only accounts for one of the three things a policy is actually giving you. The death benefit &mdash; the actual risk transfer &mdash; is the part everyone understands. The other two, insurability and convertibility, rarely show up in the comparison at all, even though they can end up mattering just as much.</p>
+
+      <h2 class="font-serif font-semibold text-2xl md:text-[26px] text-navydeep mt-10 mb-4">The part everyone compares: the risk transfer</h2>
+      <p class="text-[15.5px] text-inksoft leading-relaxed mb-5">This is the straightforward piece. You pay a premium, and if you die while the policy is in force, your beneficiaries receive the death benefit. It's real, it's the reason the policy exists, and it's the number every quote tool puts front and center &mdash; including the one on <a href="/life-insurance-quote.html" class="text-golddim underline">this site</a>. But it's also the easiest part to shop on price alone, because it's the only part a simple side-by-side comparison actually shows you.</p>
+
+      <h2 class="font-serif font-semibold text-2xl md:text-[26px] text-navydeep mt-10 mb-4">The part most people miss: insurability</h2>
+      <p class="text-[15.5px] text-inksoft leading-relaxed mb-5">Your health today is the best it's ever going to look on an insurance application. A diagnosis, a new medication, a family history that comes to light, even taking up a higher-risk hobby &mdash; any of it can move you into a higher-cost rate class, or in some cases make you effectively uninsurable for new coverage at any price. Buying coverage while you're healthy locks in your <em>ability</em> to have that coverage, independent of what happens to your health afterward.</p>
+      <p class="text-[15.5px] text-inksoft leading-relaxed mb-5">Some policies make this explicit with a <strong>guaranteed insurability rider</strong> &mdash; the right to buy additional coverage at set future dates or life events (marriage, a new child, a business loan) without new medical underwriting, regardless of what's happened to your health in the meantime. For someone young and healthy who knows their coverage needs will grow &mdash; a mortgage, a family, a growing business &mdash; that's a way to buy tomorrow's insurability at today's health, without having to buy tomorrow's full coverage amount today.</p>
+
+      <h2 class="font-serif font-semibold text-2xl md:text-[26px] text-navydeep mt-10 mb-4">The part that quietly expires: convertibility</h2>
+      <p class="text-[15.5px] text-inksoft leading-relaxed mb-5">Most term policies include a <strong>conversion privilege</strong>: the right to convert some or all of the term coverage into a permanent policy &mdash; whole life, universal life, or Term to 100 &mdash; without a new medical exam, at the health class you originally qualified for. This right isn't indefinite. It typically expires at a set age or by the end of a specific policy year, whichever comes first, and the exact cutoff varies meaningfully by insurer and product.</p>
+      <p class="text-[15.5px] text-inksoft leading-relaxed mb-5">This matters more than it looks like on a quote screen. If your health changes before that window closes, convertibility is what still lets you secure permanent coverage &mdash; the kind used for estate planning, or for the <a href="/insights/corporate-owned-life-insurance-capital-dividend-account" class="text-golddim underline">corporate insurance and Capital Dividend Account strategy</a> covered elsewhere on this site &mdash; using your health from years ago instead of your health today.</p>
+
+      <div class="bg-paperdim border-l-4 border-l-gold rounded-sm p-6 my-8">
+        <p class="font-serif font-semibold text-navydeep text-[15px] mb-1">Key takeaway</p>
+        <p class="text-[14.5px] text-inksoft leading-relaxed m-0">A policy that costs a few dollars more per month but comes with stronger insurability and convertibility terms isn't necessarily the worse deal &mdash; you're paying for an option, not just today's coverage. Like any option, its value only becomes obvious the day you need to use it, which is exactly the day it's too late to go back and buy it.</p>
+      </div>
+
+      <h2 class="font-serif font-semibold text-2xl md:text-[26px] text-navydeep mt-10 mb-4">Why this matters when you're comparing quotes</h2>
+      <p class="text-[15.5px] text-inksoft leading-relaxed mb-5">An instant quote tool is genuinely useful for seeing where pricing lands &mdash; that's exactly what <a href="/life-insurance-quote.html" class="text-golddim underline">the one on this site</a> is for. But the premium is the easiest number to compare and the least complete one. Two policies with an identical premium for an identical death benefit can have very different conversion windows, different rules about how much can be converted, and different riders available for future insurability. None of that shows up as a line item on the quote &mdash; it shows up in the contract, and it's worth asking about before assuming the cheapest option is actually the best one.</p>
+    `,
+  },
+  {
     slug: 'cra-tax-instalment-interest-2026',
     title: 'CRA Tax Instalments: What You Owe at 7%, and What They Actually Pay You',
     subtitle: "The rate CRA charges you and the rate CRA pays you aren't the same number",
