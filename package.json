@@ -5,7 +5,9 @@
   "description": "Marchand Wealth marketing site, intake form, scheduler, and TFSA calculator",
   "scripts": {
     "build:css": "tailwindcss -i ./src/tailwind.css -o ./assets/css/site.css --minify",
-    "watch:css": "tailwindcss -i ./src/tailwind.css -o ./assets/css/site.css --watch"
+    "watch:css": "tailwindcss -i ./src/tailwind.css -o ./assets/css/site.css --watch",
+    "build:insights": "node scripts/build-insights.js",
+    "build": "npm run build:css && npm run build:insights"
   },
   "devDependencies": {
     "tailwindcss": "^3.4.17"

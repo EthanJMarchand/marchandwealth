@@ -282,3 +282,7 @@ const INSIGHTS_POSTS = [
     `,
   },
 ];
+
+// No-op in the browser (no `module` global there) — lets scripts/build-insights.js
+// require() this same file from Node without a separate copy of the data.
+if (typeof module !== 'undefined' && module.exports) module.exports = INSIGHTS_POSTS;

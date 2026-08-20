@@ -85,7 +85,12 @@
       "Bash(node -e \"require\\('./insights-data.js'\\); console.log\\('parsed OK, posts:', INSIGHTS_POSTS.length\\);\")",
       "Bash(node --check insights-data.js)",
       "Bash(read -r fn)",
-      "Bash(grep -c '\\\\b__TRACKED_VAR__\\\\b' script.js)"
+      "Bash(grep -c '\\\\b__TRACKED_VAR__\\\\b' script.js)",
+      "Bash(xargs -I{} echo {})",
+      "Bash(node scripts/build-insights.js)",
+      "Bash(curl -s http://localhost:8934/insights/tfsa-underutilized-retirement-vehicle)",
+      "Bash(git stash *)",
+      "Bash(git checkout *)"
     ]
   }
 }

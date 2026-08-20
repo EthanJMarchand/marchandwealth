@@ -1,5 +1,5 @@
 [build]
-  command = "npm install && npm run build:css"
+  command = "npm install && npm run build"
   publish = "."
 
 [[redirects]]
@@ -7,6 +7,45 @@
   to = "/contact.html"
   status = 301
 
+# Netlify auto-serves e.g. contact.html at the extension-less /contact too,
+# which Google was crawling as a separate duplicate URL (still correctly
+# canonicalizing back to the .html version, but cleaner to just redirect it
+# outright). force = true is required here since a matching static file
+# (page.html) would otherwise win over a non-forced redirect.
+[[redirects]]
+  from = "/contact"
+  to = "/contact.html"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/schedule"
+  to = "/schedule.html"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/insights"
+  to = "/insights.html"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/tfsa-calculator"
+  to = "/tfsa-calculator.html"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/life-insurance-quote"
+  to = "/life-insurance-quote.html"
+  status = 301
+  force = true
+
+# Fallback only: real static files now exist at insights/<slug>.html (built
+# by scripts/build-insights.js) and take precedence over this rewrite, since
+# Netlify serves a matching static file before evaluating a non-forced
+# redirect. This just covers any slug that hasn't been built yet.
 [[redirects]]
   from = "/insights/*"
   to = "/insight.html"
