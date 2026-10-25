@@ -42,6 +42,12 @@
   status = 301
   force = true
 
+[[redirects]]
+  from = "/needs-analysis"
+  to = "/needs-analysis.html"
+  status = 301
+  force = true
+
 # Fallback only: real static files now exist at insights/<slug>.html (built
 # by scripts/build-insights.js) and take precedence over this rewrite, since
 # Netlify serves a matching static file before evaluating a non-forced

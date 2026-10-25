@@ -7,7 +7,8 @@
     "build:css": "tailwindcss -i ./src/tailwind.css -o ./assets/css/site.css --minify",
     "watch:css": "tailwindcss -i ./src/tailwind.css -o ./assets/css/site.css --watch",
     "build:insights": "node scripts/build-insights.js",
-    "build": "npm run build:css && npm run build:insights"
+    "build": "npm run build:css && npm run build:insights",
+    "test:needs-analysis": "node needs-analysis/tests/calc.test.js"
   },
   "devDependencies": {
     "tailwindcss": "^3.4.17"

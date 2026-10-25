@@ -13,6 +13,7 @@ The marketing site, contact form, meeting scheduler, and TFSA calculator for **M
 | [`index.html`](index.html) | Homepage — services, why-independent pitch, about, FAQ |
 | [`life-insurance-quote.html`](life-insurance-quote.html) | Free instant life insurance quote tool — Compulife quoter embedded in an iframe, plus SEO content and FAQ |
 | [`tfsa-calculator.html`](tfsa-calculator.html) | Free public tool: whether a planned monthly contribution catches up your TFSA room (and when), plus projected retirement balance and income |
+| [`needs-analysis.html`](needs-analysis.html) | Alberta life insurance and retirement needs worksheet. Entries stay in the browser tab |
 | [`insights.html`](insights.html) | Blog index — article cards rendered from [`insights-data.js`](insights-data.js) |
 | [`insight.html`](insight.html) | Blog post template — renders whichever post matches the URL, also from `insights-data.js` |
 | [`contact.html`](contact.html) | Contact page — advisor intro up top, detailed contact form below, submitted via Netlify Forms |
@@ -42,6 +43,11 @@ marchand-site/
 ├── contact.html              Contact page — advisor intro + contact form (Netlify Forms)
 ├── schedule.html             Meeting scheduler (Google Calendar embed)
 ├── tfsa-calculator.html        TFSA contribution & retirement calculator
+├── needs-analysis.html         Life insurance and retirement needs worksheet
+├── needs-analysis/             Worksheet JS, annual figures, and calculation tests
+│   ├── js/                     Worksheet UI and calculators (loaded by the page)
+│   ├── data/                   CPP, OAS, tax, TFSA, RRSP, inflation, probate figures
+│   └── tests/                  `node needs-analysis/tests/calc.test.js`
 ├── life-insurance-quote.html    Instant life insurance quote tool (Compulife iframe)
 ├── insights.html              Blog index (article cards)
 ├── insight.html               Blog post template (renders one post by URL)
@@ -96,6 +102,38 @@ Nothing else in the codebase needs to be touched:
 
 - The calculator, the FAQ text, and the FAQ's structured data all read from this file directly.
 - For any year you *haven't* added yet, the calculator automatically **projects** a future limit using the trailing average of the last ~10 real year-over-year increases (rounded to the nearest $500, matching how the CRA actually moves the limit) — so the tool never breaks, it just gets more accurate the more years you add.
+
+---
+
+## The needs analysis worksheet
+
+[`needs-analysis.html`](needs-analysis.html) is the Alberta life insurance and retirement needs worksheet. It is a normal page on this site, with the same header, footer, and colours as the rest of Marchand Wealth. The calculation code lives in [`needs-analysis/`](needs-analysis/) and is loaded by the page. Nothing in the worksheet is posted to a server, and nothing is written to the browser. Print the client letter and the advisor record, or copy the letter, when a copy needs to be kept.
+
+The meeting starts by choosing life insurance, disability, and critical illness, financial planning, or both. Sections that do not belong to that choice stay off the page and out of the letter. The page does not choose a product.
+
+Preview it through a local server (`python3 -m http.server` or `npx serve .`). Opening the file directly will not load the worksheet, because the browser blocks its JavaScript modules from a `file://` address.
+
+Calculation tests do not need a browser:
+
+```bash
+npm run test:needs-analysis
+```
+
+### Figures to update once a year
+
+Add a year by copying the newest block in the file. Do not change older years.
+
+| File | What to add |
+|---|---|
+| `needs-analysis/data/inflation-canada.js` | The new annual CPI percent from Statistics Canada table 18-10-0005-01. The slider starts at the 100-year average of this file. |
+| `needs-analysis/data/tfsa-contribution-limit.js` | The new annual TFSA dollar limit, and set `taxYear` to that year. |
+| `needs-analysis/data/rrsp-limits.js` | The new RRSP dollar limit. Set `contributionYear` and `nextYearDollarLimit`. |
+| `needs-analysis/data/cpp-amounts.js` | The new maximum monthly CPP at 65, YMPE, and YAMPE. |
+| `needs-analysis/data/oas-amounts.js` | The new OAS maximums and the recovery-tax threshold. |
+| `needs-analysis/data/tax-brackets.js` | Combined federal and provincial brackets for the new year, for every province and territory. |
+| `needs-analysis/data/life-expectancy.js` | The new Statistics Canada life expectancy at birth, if a new release replaces the year on file. |
+| `needs-analysis/data/probate-fees.js` | A province's schedule when the fee changes. Set `asOf`. |
+| `needs-analysis/data/planning-assumptions.js` | Only if the default planning choices should change. |
 
 ---
 
