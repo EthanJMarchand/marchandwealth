@@ -910,9 +910,10 @@ function fillList(id, rows) {
     const item = document.createElement("li");
     item.className = "flex justify-between gap-4";
     const term = document.createElement("span");
+    term.className = "min-w-0";
     term.textContent = label;
     const amount = document.createElement("span");
-    amount.className = "nums";
+    amount.className = "nums shrink-0";
     amount.textContent = value;
     item.append(term, amount);
     list.append(item);
@@ -935,7 +936,7 @@ function heading(text) {
 
 function definitionList(pairs) {
   const list = document.createElement("dl");
-  list.className = "mt-2 grid grid-cols-[minmax(8rem,1fr)_auto] gap-x-6 gap-y-1 text-sm";
+  list.className = "mt-2 grid grid-cols-[minmax(0,1fr)_auto] gap-x-6 gap-y-1 text-sm";
   for (const [termText, valueText] of pairs) {
     const term = document.createElement("dt");
     term.className = "text-inksoft";
@@ -1866,6 +1867,42 @@ function compactDollars(value) {
   return formatDollars(value);
 }
 
+function chartFrame(root) {
+  if (!window.matchMedia("(max-width: 767px)").matches) {
+    return { width: 640, height: 240, padLeft: 64, padRight: 16, padTop: 16, padBottom: 36 };
+  }
+  const measured = root.clientWidth;
+  const width = Math.max(260, Math.round(measured || 320));
+  return { width, height: 200, padLeft: 58, padRight: 8, padTop: 12, padBottom: 28 };
+}
+
+function placeChartTip(tip, box, xPx, yPx, preferredWidth) {
+  const tipWidth = Math.min(preferredWidth, Math.max(112, box.width - 8));
+  tip.style.maxWidth = `${tipWidth}px`;
+  let left = xPx + 8;
+  if (left + tipWidth > box.width - 4) left = Math.max(4, box.width - tipWidth - 4);
+  if (left < 4) left = 4;
+  tip.style.left = `${left}px`;
+  tip.style.top = `${Math.max(0, yPx)}px`;
+}
+
+function bindChartPointer(hit, svg, geometry, place, hide) {
+  const indexAt = (event) => {
+    const box = svg.getBoundingClientRect();
+    if (!box.width) return 0;
+    const x = ((event.clientX - box.left) / box.width) * geometry.width;
+    const span = geometry.width - geometry.padLeft - geometry.padRight;
+    if (!span) return 0;
+    return Math.round(((x - geometry.padLeft) / span) * (geometry.count - 1));
+  };
+  const show = (event) => place(indexAt(event));
+  hit.style.touchAction = "pan-y";
+  hit.addEventListener("pointerdown", show);
+  hit.addEventListener("pointermove", show);
+  hit.addEventListener("pointerleave", hide);
+  hit.addEventListener("pointercancel", hide);
+}
+
 function svgText(x, y, text, anchor) {
   const node = document.createElementNS("http://www.w3.org/2000/svg", "text");
   node.setAttribute("x", String(x));
@@ -1883,17 +1920,14 @@ function drawNeedChart({ root, points, usesAge, sentence, empty }) {
     root.textContent = empty;
     return;
   }
-  const width = 640;
-  const height = 240;
-  const padLeft = 64;
-  const padRight = 16;
-  const padTop = 16;
-  const padBottom = 36;
+  const { width, height, padLeft, padRight, padTop, padBottom } = chartFrame(root);
   const maxNeed = Math.max(...points.map((point) => Math.max(point.capitalNeed, point.mortgageLeft)), 1);
   const xFor = (index) => padLeft + (index / (points.length - 1)) * (width - padLeft - padRight);
   const yFor = (need) => padTop + (1 - need / maxNeed) * (height - padTop - padBottom);
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  svg.setAttribute("width", String(width));
+  svg.setAttribute("height", String(height));
   svg.setAttribute("role", "img");
   svg.setAttribute("aria-label", sentence);
   svg.classList.add("w-full", "h-64");
@@ -1958,8 +1992,7 @@ function drawNeedChart({ root, points, usesAge, sentence, empty }) {
     guideX.style.top = `${y * scaleY}px`;
     guideX.style.left = `${padLeft * scaleX}px`;
     guideX.style.width = `${(x - padLeft) * scaleX}px`;
-    tip.style.left = `${Math.min(box.width - 140, x * scaleX + 8)}px`;
-    tip.style.top = `${Math.max(0, y * scaleY - 48)}px`;
+    placeChartTip(tip, box, x * scaleX, Math.max(0, y * scaleY - 48), 156);
     tip.replaceChildren();
     const age = document.createElement("p");
     age.textContent = usesAge
@@ -1987,13 +2020,7 @@ function drawNeedChart({ root, points, usesAge, sentence, empty }) {
       tip.append(tax);
     }
   };
-  hit.addEventListener("mousemove", (event) => {
-    const box = svg.getBoundingClientRect();
-    const x = ((event.clientX - box.left) / box.width) * width;
-    const index = Math.round(((x - padLeft) / (width - padLeft - padRight)) * (points.length - 1));
-    place(index);
-  });
-  hit.addEventListener("mouseleave", () => {
+  bindChartPointer(hit, svg, { width, padLeft, padRight, count: points.length }, place, () => {
     guideY.style.opacity = "0";
     guideX.style.opacity = "0";
     tip.style.opacity = "0";
@@ -2007,17 +2034,14 @@ function drawNeedChart({ root, points, usesAge, sentence, empty }) {
 }
 
 function drawErosionChart({ root, points, sentence }) {
-  const width = 640;
-  const height = 240;
-  const padLeft = 64;
-  const padRight = 16;
-  const padTop = 16;
-  const padBottom = 36;
+  const { width, height, padLeft, padRight, padTop, padBottom } = chartFrame(root);
   const maxPower = Math.max(...points.map((point) => point.buyingPower), 1);
   const xFor = (index) => padLeft + (index / (points.length - 1)) * (width - padLeft - padRight);
   const yFor = (value) => padTop + (1 - value / maxPower) * (height - padTop - padBottom);
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  svg.setAttribute("width", String(width));
+  svg.setAttribute("height", String(height));
   svg.setAttribute("role", "img");
   svg.setAttribute("aria-label", sentence);
   svg.classList.add("w-full", "h-64");
@@ -2073,8 +2097,7 @@ function drawErosionChart({ root, points, sentence }) {
     guideX.style.top = `${y * scaleY}px`;
     guideX.style.left = `${padLeft * scaleX}px`;
     guideX.style.width = `${(x - padLeft) * scaleX}px`;
-    tip.style.left = `${Math.min(box.width - 160, x * scaleX + 8)}px`;
-    tip.style.top = `${Math.max(0, y * scaleY - 56)}px`;
+    placeChartTip(tip, box, x * scaleX, Math.max(0, y * scaleY - 56), 168);
     tip.replaceChildren();
     const age = document.createElement("p");
     age.textContent = `Age ${point.age}`;
@@ -2085,13 +2108,7 @@ function drawErosionChart({ root, points, sentence }) {
     meaning.textContent = "today's buying power";
     tip.append(age, amount, meaning);
   };
-  hit.addEventListener("mousemove", (event) => {
-    const box = svg.getBoundingClientRect();
-    const x = ((event.clientX - box.left) / box.width) * width;
-    const index = Math.round(((x - padLeft) / (width - padLeft - padRight)) * (points.length - 1));
-    place(index);
-  });
-  hit.addEventListener("mouseleave", () => {
+  bindChartPointer(hit, svg, { width, padLeft, padRight, count: points.length }, place, () => {
     guideY.style.opacity = "0";
     guideX.style.opacity = "0";
     tip.style.opacity = "0";
@@ -2368,23 +2385,20 @@ function renderWealthChart(model) {
   if (note) {
     const legacy = goal > 0 ? ` The gold line is the legacy goal of ${formatDollars(goal)}.` : "";
     const ages = hasPartner() ? ` Ages on the chart are ${personName()}'s age. The plan ends at the later death.` : "";
-    note.textContent = `The pine line is the combined TFSA, RRSP, non-registered, and other assets. Contributions run until age ${retire == null ? "retirement" : Math.round(retire)}. After that, CPP and OAS cover part of the income and the accounts withdraw the rest.${legacy} The red mark is the tax if death is at the age on the slider.${ages}`;
+    note.textContent = `The solid line is the combined TFSA, RRSP, non-registered, and other assets. Contributions run until age ${retire == null ? "retirement" : Math.round(retire)}. After that, CPP and OAS cover part of the income and the accounts withdraw the rest.${legacy} The red mark is the tax if death is at the age on the slider.${ages}`;
   }
 }
 
 function drawPortfolioChart(root, rows, model) {
-  const width = 640;
-  const height = 240;
-  const padLeft = 64;
-  const padRight = 16;
-  const padTop = 16;
-  const padBottom = 36;
+  const { width, height, padLeft, padRight, padTop, padBottom } = chartFrame(root);
   const goal = model.retirement?.legacyAtDeath || 0;
   const maxWealth = Math.max(...rows.map((row) => row.total), goal, 1);
   const xFor = (index) => padLeft + (index / (rows.length - 1)) * (width - padLeft - padRight);
   const yFor = (value) => padTop + (1 - value / maxWealth) * (height - padTop - padBottom);
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  svg.setAttribute("width", String(width));
+  svg.setAttribute("height", String(height));
   svg.setAttribute("role", "img");
   svg.setAttribute("aria-label", "Combined balance from this year to the end of the plan");
   svg.classList.add("w-full", "h-64");
@@ -2472,8 +2486,7 @@ function drawPortfolioChart(root, rows, model) {
     guideX.style.top = `${y * scaleY}px`;
     guideX.style.left = `${padLeft * scaleX}px`;
     guideX.style.width = `${(x - padLeft) * scaleX}px`;
-    tip.style.left = `${Math.min(box.width - 180, x * scaleX + 8)}px`;
-    tip.style.top = `${Math.max(0, y * scaleY - 88)}px`;
+    placeChartTip(tip, box, x * scaleX, Math.max(0, y * scaleY - 88), 188);
     tip.replaceChildren();
     const age = document.createElement("p");
     age.textContent = `Age ${Math.round(row.age)}`;
@@ -2487,13 +2500,7 @@ function drawPortfolioChart(root, rows, model) {
       tip.append(lineItem);
     }
   };
-  hit.addEventListener("mousemove", (event) => {
-    const box = svg.getBoundingClientRect();
-    const x = ((event.clientX - box.left) / box.width) * width;
-    const index = Math.round(((x - padLeft) / (width - padLeft - padRight)) * (rows.length - 1));
-    place(index);
-  });
-  hit.addEventListener("mouseleave", () => {
+  bindChartPointer(hit, svg, { width, padLeft, padRight, count: rows.length }, place, () => {
     guideY.style.opacity = "0";
     guideX.style.opacity = "0";
     tip.style.opacity = "0";
@@ -2548,9 +2555,13 @@ function renderPortfolioTable(model) {
     if (hit) tr.className = "bg-red-50";
     values.forEach((value, index) => {
       const cell = document.createElement("td");
-      cell.className = "whitespace-nowrap border-b border-line px-2 py-1 nums";
-      if (hit && index === values.length - 1) cell.className += " font-semibold text-red-700";
-      cell.textContent = value;
+      cell.className = "whitespace-nowrap border-b border-line px-2 py-1";
+      cell.dataset.label = labels[index];
+      const amount = document.createElement("span");
+      amount.className = "nums shrink-0";
+      if (hit && index === values.length - 1) amount.className += " font-semibold text-red-700";
+      amount.textContent = value;
+      cell.append(amount);
       tr.append(cell);
     });
     body.append(tr);
@@ -2575,7 +2586,7 @@ function renderEarlyDeath(model) {
     ? " The RRSP rolls to an eligible beneficiary, so it is not in this tax."
     : " The RRSP is included in full.";
   $("early-death-note").textContent = row
-    ? `If death is at age ${age}, tax on these accounts is ${formatDollars(row.deathTax)}. That year is the red row in the table. The pine line keeps going. The red mark is the balance after that tax.${rollover}`
+    ? `If death is at age ${age}, tax on these accounts is ${formatDollars(row.deathTax)}. That year is the red row in the table. The solid line keeps going. The red mark is the balance after that tax.${rollover}`
     : "";
 }
 

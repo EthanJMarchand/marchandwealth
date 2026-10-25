@@ -62,8 +62,184 @@ body.needs-worksheet .need-tip {
   opacity: 0;
   transition: left 90ms linear, top 90ms linear, opacity 120ms linear;
 }
-/* The site range rule is width: 100%. On this page the slider sits beside a number field. */
-body.needs-worksheet input[type=range] { width: auto; flex: 1 1 auto; min-width: 0; }
+/* The site range rule is width: 100%. Beside a number field the slider shares the row. */
+body.needs-worksheet input[type=range] { width: 100%; max-width: 100%; min-width: 0; }
+body.needs-worksheet .flex > input[type=range] { width: auto; flex: 1 1 auto; }
+
+/* A nowrap table or date control must not set the width of the page. */
+body.needs-worksheet {
+  overflow-wrap: break-word;
+}
+body.needs-worksheet input,
+body.needs-worksheet select,
+body.needs-worksheet textarea {
+  max-width: 100%;
+  min-width: 0;
+}
+body.needs-worksheet input[type="date"] {
+  display: block;
+  width: 100%;
+}
+body.needs-worksheet input[type="date"]::-webkit-datetime-edit,
+body.needs-worksheet input[type="date"]::-webkit-date-and-time-value {
+  min-width: 0;
+}
+body.needs-worksheet .need-chart,
+body.needs-worksheet .need-chart svg {
+  max-width: 100%;
+}
+body.needs-worksheet .need-tip {
+  max-width: min(12rem, calc(100% - 0.5rem));
+  overflow-wrap: anywhere;
+  box-sizing: border-box;
+}
+body.needs-worksheet #client-letter,
+body.needs-worksheet #advisor-record,
+body.needs-worksheet #file-copy {
+  min-width: 0;
+  max-width: 100%;
+}
+body.needs-worksheet #file-copy dl {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+body.needs-worksheet #file-copy dt,
+body.needs-worksheet #file-copy li > span:first-child {
+  min-width: 0;
+}
+
+@media (max-width: 1023px) {
+  body.needs-worksheet main > .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  body.needs-worksheet main,
+  body.needs-worksheet main > .grid,
+  body.needs-worksheet form,
+  body.needs-worksheet section,
+  body.needs-worksheet aside,
+  body.needs-worksheet article,
+  body.needs-worksheet label,
+  body.needs-worksheet .grid,
+  body.needs-worksheet .grid > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+  body.needs-worksheet #meeting-partner.person-spouse {
+    margin-left: 0;
+    margin-right: 0;
+    border-left: 1px solid #c1a57b;
+    border-right: 1px solid #c1a57b;
+    border-radius: 0.125rem;
+  }
+  body.needs-worksheet .worksheet-sticky-summary > div {
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+  body.needs-worksheet .worksheet-sticky-summary > div > div {
+    min-width: 0;
+    flex: 1 1 8.5rem;
+  }
+}
+
+@media (max-width: 767px) {
+  body.needs-worksheet input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  body.needs-worksheet select,
+  body.needs-worksheet textarea {
+    font-size: 16px;
+    min-height: 3rem;
+  }
+  body.needs-worksheet .flex.items-center > input:not([type="range"]) {
+    width: 6.75rem;
+    flex: 0 0 6.75rem;
+    max-width: 46%;
+  }
+  body.needs-worksheet input[type="checkbox"],
+  body.needs-worksheet input[type="radio"] {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex: 0 0 1.25rem;
+    margin-top: 0.15rem;
+  }
+  body.needs-worksheet label.flex {
+    align-items: flex-start;
+    min-height: 2.75rem;
+    padding-top: 0.35rem;
+    padding-bottom: 0.35rem;
+  }
+  body.needs-worksheet button {
+    min-height: 2.75rem;
+  }
+  body.needs-worksheet input[type="range"] {
+    height: 28px;
+    background: transparent;
+  }
+  body.needs-worksheet input[type="range"]::-webkit-slider-runnable-track {
+    height: 6px;
+    background: #ddd7ca;
+    border-radius: 999px;
+  }
+  body.needs-worksheet input[type="range"]::-moz-range-track {
+    height: 6px;
+    background: #ddd7ca;
+    border-radius: 999px;
+  }
+  body.needs-worksheet input[type="range"]::-webkit-slider-thumb {
+    width: 28px;
+    height: 28px;
+    margin-top: -11px;
+  }
+  body.needs-worksheet input[type="range"]::-moz-range-thumb {
+    width: 28px;
+    height: 28px;
+  }
+  body.needs-worksheet .need-chart svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  body.needs-worksheet .portfolio-scroll {
+    overflow: visible;
+  }
+  body.needs-worksheet #portfolio-table,
+  body.needs-worksheet #portfolio-table tbody,
+  body.needs-worksheet #portfolio-table tr {
+    display: block;
+    width: 100%;
+  }
+  body.needs-worksheet #portfolio-table thead {
+    display: none;
+  }
+  body.needs-worksheet #portfolio-table tr {
+    margin-bottom: 0.75rem;
+    border: 1px solid #ddd7ca;
+    border-radius: 0.125rem;
+    padding: 0.25rem 0.75rem;
+  }
+  body.needs-worksheet #portfolio-table tr.bg-red-50 {
+    border-color: #b42318;
+    background: #fdf2f2;
+  }
+  body.needs-worksheet #portfolio-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.75rem;
+    width: auto;
+    white-space: normal;
+    border-bottom: 1px solid #eeeae3;
+    padding: 0.5rem 0;
+  }
+  body.needs-worksheet #portfolio-table td::before {
+    content: attr(data-label);
+    flex: 1 1 auto;
+    min-width: 0;
+    color: #565f6c;
+    font-weight: 500;
+    text-align: left;
+  }
+  body.needs-worksheet #portfolio-table td:last-child {
+    border-bottom: 0;
+  }
+}
 
 @media print {
   body.needs-worksheet .no-print,
