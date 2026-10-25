@@ -25,3 +25,73 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: #c1a57b
 input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border-radius: 999px; background: #ddd7ca; outline: none; }
 input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #c1a57b; border: 3px solid #232a35; cursor: pointer; }
 input[type=range]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: #c1a57b; border: 3px solid #232a35; cursor: pointer; }
+
+/* Needs analysis worksheet. Scoped so print and section rules stay on this page. */
+body.needs-worksheet .nums { font-variant-numeric: tabular-nums; }
+body.needs-worksheet .figure { font-weight: 600; color: #232a35; }
+body.needs-worksheet .person-spouse {
+  background: #f7f4ee;
+  border: 1px solid #c1a57b;
+}
+body.needs-worksheet #meeting-partner.person-spouse {
+  margin-right: -1.25rem;
+  margin-left: -1.25rem;
+  border-right: 0;
+  border-left: 0;
+  border-radius: 0;
+  padding: 1.25rem 1.25rem 1.5rem;
+}
+body.needs-worksheet:not([data-scope="insurance"]):not([data-scope="both"]) .scope-insurance,
+body.needs-worksheet:not([data-scope="planning"]):not([data-scope="both"]) .scope-planning {
+  display: none !important;
+}
+body.needs-worksheet .need-chart { position: relative; }
+body.needs-worksheet .need-guide-y,
+body.needs-worksheet .need-guide-x {
+  position: absolute;
+  pointer-events: none;
+  background: #232a35;
+  opacity: 0;
+  transition: left 90ms linear, top 90ms linear, width 90ms linear, opacity 120ms linear;
+}
+body.needs-worksheet .need-guide-y { width: 1px; top: 0; }
+body.needs-worksheet .need-guide-x { height: 1px; left: 0; }
+body.needs-worksheet .need-tip {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  transition: left 90ms linear, top 90ms linear, opacity 120ms linear;
+}
+/* The site range rule is width: 100%. On this page the slider sits beside a number field. */
+body.needs-worksheet input[type=range] { width: auto; flex: 1 1 auto; min-width: 0; }
+
+@media print {
+  body.needs-worksheet .no-print,
+  body.needs-worksheet header,
+  body.needs-worksheet form,
+  body.needs-worksheet aside,
+  body.needs-worksheet footer {
+    display: none !important;
+  }
+  body.needs-worksheet { background: white !important; }
+  body.needs-worksheet #client-letter,
+  body.needs-worksheet #advisor-record {
+    border: none !important;
+    box-shadow: none !important;
+    margin-top: 0 !important;
+    padding: 0 !important;
+  }
+  body.needs-worksheet .report-break {
+    break-before: page;
+    page-break-before: always;
+  }
+  body.needs-worksheet[data-print="advisor"] #advisor-record {
+    break-before: auto !important;
+    page-break-before: auto !important;
+  }
+  body.needs-worksheet[data-print="client"] #advisor-record,
+  body.needs-worksheet[data-print="advisor"] #client-letter {
+    display: none !important;
+  }
+  body.needs-worksheet main > .grid { display: none !important; }
+}
