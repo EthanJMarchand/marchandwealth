@@ -165,8 +165,10 @@
             <label class="block text-sm font-medium">Firm
               <input id="advisor-firm" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
             </label>
-            <label class="block text-sm font-medium">Meeting date
-              <input id="meeting-date" type="date" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
+            <label class="block min-w-0 max-w-full text-sm font-medium">Meeting date
+              <span class="meeting-date-fit">
+                <input id="meeting-date" type="date" class="mt-1 w-full min-w-0 max-w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
+              </span>
             </label>
             <label class="block text-sm font-medium">Who is this worksheet for?
               <input id="client-name" value="Person 1" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
@@ -601,8 +603,8 @@
                 <input id="early-death-age" type="range" min="1" max="100" step="1" class="mt-2 w-full" />
                 <p id="early-death-note" class="mt-2 text-sm leading-6"></p>
               </div>
-              <div class="portfolio-scroll mt-4 overflow-x-auto">
-                <table id="portfolio-table" class="w-full text-left text-xs"></table>
+              <div class="portfolio-scroll mt-4 min-w-0 max-w-full overflow-x-auto">
+                <table id="portfolio-table" class="w-max min-w-full text-left text-xs"></table>
               </div>
               <p id="allocation-note" class="mt-3 text-sm leading-6"></p>
             </div>
