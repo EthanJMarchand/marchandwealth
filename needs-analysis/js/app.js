@@ -2555,13 +2555,9 @@ function renderPortfolioTable(model) {
     if (hit) tr.className = "bg-red-50";
     values.forEach((value, index) => {
       const cell = document.createElement("td");
-      cell.className = "whitespace-nowrap border-b border-line px-2 py-1";
-      cell.dataset.label = labels[index];
-      const amount = document.createElement("span");
-      amount.className = "nums shrink-0";
-      if (hit && index === values.length - 1) amount.className += " font-semibold text-red-700";
-      amount.textContent = value;
-      cell.append(amount);
+      cell.className = "whitespace-nowrap border-b border-line px-2 py-1 nums";
+      if (hit && index === values.length - 1) cell.className += " font-semibold text-red-700";
+      cell.textContent = value;
       tr.append(cell);
     });
     body.append(tr);
