@@ -324,6 +324,7 @@
             <input id="rec-tfsa-slider" type="range" min="0" max="10000" step="50" value="0" class="w-full" />
             <input id="rec-tfsa" inputmode="decimal" value="0" aria-label="Recommended TFSA contribution per month" class="w-28 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
           </div>
+          <p id="rec-tfsa-note" class="mt-2 text-sm leading-6 text-inksoft"></p>
         </div>
         <div>
           <label class="block text-sm font-medium" for="rec-rrsp-slider">RRSP, monthly</label>
@@ -331,6 +332,7 @@
             <input id="rec-rrsp-slider" type="range" min="0" max="10000" step="50" value="0" class="w-full" />
             <input id="rec-rrsp" inputmode="decimal" value="0" aria-label="Recommended RRSP contribution per month" class="w-28 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
           </div>
+          <p id="rec-rrsp-note" class="mt-2 text-sm leading-6 text-inksoft"></p>
         </div>
         <div>
           <label class="block text-sm font-medium" for="rec-nonreg-slider">Non-registered, monthly</label>
@@ -385,6 +387,20 @@
         <div id="after-spouse-life-wrap" class="hidden">
           <p class="text-xs uppercase tracking-wide text-inksoft">Spouse, still open</p>
           <p id="after-spouse-life" class="figure nums font-serif text-4xl text-navydeep">$0</p>
+        </div>
+      </div>
+      <div id="contribution-schedule-wrap" class="mt-8 hidden">
+        <h3 class="font-serif text-xl font-semibold text-navydeep">The slider is above the room</h3>
+        <p class="mt-2 text-sm leading-6 text-inksoft">What was entered is kept only while unused room remains. After that, the deposit comes down to the new room each year.</p>
+        <div class="portfolio-scroll mt-4">
+          <table id="contribution-schedule" class="text-left text-xs"></table>
+        </div>
+      </div>
+      <div class="mt-8">
+        <h3 class="font-serif text-xl font-semibold text-navydeep">Year by year</h3>
+        <p id="projection-note" class="mt-2 text-sm leading-6 text-inksoft"></p>
+        <div class="portfolio-scroll mt-4">
+          <table id="portfolio-table" class="text-left text-xs"></table>
         </div>
       </div>
     </section>

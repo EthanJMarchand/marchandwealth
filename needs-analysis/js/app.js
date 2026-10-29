@@ -13,7 +13,7 @@ import { calculateLifeNeed } from "./calc/life-need.js";
 import { formatDollars, readMoney } from "./calc/money.js";
 import { incomeYearsAtAge, projectLifeNeed } from "./calc/need-path.js";
 import { cppContributionYears, estimateCpp, estimateOas, residenceYearsFromAge } from "./calc/pensions.js";
-import { projectPortfolio } from "./calc/portfolio-path.js";
+import { describeDeposits, projectPortfolio } from "./calc/portfolio-path.js";
 import { calculateProbate } from "./calc/probate.js";
 
 const $ = (id) => document.getElementById(id);
@@ -665,6 +665,10 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
   );
   if (hasSpouse()) adviceList.append(planRow(`New life insurance, ${spouseName()}`, formatDollars(num("rec-spouse-life"))));
   advice.append(adviceList);
+  const tfsaPlan = roomNote(recommended.portfolio, num("rec-tfsa") * 12, "tfsa");
+  const rrspPlan = roomNote(recommended.portfolio, num("rec-rrsp") * 12, "rrsp");
+  if (tfsaPlan.text) advice.append(node("p", "mt-4 text-sm leading-6", tfsaPlan.text));
+  if (rrspPlan.text) advice.append(node("p", "mt-2 text-sm leading-6", rrspPlan.text));
   root.append(advice);
 
   const after = planPage("After the recommendation", "The two paths");
@@ -732,6 +736,161 @@ function compareSeries(current, recommended, earlyAge) {
   };
 }
 
+function roomNote(portfolio, annualWant, key) {
+  const name = key === "tfsa" ? "TFSA" : "RRSP";
+  const field = key === "tfsa" ? "tfsaIn" : "rrspIn";
+  const saving = (portfolio?.rows || []).filter((row) => !row.retired);
+  if (!saving.length || annualWant <= 0) return { text: "", limited: false, maxed: false };
+  const schedule = describeDeposits(portfolio.rows).accounts[key];
+  const thisYear = saving[0][field] || 0;
+  const shortNow = thisYear + 0.5 < annualWant;
+  const shortLater = saving.find((row, index) => index > 0 && (row[field] || 0) + 0.5 < annualWant);
+  if (!shortNow && !shortLater) {
+    return {
+      text: `${name} room covers ${formatDollars(annualWant)} a year through retirement.`,
+      limited: false,
+      maxed: false,
+    };
+  }
+  if (shortNow && thisYear <= 0.5) {
+    if (schedule.laterOffset <= 0) {
+      return { text: `${name} is maxed. Nothing more goes in before retirement.`, limited: true, maxed: true };
+    }
+    const fitsAgain = schedule.later + 0.5 >= annualWant;
+    const next = fitsAgain
+      ? ` In ${schedule.calendarYear} the new room covers ${formatDollars(annualWant)} again, and that contribution continues.`
+      : ` In ${schedule.calendarYear} the deposit is the new room, ${formatDollars(schedule.later)}. After that it follows each year's maximum, not the slider.`;
+    return { text: `${name} is maxed. Nothing more goes in this year.${next}`, limited: true, maxed: true };
+  }
+  if (shortNow) {
+    const next = schedule.laterOffset > 0
+      ? ` In ${schedule.calendarYear} it is ${formatDollars(schedule.later)}, and it stays at each year's maximum after that.`
+      : "";
+    return {
+      text: `${name} is maxed for this slider. Room allows ${formatDollars(thisYear)} this year, not ${formatDollars(annualWant)}.${next}`,
+      limited: true,
+      maxed: true,
+    };
+  }
+  return {
+    text: `The ${name} amount is ${formatDollars(annualWant)} a year. Room covers that through ${shortLater.calendarYear - 1}. In ${shortLater.calendarYear} the deposit comes down to ${formatDollars(shortLater[field])}, and it follows the projected maximum after that.`,
+    limited: true,
+    maxed: false,
+  };
+}
+
+function showRoomNote(id, note) {
+  const element = $(id);
+  element.textContent = note.text;
+  element.className = note.limited
+    ? "mt-2 rounded-sm border border-gold bg-paperdim px-3 py-2 text-sm leading-6 text-navydeep"
+    : "mt-2 text-sm leading-6 text-inksoft";
+}
+
+function tableCell(label, value, className) {
+  const cell = document.createElement("td");
+  cell.className = className;
+  cell.dataset.label = label;
+  const amount = document.createElement("span");
+  amount.className = "nums shrink-0";
+  amount.textContent = value;
+  cell.append(amount);
+  return cell;
+}
+
+function renderContributionSchedule(portfolio) {
+  const wrap = $("contribution-schedule-wrap");
+  const table = $("contribution-schedule");
+  const rows = (portfolio?.rows || []).filter((row) => !row.retired);
+  const tfsaWant = num("rec-tfsa") * 12;
+  const rrspWant = num("rec-rrsp") * 12;
+  const limited = rows.some((row) => (row.tfsaIn || 0) + 0.5 < tfsaWant || (row.rrspIn || 0) + 0.5 < rrspWant);
+  table.replaceChildren();
+  wrap.classList.toggle("hidden", !limited || !rows.length);
+  if (!limited || !rows.length) return;
+  const labels = ["Year", "Age", "TFSA asked", "TFSA deposited", "RRSP asked", "RRSP deposited"];
+  const head = document.createElement("thead");
+  const headRow = document.createElement("tr");
+  for (const label of labels) {
+    const cell = document.createElement("th");
+    cell.className = "whitespace-nowrap border-b border-line px-2 py-2 font-medium";
+    cell.textContent = label;
+    headRow.append(cell);
+  }
+  head.append(headRow);
+  const body = document.createElement("tbody");
+  for (const row of rows) {
+    const tr = document.createElement("tr");
+    const values = [
+      [String(row.calendarYear), false],
+      [String(Math.round(row.age)), false],
+      [formatDollars(tfsaWant), false],
+      [formatDollars(row.tfsaIn), row.tfsaIn + 0.5 < tfsaWant],
+      [formatDollars(rrspWant), false],
+      [formatDollars(row.rrspIn), row.rrspIn + 0.5 < rrspWant],
+    ];
+    values.forEach(([value, short], index) => {
+      tr.append(tableCell(labels[index], value, `whitespace-nowrap border-b border-line px-2 py-1${short ? " room-short" : ""}`));
+    });
+    body.append(tr);
+  }
+  table.append(head, body);
+}
+
+function renderProjectionTable(portfolio, earlyAge, facts) {
+  const table = $("portfolio-table");
+  const note = $("projection-note");
+  const rows = portfolio?.rows || [];
+  table.replaceChildren();
+  if (!rows.length) {
+    note.textContent = "Add an age to see the year-by-year projection.";
+    return;
+  }
+  const spouse = facts.spouse && facts.spouseAge != null;
+  const labels = ["Year", "Age"];
+  if (spouse) labels.push(`${spouseName()} age`);
+  labels.push("TFSA in", "RRSP in", "Non-reg in", "TFSA", "RRSP", "Non-reg", "Total", "CPP and OAS", "From the accounts", "Tax on withdrawal", "Tax if death");
+  const head = document.createElement("thead");
+  const headRow = document.createElement("tr");
+  for (const label of labels) {
+    const cell = document.createElement("th");
+    cell.className = "whitespace-nowrap border-b border-line px-2 py-2 text-left font-medium";
+    cell.textContent = label;
+    headRow.append(cell);
+  }
+  head.append(headRow);
+  const body = document.createElement("tbody");
+  const tfsaWant = num("rec-tfsa") * 12;
+  const rrspWant = num("rec-rrsp") * 12;
+  const startAge = rows[0].age;
+  for (const row of rows) {
+    const death = earlyAge != null && Math.round(row.age) === Math.round(earlyAge);
+    const tr = document.createElement("tr");
+    if (death) tr.className = "death-row";
+    const values = [[String(row.calendarYear), ""], [String(Math.round(row.age)), ""]];
+    if (spouse) values.push([String(Math.round(facts.spouseAge + (row.age - startAge))), ""]);
+    values.push(
+      [formatDollars(row.tfsaIn), !row.retired && row.tfsaIn + 0.5 < tfsaWant ? "room-short" : ""],
+      [formatDollars(row.rrspIn), !row.retired && row.rrspIn + 0.5 < rrspWant ? "room-short" : ""],
+      [formatDollars(row.nonRegIn), ""],
+      [formatDollars(row.tfsa), ""],
+      [formatDollars(row.rrsp), ""],
+      [formatDollars(row.nonReg), ""],
+      [formatDollars(row.total), ""],
+      [formatDollars(row.pension), ""],
+      [formatDollars(row.withdrawal), ""],
+      [formatDollars(row.tax), ""],
+      [formatDollars(row.deathTax), death ? "death-tax" : ""],
+    );
+    values.forEach(([value, extra], index) => {
+      tr.append(tableCell(labels[index], value, `whitespace-nowrap border-b border-line px-2 py-1 ${extra}`));
+    });
+    body.append(tr);
+  }
+  table.append(head, body);
+  note.textContent = "Each deposit is the slider amount or the room still available, whichever is smaller. A gold figure is below the slider because the room ran out. At retirement the deposits stop. CPP and OAS cover part of the income, and the accounts withdraw the rest. The red row is the early-death age. That tax is shown beside the balance. It is not taken off the path that continues.";
+}
+
 function labelMap(labels) {
   const map = [];
   if (!labels.length) return map;
@@ -783,6 +942,12 @@ function render() {
   const earlyAfter = placeRange("early-after", facts.age, endAge(facts.age), "earlyAfter");
   $("early-after-readout").textContent = deathLine(rowNearest(recommended.portfolio, earlyAfter));
   drawSeries($("compare-chart"), compareSeries(current.portfolio, recommended.portfolio, earlyAfter));
+  const tfsaRoom = roomNote(recommended.portfolio, num("rec-tfsa") * 12, "tfsa");
+  const rrspRoom = roomNote(recommended.portfolio, num("rec-rrsp") * 12, "rrsp");
+  showRoomNote("rec-tfsa-note", tfsaRoom);
+  showRoomNote("rec-rrsp-note", rrspRoom);
+  renderContributionSchedule(recommended.portfolio);
+  renderProjectionTable(recommended.portfolio, earlyAfter, facts);
   const still = Math.max(0, current.life.capitalNeed - num("rec-life"));
   $("after-life").textContent = formatDollars(still);
   if (current.spouseLife) {
