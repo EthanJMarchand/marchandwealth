@@ -120,7 +120,7 @@
   <div class="worksheet-sticky-summary lg:hidden">
   <div class="mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-x-4 gap-y-2 px-4 pb-3">
     <div class="min-w-0 flex-1">
-      <p class="text-xs uppercase tracking-wide text-inksoft">Life insurance need</p>
+      <p id="sticky-life-label" class="text-xs uppercase tracking-wide text-inksoft">If Client 1 dies</p>
       <p id="sticky-life" class="figure nums font-serif font-semibold text-2xl text-navydeep">$0</p>
     </div>
     <div class="min-w-0 flex-1 text-right">
@@ -138,7 +138,7 @@
     </details>
     <section id="section-1" class="rounded-sm border border-line bg-white p-5 md:p-6 shadow-sm" data-crumb="Financial plan · Section 1 · Facts">
       <h2 class="font-serif font-semibold text-2xl text-navydeep"><span class="ref-tag">Section 1</span>Facts</h2>
-      <p class="mt-2 text-sm leading-6 text-inksoft">One household. The five-year average income is what the pictures use. Last year is kept beside it.</p>
+      <p class="mt-2 text-sm leading-6 text-inksoft">One household. Each person's employment income stands on its own. Dividends stay out of that income. CPP and OAS start from it, and either figure can be replaced with the amount from CRA.</p>
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
         <label class="block text-sm font-medium">Plan date
           <input id="plan-date" type="date" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
@@ -152,12 +152,9 @@
         <label class="block text-sm font-medium">Age
           <input id="client-age" inputmode="numeric" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
         </label>
-        <label class="block text-sm font-medium">Last year's income
+        <label class="block text-sm font-medium">Employment income
           <input id="income-last" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
-        </label>
-        <label class="block text-sm font-medium">Average income, last 5 years
-          <input id="income-average" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
-          <span class="mt-1 block font-normal text-inksoft">Employment income only. Do not include dividends. This is what predicts CPP and OAS.</span>
+          <span class="mt-1 block font-normal text-inksoft">Income from work. Do not include dividends.</span>
         </label>
       </div>
 
@@ -176,12 +173,9 @@
           <label class="block text-sm font-medium">Age
             <input id="spouse-age" inputmode="numeric" class="mt-1 w-full rounded-sm border border-line bg-white px-3.5 py-2.5 text-sm" />
           </label>
-          <label class="block text-sm font-medium">Last year's income
+          <label class="block text-sm font-medium">Employment income
             <input id="spouse-income-last" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-white px-3.5 py-2.5 text-sm" autocomplete="off" />
-          </label>
-          <label class="block text-sm font-medium">Average income, last 5 years
-            <input id="spouse-income-average" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-white px-3.5 py-2.5 text-sm" autocomplete="off" />
-            <span class="mt-1 block font-normal text-inksoft">Employment income only. Do not include dividends.</span>
+            <span class="mt-1 block font-normal text-inksoft">Income from work. Do not include dividends.</span>
           </label>
         </div>
       </div>
@@ -202,8 +196,8 @@
         </label>
       </div>
 
-      <h3 id="section-2" class="mt-8 font-serif text-xl font-semibold text-navydeep" data-crumb="Financial plan · Section 2 · If Client 1 dies"><span class="ref-tag">Section 2</span><span id="section-2-title">If Client 1 dies</span></h3>
-      <p id="section-2-intro" class="mt-2 text-sm leading-6 text-inksoft">If Client 1 dies, the household keeps this share of their income for this many years. Each later year of income is higher by the inflation rate. Debts and final expenses are paid off as well.</p>
+      <h3 id="section-2" class="mt-8 font-serif text-xl font-semibold text-navydeep" data-crumb="Financial plan · Section 2 · Life insurance"><span class="ref-tag">Section 2</span>Life insurance</h3>
+      <p class="mt-2 text-sm leading-6 text-inksoft">Each person is calculated alone. Shared debts are added to both.</p>
       <div class="mt-4 max-w-xl" data-crumb="Financial plan · Section 2 · Slider 11 · Inflation">
         <label class="block text-sm font-medium" for="inflation-slider"><span class="ref-tag">Slider 11</span>Inflation, percent a year</label>
         <div class="mt-2 flex items-center gap-4">
@@ -212,15 +206,9 @@
         </div>
         <p class="mt-2 text-sm text-inksoft">The whole plan uses this rate. It starts at 2.2%. Life insurance income, retirement income, and costs rise by it each year.</p>
       </div>
+      <h3 class="mt-6 text-sm font-semibold uppercase tracking-[0.14em] text-inksoft">Shared by both deaths</h3>
+      <p class="mt-2 text-sm text-inksoft">The mortgage, other debts, final expenses, and probate are paid whichever person dies. Each person's income is calculated on its own.</p>
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
-        <label class="block text-sm font-medium"><span id="income-years-label">Years of Client 1's income to replace after death</span>
-          <input id="income-years" inputmode="numeric" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
-          <span class="mt-1 block font-normal text-inksoft">How long that income has to last. It steps down once retirement is that close.</span>
-        </label>
-        <label class="block text-sm font-medium">Percent of their income the household keeps
-          <input id="replacement-ratio" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
-          <span id="replacement-hint" class="mt-1 block font-normal text-inksoft">70 means the household keeps 70% of Client 1's income.</span>
-        </label>
         <label class="block text-sm font-medium">Mortgage to clear
           <input id="debts" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
         </label>
@@ -233,17 +221,44 @@
         <label class="block text-sm font-medium">Final expenses
           <input id="final-expenses" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
         </label>
-        <label class="block text-sm font-medium">Life insurance already in place
-          <input id="existing-coverage" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
-          <span class="mt-1 block font-normal text-inksoft">This reduces the amount still needed.</span>
-        </label>
-        <label id="spouse-coverage-wrap" class="hidden block text-sm font-medium"><span id="spouse-coverage-label">Client 2's life insurance already in place</span>
-          <input id="spouse-existing-coverage" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
-        </label>
         <label class="block text-sm font-medium">Value that goes through probate
           <input id="estate-value" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
           <span class="mt-1 block font-normal text-inksoft">The court fee is calculated on this. A TFSA, and life insurance with a named beneficiary, usually stay out.</span>
         </label>
+      </div>
+      <div id="client-death" class="mt-6 rounded-sm border border-line p-4">
+        <h3 class="font-serif text-xl font-semibold text-navydeep"><span id="section-2-title">If Client 1 dies</span></h3>
+        <p id="section-2-intro" class="mt-2 text-sm leading-6 text-inksoft">The household keeps this share of their income for this many years. Each later year of income is higher by the inflation rate.</p>
+        <div class="mt-4 grid gap-4 sm:grid-cols-2">
+          <label class="block text-sm font-medium"><span id="income-years-label">Years of Client 1's income to replace</span>
+            <input id="income-years" inputmode="numeric" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
+            <span class="mt-1 block font-normal text-inksoft">How long that income has to last. It steps down once retirement is that close.</span>
+          </label>
+          <label class="block text-sm font-medium">Percent of their income the household keeps
+            <input id="replacement-ratio" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
+            <span id="replacement-hint" class="mt-1 block font-normal text-inksoft">70 means the household keeps 70% of Client 1's income.</span>
+          </label>
+          <label class="block text-sm font-medium">Life insurance already in place
+            <input id="existing-coverage" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
+            <span class="mt-1 block font-normal text-inksoft">This reduces the amount still needed.</span>
+          </label>
+        </div>
+      </div>
+      <div id="spouse-death" class="person-spouse mt-4 hidden rounded-sm p-4">
+        <h3 class="font-serif text-xl font-semibold text-navydeep"><span id="section-2b-title">If Client 2 dies</span></h3>
+        <p id="section-2b-intro" class="mt-2 text-sm leading-6 text-inksoft">Same household debts. This box uses only Client 2's income, tax, and life insurance.</p>
+        <div class="mt-4 grid gap-4 sm:grid-cols-2">
+          <label class="block text-sm font-medium"><span id="spouse-income-years-label">Years of Client 2's income to replace</span>
+            <input id="spouse-income-years" inputmode="numeric" class="mt-1 w-full rounded-sm border border-line bg-white px-3.5 py-2.5 text-sm" />
+          </label>
+          <label class="block text-sm font-medium">Percent of their income the household keeps
+            <input id="spouse-replacement-ratio" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-white px-3.5 py-2.5 text-sm" />
+            <span id="spouse-replacement-hint" class="mt-1 block font-normal text-inksoft">70 means the household keeps 70% of Client 2's income.</span>
+          </label>
+          <label class="block text-sm font-medium"><span id="spouse-coverage-label">Client 2's life insurance already in place</span>
+            <input id="spouse-existing-coverage" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-white px-3.5 py-2.5 text-sm" autocomplete="off" />
+          </label>
+        </div>
       </div>
       <fieldset class="mt-4">
         <legend class="text-sm font-medium">Do you want the life insurance to cover taxes and probate?</legend>
@@ -264,24 +279,40 @@
         </label>
       </div>
       <h3 class="mt-6 font-serif text-xl font-semibold text-navydeep">CPP and OAS</h3>
-      <p class="mt-2 text-sm leading-6 text-inksoft">These start from the five-year average employment income, continued to retirement. Dividends are not part of that income. The amounts are a year, in today's dollars, and Slider 11 raises them after that. Type the figure from your CRA account when you have it.</p>
+      <p class="mt-2 text-sm leading-6 text-inksoft">The slider starts from last year's employment income, continued to retirement. Do not include dividends in that income. Move the slider, or type the amount from the CRA account. The figures are a year, in today's dollars. Slider 11 raises them after retirement.</p>
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
-        <label class="block text-sm font-medium"><span id="cpp-label">Client 1 CPP at 65, a year</span>
-          <input id="cpp-annual" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
-          <span id="cpp-hint" class="mt-1 block font-normal text-inksoft"></span>
-        </label>
-        <label class="block text-sm font-medium"><span id="oas-label">Client 1 OAS at 65, a year</span>
-          <input id="oas-annual" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
-          <span id="oas-hint" class="mt-1 block font-normal text-inksoft"></span>
-        </label>
-        <label id="spouse-cpp-wrap" class="hidden block text-sm font-medium"><span id="spouse-cpp-label">Client 2 CPP at 65, a year</span>
-          <input id="spouse-cpp" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
-          <span id="spouse-cpp-hint" class="mt-1 block font-normal text-inksoft"></span>
-        </label>
-        <label id="spouse-oas-wrap" class="hidden block text-sm font-medium"><span id="spouse-oas-label">Client 2 OAS at 65, a year</span>
-          <input id="spouse-oas" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
-          <span id="spouse-oas-hint" class="mt-1 block font-normal text-inksoft"></span>
-        </label>
+        <div>
+          <label class="block text-sm font-medium" for="cpp-slider"><span class="ref-tag">Slider 12</span><span id="cpp-label">Client 1 CPP at 65, a year</span></label>
+          <div class="mt-2 flex items-center gap-4">
+            <input id="cpp-slider" type="range" min="0" max="20000" step="100" value="0" class="w-full" />
+            <input id="cpp-annual" inputmode="decimal" aria-label="Client 1 CPP at 65, a year" class="w-28 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
+          </div>
+          <p id="cpp-hint" class="mt-2 text-sm text-inksoft"></p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium" for="oas-slider"><span class="ref-tag">Slider 13</span><span id="oas-label">Client 1 OAS at 65, a year</span></label>
+          <div class="mt-2 flex items-center gap-4">
+            <input id="oas-slider" type="range" min="0" max="12000" step="100" value="0" class="w-full" />
+            <input id="oas-annual" inputmode="decimal" aria-label="Client 1 OAS at 65, a year" class="w-28 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
+          </div>
+          <p id="oas-hint" class="mt-2 text-sm text-inksoft"></p>
+        </div>
+        <div id="spouse-cpp-wrap" class="hidden">
+          <label class="block text-sm font-medium" for="spouse-cpp-slider"><span class="ref-tag">Slider 14</span><span id="spouse-cpp-label">Client 2 CPP at 65, a year</span></label>
+          <div class="mt-2 flex items-center gap-4">
+            <input id="spouse-cpp-slider" type="range" min="0" max="20000" step="100" value="0" class="w-full" />
+            <input id="spouse-cpp" inputmode="decimal" aria-label="Client 2 CPP at 65, a year" class="w-28 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
+          </div>
+          <p id="spouse-cpp-hint" class="mt-2 text-sm text-inksoft"></p>
+        </div>
+        <div id="spouse-oas-wrap" class="hidden">
+          <label class="block text-sm font-medium" for="spouse-oas-slider"><span class="ref-tag">Slider 15</span><span id="spouse-oas-label">Client 2 OAS at 65, a year</span></label>
+          <div class="mt-2 flex items-center gap-4">
+            <input id="spouse-oas-slider" type="range" min="0" max="12000" step="100" value="0" class="w-full" />
+            <input id="spouse-oas" inputmode="decimal" aria-label="Client 2 OAS at 65, a year" class="w-28 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
+          </div>
+          <p id="spouse-oas-hint" class="mt-2 text-sm text-inksoft"></p>
+        </div>
       </div>
       <label id="rollover-wrap" class="mt-4 hidden flex gap-2 text-sm font-medium">
         <input id="rrsp-rollover" type="checkbox" />
@@ -412,16 +443,18 @@
 
     <section class="rounded-sm border border-line bg-white p-5 md:p-6 shadow-sm">
       <h2 id="section-5" class="font-serif font-semibold text-2xl text-navydeep" data-crumb="Financial plan · Section 5 · The path today"><span class="ref-tag">Section 5</span>The path today</h2>
-      <p class="ref-tag mt-4" data-crumb="Financial plan · Section 5 · Illustration 1 · Life insurance need">Illustration 1 · Life insurance need</p>
+      <p id="illustration-1-label" class="ref-tag mt-4" data-crumb="Financial plan · Section 5 · Illustration 1 · If Client 1 dies">Illustration 1 · If Client 1 dies</p>
       <p id="life-figure" class="figure nums font-serif text-5xl text-navydeep">$0</p>
-      <p id="life-caption" class="mt-2 text-sm leading-6 text-inksoft">Years of income after death, plus debts and final expenses.</p>
+      <p id="life-caption" class="mt-2 text-sm leading-6 text-inksoft">Years of income after death, plus the shared debts and final expenses.</p>
       <div id="need-bars" class="mt-6 space-y-3"></div>
-      <p class="ref-tag mt-6" data-crumb="Financial plan · Section 5 · Illustration 2 · Need over time">Illustration 2 · Need over time</p>
+      <p id="illustration-2-label" class="ref-tag mt-6" data-crumb="Financial plan · Section 5 · Illustration 2 · If Client 1 dies, over time">Illustration 2 · If Client 1 dies, over time</p>
       <div id="need-chart" class="need-chart mt-2"></div>
       <p class="mt-2 text-xs text-inksoft">Solid line: capital need. Dashed line: mortgage.</p>
       <div id="spouse-need-block" class="person-spouse mt-6 hidden rounded-sm p-4">
         <p id="illustration-3-label" class="ref-tag" data-crumb="Financial plan · Section 5 · Illustration 3 · If Client 2 dies">Illustration 3 · If Client 2 dies</p>
         <p id="spouse-life-figure" class="figure nums font-serif text-4xl text-navydeep">$0</p>
+        <p id="spouse-life-caption" class="mt-2 text-sm leading-6 text-inksoft"></p>
+        <div id="spouse-need-bars" class="mt-4 space-y-3"></div>
         <div id="spouse-need-chart" class="need-chart mt-4"></div>
       </div>
       <div class="mt-8">
@@ -465,19 +498,20 @@
       <p class="mt-2 text-sm leading-6 text-inksoft">Life insurance is the lump sum if they die. Disability replaces monthly income while they cannot work. Critical illness is one payment for a set number of months of income.</p>
       <div class="mt-6 space-y-5">
         <div>
-          <label class="block text-sm font-medium" for="rec-life-slider" data-crumb="Financial plan · Section 7 · Slider 5 · New life insurance"><span class="ref-tag">Slider 5</span>New life insurance</label>
+          <label class="block text-sm font-medium" for="rec-life-slider" data-crumb="Financial plan · Section 7 · Slider 5 · New life insurance"><span class="ref-tag">Slider 5</span><span id="rec-life-text">New life insurance, Client 1</span></label>
           <div class="mt-2 flex items-center gap-4">
-            <input id="rec-life-slider" type="range" min="0" max="2000000" step="1000" value="0" class="w-full" />
+            <input id="rec-life-slider" type="range" min="0" max="2000000" step="50000" value="0" class="w-full" />
             <input id="rec-life" inputmode="decimal" value="0" aria-label="New life insurance amount" class="w-28 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
           </div>
-          <p class="mt-2 text-sm text-inksoft">Starts at the illustrated life insurance need.</p>
+          <p class="mt-2 text-sm text-inksoft">Rounded to the nearest $50,000. The slider moves in $50,000 steps.</p>
         </div>
         <div id="rec-spouse-life-wrap" class="hidden">
           <label id="rec-spouse-life-label" class="block text-sm font-medium" for="rec-spouse-life-slider" data-crumb="Financial plan · Section 7 · Slider 6 · Client 2's life insurance"><span class="ref-tag">Slider 6</span><span id="rec-spouse-life-text">New life insurance, Client 2</span></label>
           <div class="mt-2 flex items-center gap-4">
-            <input id="rec-spouse-life-slider" type="range" min="0" max="2000000" step="1000" value="0" class="w-full" />
+            <input id="rec-spouse-life-slider" type="range" min="0" max="2000000" step="50000" value="0" class="w-full" />
             <input id="rec-spouse-life" inputmode="decimal" value="0" aria-label="New life insurance amount for the spouse" class="w-28 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
           </div>
+          <p class="mt-2 text-sm text-inksoft">Rounded to the nearest $50,000. The slider moves in $50,000 steps.</p>
         </div>
         <div>
           <label class="block text-sm font-medium" for="rec-disability-slider" data-crumb="Financial plan · Section 7 · Slider 7 · Disability"><span class="ref-tag">Slider 7</span>New disability benefit, monthly income to replace</label>
@@ -501,8 +535,8 @@
             <input id="ci-months-slider" type="range" min="0" max="36" step="6" value="12" class="w-full" />
             <input id="ci-months" inputmode="numeric" value="12" aria-label="Months of income the critical illness benefit covers" class="w-24 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
           </div>
-          <p class="mt-2 text-sm text-inksoft">Stops at 6, 12, 18, 24, 30, or 36 months. The lump sum is that many months of income, at the percent in the life insurance goal.</p>
-          <p class="mt-2 text-sm">Lump sum <span id="ci-amount" class="nums font-semibold">$0</span></p>
+          <p class="mt-2 text-sm text-inksoft">Stops at 6, 12, 18, 24, 30, or 36 months. Each lump sum is that many months of that person's income, at their own percent in Section 2.</p>
+          <p class="mt-2 text-sm"><span id="ci-client-label">Client 1 lump sum</span> <span id="ci-amount" class="nums font-semibold">$0</span></p>
           <p id="spouse-ci-line" class="mt-1 hidden text-sm"><span id="spouse-ci-label">Client 2 lump sum</span> <span id="spouse-ci-amount" class="nums font-semibold">$0</span></p>
         </div>
       </div>
@@ -538,7 +572,7 @@
       <p id="early-after-readout" class="mt-2 text-sm text-inksoft"></p>
       <div class="mt-6 grid gap-4 sm:grid-cols-2">
         <div>
-          <p class="text-xs uppercase tracking-wide text-inksoft">Life insurance need not covered</p>
+          <p id="after-life-label" class="text-xs uppercase tracking-wide text-inksoft">Client 1's life insurance need not covered</p>
           <p id="after-life" class="figure nums font-serif text-4xl text-navydeep">$0</p>
           <p id="after-life-note" class="mt-1 text-sm text-inksoft">Illustrated need minus the new life insurance.</p>
         </div>

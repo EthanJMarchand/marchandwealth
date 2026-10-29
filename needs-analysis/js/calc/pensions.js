@@ -24,7 +24,7 @@ export function residenceYearsFromAge(age) {
   return Math.max(0, Math.min(40, Math.floor(age - 18)));
 }
 
-// Assumes the five-year average keeps going until retirement, and contributions
+// Assumes last year's employment income keeps going until retirement, and contributions
 // stop at 65. Someone already past 65 keeps the years already earned.
 export function projectedCppYears(age, retirementAge) {
   if (Number.isFinite(age) && age > 65) return cppContributionYears(age);

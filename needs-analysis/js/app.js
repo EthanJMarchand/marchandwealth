@@ -65,9 +65,12 @@ function hasSpouse() {
   return document.querySelector('input[name="spouse"]:checked')?.value === "yes";
 }
 
-function planningIncome(lastId, averageId) {
-  const average = num(averageId);
-  return average > 0 ? average : num(lastId);
+function planningIncome(lastId) {
+  return num(lastId);
+}
+
+function roundLife(amount) {
+  return Math.round(Math.max(0, amount) / 50000) * 50000;
 }
 
 function dependantCount() {
@@ -121,13 +124,26 @@ function applyNames() {
   const client = clientName();
   const spouse = spouseName();
   setLabel("section-2-title", `If ${client} dies`);
-  $("section-2").dataset.crumb = `Financial plan · Section 2 · If ${client} dies`;
-  setLabel("section-2-intro", `If ${client} dies, the household keeps this share of their income for this many years. Each later year of income is higher by the inflation rate. Debts and final expenses are paid off as well.`);
-  setLabel("income-years-label", `Years of ${client}'s income to replace after death`);
+  setLabel("section-2b-title", `If ${spouse} dies`);
+  setLabel("section-2b-intro", `${client}'s years and percent stay in the box above. This box uses only ${spouse}'s income, years, percent, tax, and life insurance. The shared debts are added here too.`);
+  setLabel("section-2-intro", hasSpouse()
+    ? `Only ${client}'s income, years, and percent. ${spouse}'s box does not change this one. Each later year of income is higher by the inflation rate. The shared debts are added on top.`
+    : `The household keeps this share of ${client}'s income for this many years. Each later year is higher by the inflation rate.`);
+  setLabel("income-years-label", `Years of ${client}'s income to replace`);
+  setLabel("spouse-income-years-label", `Years of ${spouse}'s income to replace`);
   setLabel("replacement-hint", `70 means each year the household keeps 70% of ${client}'s income. The amount rises with Slider 11.`);
+  setLabel("spouse-replacement-hint", `70 means each year the household keeps 70% of ${spouse}'s income.`);
   setLabel("spouse-coverage-label", `${spouse}'s life insurance already in place`);
+  setLabel("illustration-1-label", `Illustration 1 · If ${client} dies`);
+  $("illustration-1-label").dataset.crumb = `Financial plan · Section 5 · Illustration 1 · If ${client} dies`;
+  setLabel("illustration-2-label", `Illustration 2 · If ${client} dies, over time`);
+  $("illustration-2-label").dataset.crumb = `Financial plan · Section 5 · Illustration 2 · If ${client} dies, over time`;
   setLabel("illustration-3-label", `Illustration 3 · If ${spouse} dies`);
   $("illustration-3-label").dataset.crumb = `Financial plan · Section 5 · Illustration 3 · If ${spouse} dies`;
+  setLabel("sticky-life-label", `If ${client} dies`);
+  setLabel("after-life-label", `${client}'s life insurance need not covered`);
+  setLabel("ci-client-label", `${client} lump sum`);
+  setLabel("rec-life-text", `New life insurance, ${client}`);
   setLabel("rec-spouse-life-text", `New life insurance, ${spouse}`);
   $("rec-spouse-life-label").dataset.crumb = `Financial plan · Section 7 · Slider 6 · ${spouse}'s life insurance`;
   setLabel("rec-spouse-disability-text", `${spouse}'s disability benefit, monthly income to replace`);
@@ -199,7 +215,9 @@ function fillDefaults() {
   $("spouse-name").value = "Client 2";
   $("dependant-count").value = "0";
   $("income-years").value = "10";
+  $("spouse-income-years").value = "10";
   $("replacement-ratio").value = String(assumptions.survivorIncomeReplacement * 100);
+  $("spouse-replacement-ratio").value = String(assumptions.survivorIncomeReplacement * 100);
   $("final-expenses").value = String(assumptions.finalExpenses);
   $("education-amount").value = String(assumptions.educationFundPerDependant);
   $("independence-age").value = String(assumptions.dependantIndependenceAge);
@@ -221,29 +239,46 @@ function fillDefaults() {
 }
 
 function placeBenefit(flag, inputId, sliderId, amount, max) {
+  const life = flag === "life" || flag === "spouseLife";
   const slider = $(sliderId);
-  const ceiling = Math.max(0, Math.ceil(max || 0));
+  const target = life ? roundLife(amount) : Math.max(0, amount || 0);
+  const ceiling = life ? Math.max(roundLife(max || 0), target, 50000) : Math.max(0, Math.ceil(max || 0));
   slider.max = String(ceiling);
-  if (!dirty[flag]) $(inputId).value = moneyOrBlank(Math.max(0, amount || 0));
-  const chosen = Math.min(ceiling, Math.max(0, num(inputId)));
+  slider.step = life ? "50000" : slider.step;
+  const input = $(inputId);
+  const focused = document.activeElement === input;
+  if (!dirty[flag]) input.value = moneyOrBlank(target);
+  const raw = Math.min(ceiling, Math.max(0, num(inputId)));
+  const chosen = life ? roundLife(raw) : raw;
+  if (life && !focused) input.value = moneyOrBlank(chosen);
   slider.value = String(Math.round(chosen));
 }
 
 function pairSlider(eventTarget) {
   const pairs = [
-    ["rec-tfsa-slider", "rec-tfsa", 10000],
-    ["rec-rrsp-slider", "rec-rrsp", 10000],
-    ["rec-nonreg-slider", "rec-nonreg", 10000],
-    ["rec-life-slider", "rec-life", 5000000],
-    ["rec-spouse-life-slider", "rec-spouse-life", 5000000],
-    ["rec-disability-slider", "rec-disability", 50000],
-    ["rec-spouse-disability-slider", "rec-spouse-disability", 50000],
-    ["ci-months-slider", "ci-months", 36],
-    ["inflation-slider", "inflation-rate", 8],
+    ["rec-tfsa-slider", "rec-tfsa", 10000, false],
+    ["rec-rrsp-slider", "rec-rrsp", 10000, false],
+    ["rec-nonreg-slider", "rec-nonreg", 10000, false],
+    ["rec-life-slider", "rec-life", 5000000, true],
+    ["rec-spouse-life-slider", "rec-spouse-life", 5000000, true],
+    ["rec-disability-slider", "rec-disability", 50000, false],
+    ["rec-spouse-disability-slider", "rec-spouse-disability", 50000, false],
+    ["ci-months-slider", "ci-months", 36, false],
+    ["inflation-slider", "inflation-rate", 8, false],
+    ["cpp-slider", "cpp-annual", 20000, false],
+    ["oas-slider", "oas-annual", 12000, false],
+    ["spouse-cpp-slider", "spouse-cpp", 20000, false],
+    ["spouse-oas-slider", "spouse-oas", 12000, false],
   ];
-  for (const [sliderId, inputId, max] of pairs) {
-    if (eventTarget.id === sliderId) $(inputId).value = eventTarget.value;
-    if (eventTarget.id === inputId) $(sliderId).value = String(Math.min(max, Math.max(0, readMoney(eventTarget.value))));
+  for (const [sliderId, inputId, max, life] of pairs) {
+    const ceiling = Number($(sliderId).max) || max;
+    if (eventTarget.id === sliderId) {
+      $(inputId).value = life ? String(roundLife(Number(eventTarget.value))) : eventTarget.value;
+    }
+    if (eventTarget.id === inputId) {
+      const raw = Math.min(ceiling, Math.max(0, readMoney(eventTarget.value)));
+      $(sliderId).value = String(life ? roundLife(raw) : raw);
+    }
   }
 }
 
@@ -258,19 +293,26 @@ function placeAmount(flag, id, amount) {
   if (!dirty[flag]) $(id).value = moneyOrBlank(amount);
 }
 
+function placePension(flag, inputId, sliderId, estimate, max) {
+  const slider = $(sliderId);
+  slider.max = String(Math.max(100, Math.round(max || 0)));
+  if (!dirty[flag]) $(inputId).value = moneyOrBlank(estimate);
+  slider.value = String(Math.min(Number(slider.max), Math.max(0, Math.round(num(inputId)))));
+}
+
 function syncPensions() {
   const retire = num("retirement-age") || 65;
-  const client = pensionEstimate(planningIncome("income-last", "income-average"), ageOf("client-age"), retire);
+  const client = pensionEstimate(planningIncome("income-last"), ageOf("client-age"), retire);
   const spouse = pensionEstimate(
-    hasSpouse() ? planningIncome("spouse-income-last", "spouse-income-average") : 0,
+    hasSpouse() ? planningIncome("spouse-income-last") : 0,
     hasSpouse() ? ageOf("spouse-age") : null,
     retire,
   );
-  placeAmount("cpp", "cpp-annual", client.cpp);
-  placeAmount("oas", "oas-annual", client.oas);
-  placeAmount("spouseCpp", "spouse-cpp", spouse.cpp);
-  placeAmount("spouseOas", "spouse-oas", spouse.oas);
-  $("cpp-hint").textContent = `Estimate ${formatDollars(client.cpp)} a year from the five-year average through retirement. Type the CRA amount to replace it.`;
+  placePension("cpp", "cpp-annual", "cpp-slider", client.cpp, maxCpp());
+  placePension("oas", "oas-annual", "oas-slider", client.oas, maxOas());
+  placePension("spouseCpp", "spouse-cpp", "spouse-cpp-slider", spouse.cpp, maxCpp());
+  placePension("spouseOas", "spouse-oas", "spouse-oas-slider", spouse.oas, maxOas());
+  $("cpp-hint").textContent = `Estimate ${formatDollars(client.cpp)} a year from last year's employment income through retirement. Not dividends. Type the CRA amount to replace it.`;
   $("oas-hint").textContent = `Estimate ${formatDollars(client.oas)} a year if residence in Canada runs from age 18 to 65. Type the CRA amount to replace it.`;
   $("spouse-cpp-hint").textContent = `Estimate ${formatDollars(spouse.cpp)} a year. Type the CRA amount to replace it.`;
   $("spouse-oas-hint").textContent = `Estimate ${formatDollars(spouse.oas)} a year. Type the CRA amount to replace it.`;
@@ -396,7 +438,7 @@ function buildPath(facts, monthly, mode) {
       })
     : null;
   const years = facts.age == null ? facts.incomeYears : incomeYearsAtAge(facts.age, facts.incomeYears, facts.retirementAge);
-  const spouseYears = facts.spouseAge == null ? facts.incomeYears : incomeYearsAtAge(facts.spouseAge, facts.incomeYears, facts.retirementAge);
+  const spouseYears = facts.spouseAge == null ? facts.spouseIncomeYears : incomeYearsAtAge(facts.spouseAge, facts.spouseIncomeYears, facts.retirementAge);
   const shared = {
     dependantAges: facts.ages,
     independenceAge: facts.independenceAge,
@@ -419,7 +461,7 @@ function buildPath(facts, monthly, mode) {
     ? calculateLifeNeed({
         ...shared,
         personalIncome: spouseIncome,
-        replacementRatio: facts.replacement,
+        replacementRatio: facts.spouseReplacement,
         years: spouseYears,
     existingLifeInsurance: facts.spouseCoverage,
     assetsAtDeath: facts.spouseTfsa,
@@ -464,7 +506,9 @@ function buildPath(facts, monthly, mode) {
     ? projectLifeNeed({
         ...pathInput,
         currentAge: facts.spouseAge,
+        incomeYearsAtStart: facts.spouseIncomeYears,
         personalIncome: spouseIncome,
+        replacementRatio: facts.spouseReplacement,
         taxAtYear: (elapsed) => includeTax ? deathTaxAtYear({
           ...deathBase,
           savingsReturn: spouseBlend,
@@ -591,8 +635,10 @@ function readFacts() {
     spouse,
     province: $("province").value || "AB",
     qcVerification: $("qc-verification").checked,
-    clientIncome: planningIncome("income-last", "income-average"),
-    spouseIncome: spouse ? planningIncome("spouse-income-last", "spouse-income-average") : 0,
+    clientIncome: planningIncome("income-last"),
+    spouseIncome: spouse ? planningIncome("spouse-income-last") : 0,
+    spouseIncomeYears: num("spouse-income-years") || num("income-years"),
+    spouseReplacement: (num("spouse-replacement-ratio") || num("replacement-ratio")) / 100,
     age: ageOf("client-age"),
     spouseAge: spouse ? ageOf("spouse-age") : null,
     ages: dependantAges(),
@@ -770,8 +816,17 @@ function drawSeries(root, { series, xLabels, aria, mark, tipAt }) {
   hit.addEventListener("pointerleave", () => { tip.style.opacity = "0"; });
 }
 
-function fillBars(life) {
-  const root = $("need-bars");
+function incomeCaption(name, life, inflation, ratio, coverage) {
+  const incomeYears = life.years;
+  const firstYear = life.annualIncomeNeed;
+  const lastYear = incomeYears > 1 ? firstYear * ((1 + inflation / 100) ** (incomeYears - 1)) : firstYear;
+  if (incomeYears > 0) {
+    return `${incomeYears} years at ${Math.round(ratio * 100)}% of ${name}'s income. Year 1 is ${formatDollars(firstYear)}. Year ${incomeYears} is ${formatDollars(lastYear)} after ${inflation}% inflation. Those years are added together, then the shared debts and final expenses. ${formatDollars(coverage)} of life insurance is already in place.`;
+  }
+  return `No years of income are left to replace. The need is the shared debts and final expenses. ${formatDollars(coverage)} of life insurance is already in place.`;
+}
+
+function fillBars(root, life) {
   root.replaceChildren();
   const parts = [
     ["Income", life.incomeCapital],
@@ -839,7 +894,7 @@ function referenceKey() {
   block.append(
     col("Sections", [
       "1 Facts",
-      "2 Life insurance goal",
+      "2 Life insurance",
       "3 Retirement",
       "4 Accounts",
       "5 The path today",
@@ -850,9 +905,9 @@ function referenceKey() {
       "10 Year by year",
     ]),
     col("Illustrations", [
-      "1 Life insurance need",
-      "2 Need over time",
-      "3 Client 2's need",
+      "1 If Client 1 dies",
+      "2 If Client 1 dies, over time",
+      "3 If Client 2 dies",
       "4 Savings if nothing changes",
       "5 The two paths",
       "6 Year by year",
@@ -870,6 +925,10 @@ function referenceKey() {
       "9 Critical illness months",
       "10 Early death, after",
       "11 Inflation",
+      "12 Client 1 CPP",
+      "13 Client 1 OAS",
+      "14 Client 2 CPP",
+      "15 Client 2 OAS",
     ]),
   );
   return block;
@@ -908,15 +967,14 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
   const rows = [
     ["Plan date", date],
     [clientName(), facts.age == null ? "Age not entered" : `Age ${facts.age}`],
-    ["Last year's income", formatDollars(num("income-last"))],
-    ["Five-year average income", formatDollars(num("income-average"))],
+    ["Employment income", formatDollars(num("income-last"))],
     ["Client 2", hasSpouse() ? spouseName() : "No"],
   ];
   if (hasSpouse()) {
     rows.push(
       [`${spouseName()} age`, facts.spouseAge == null ? "Not entered" : String(facts.spouseAge)],
-      [`${spouseName()} last year`, formatDollars(num("spouse-income-last"))],
-      [`${spouseName()} five-year average`, formatDollars(num("spouse-income-average"))],
+      [`${spouseName()} employment income`, formatDollars(num("spouse-income-last"))],
+      [`If ${spouseName()} dies, income to replace`, `${facts.spouseIncomeYears} years at ${Math.round(facts.spouseReplacement * 100)}%`],
       [`${spouseName()} CPP at 65`, `${formatDollars(facts.spouseCpp)} a year`],
       [`${spouseName()} OAS at 65`, `${formatDollars(facts.spouseOas)} a year`],
     );
@@ -944,7 +1002,7 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
     );
   }
   const markers = {
-    [`If ${clientName()} dies, income to replace`]: "Section 2 · Life insurance goal",
+    [`If ${clientName()} dies, income to replace`]: "Section 2 · Life insurance",
     "Retirement age": "Section 3 · Retirement",
     [`${clientName()} TFSA`]: "Section 4 · Accounts",
   };
@@ -956,9 +1014,9 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
   root.append(household);
 
   const insurance = planPage("Section 5 · Illustration 1", "Insurance need");
-  insurance.append(node("p", "ref-tag mt-6", "Illustration 1 · Life insurance need"));
+  insurance.append(node("p", "ref-tag mt-6", `Illustration 1 · If ${clientName()} dies`));
   insurance.append(node("p", "mt-2 font-serif text-5xl text-navydeep nums", formatDollars(current.life.capitalNeed)));
-  insurance.append(node("p", "mt-2 text-sm text-inksoft", `${clientName()} · ${facts.incomeYears} years at ${Math.round(facts.replacement * 100)}% of income after death · ${formatDollars(facts.existingCoverage)} already in place`));
+  insurance.append(node("p", "mt-2 text-sm text-inksoft", `${clientName()} · ${facts.incomeYears} years at ${Math.round(facts.replacement * 100)}% of their income · ${formatDollars(facts.existingCoverage)} already in place`));
   insurance.append(node("p", "mt-2 text-sm leading-6 text-inksoft", taxSentence(current, facts)));
   insurance.append(node("p", "ref-tag mt-8", "Illustration 2 · Need over time"));
   const chart = node("div", "need-chart mt-2");
@@ -966,7 +1024,7 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
   if (current.spouseLife) {
     insurance.append(node("p", "ref-tag mt-8", `Illustration 3 · If ${spouseName()} dies`));
     insurance.append(node("p", "mt-2 font-serif text-4xl text-navydeep nums", formatDollars(current.spouseLife.capitalNeed)));
-    insurance.append(node("p", "mt-2 text-sm text-inksoft", spouseName()));
+    insurance.append(node("p", "mt-2 text-sm text-inksoft", `${spouseName()} · ${facts.spouseIncomeYears} years at ${Math.round(facts.spouseReplacement * 100)}% of their income · ${formatDollars(facts.spouseCoverage)} already in place`));
     const spouseChart = node("div", "need-chart mt-6");
     insurance.append(spouseChart);
     drawSeries(spouseChart, seriesFromNeed(current.spouseNeedPath, `${spouseName()} insurance need`));
@@ -1000,10 +1058,11 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
   if (hasSpouse()) {
     adviceList.append(
       planRow(`Disability benefit, ${spouseName()}`, `${formatDollars(num("rec-spouse-disability"))} a month`),
-      planRow(`Critical illness, ${spouseName()}`, `${formatDollars(criticalIllnessLumpSum(facts.spouseIncome, facts.replacement, num("ci-months")))} for ${num("ci-months")} months`),
+      planRow(`Critical illness, ${spouseName()}`, `${formatDollars(criticalIllnessLumpSum(facts.spouseIncome, facts.spouseReplacement, num("ci-months")))} for ${num("ci-months")} months`),
     );
   }
   advice.append(adviceList);
+  advice.append(node("p", "mt-4 text-sm text-inksoft", "Each life insurance amount moves in $50,000 steps."));
   const tfsaPlan = accountRoomNote(recommended, "tfsa", "TFSA");
   const rrspPlan = accountRoomNote(recommended, "rrsp", "RRSP");
   if (tfsaPlan.text) advice.append(node("p", "mt-4 text-sm leading-6", tfsaPlan.text));
@@ -1300,7 +1359,7 @@ function render() {
   const spouse = hasSpouse();
   $("spouse-fields").classList.toggle("hidden", !spouse);
   $("spouse-accounts").classList.toggle("hidden", !spouse);
-  $("spouse-coverage-wrap").classList.toggle("hidden", !spouse);
+  $("spouse-death").classList.toggle("hidden", !spouse);
   $("spouse-need-block").classList.toggle("hidden", !spouse);
   $("rec-spouse-life-wrap").classList.toggle("hidden", !spouse);
   $("rec-spouse-disability-wrap").classList.toggle("hidden", !spouse);
@@ -1319,29 +1378,26 @@ function render() {
   placeBenefit("life", "rec-life", "rec-life-slider", current.life.capitalNeed, Math.max(current.life.capitalNeed, 2000000));
   if (current.spouseLife) placeBenefit("spouseLife", "rec-spouse-life", "rec-spouse-life-slider", current.spouseLife.capitalNeed, Math.max(current.spouseLife.capitalNeed, 2000000));
   const disability = disabilityMonthlyBenefit(facts.clientIncome, facts.replacement);
-  const spouseDisability = disabilityMonthlyBenefit(facts.spouseIncome, facts.replacement);
+  const spouseDisability = disabilityMonthlyBenefit(facts.spouseIncome, facts.spouseReplacement);
   placeBenefit("disability", "rec-disability", "rec-disability-slider", disability, Math.max(disability, facts.clientIncome / 12));
   placeBenefit("spouseDisability", "rec-spouse-disability", "rec-spouse-disability-slider", spouseDisability, Math.max(spouseDisability, facts.spouseIncome / 12));
   const months = Math.max(0, Math.min(36, num("ci-months")));
   $("ci-amount").textContent = formatDollars(criticalIllnessLumpSum(facts.clientIncome, facts.replacement, months));
-  $("spouse-ci-amount").textContent = formatDollars(criticalIllnessLumpSum(facts.spouseIncome, facts.replacement, months));
-  $("disability-hint").textContent = `Starts at ${Math.round(facts.replacement * 100)}% of monthly income, ${formatDollars(disability)}. Slide it to recommend a different monthly benefit.`;
-  $("spouse-disability-hint").textContent = `Starts at ${formatDollars(spouseDisability)} a month.`;
+  $("spouse-ci-amount").textContent = formatDollars(criticalIllnessLumpSum(facts.spouseIncome, facts.spouseReplacement, months));
+  $("disability-hint").textContent = `Starts at ${Math.round(facts.replacement * 100)}% of ${clientName()}'s monthly income, ${formatDollars(disability)}. Slide it to recommend a different monthly benefit.`;
+  $("spouse-disability-hint").textContent = `Starts at ${Math.round(facts.spouseReplacement * 100)}% of ${spouseName()}'s monthly income, ${formatDollars(spouseDisability)}.`;
   const recommended = buildPath(facts, { tfsa: num("rec-tfsa"), rrsp: num("rec-rrsp"), nonreg: num("rec-nonreg") }, "recommended");
 
   $("life-figure").textContent = formatDollars(current.life.capitalNeed);
   $("sticky-life").textContent = formatDollars(current.life.capitalNeed);
-  const incomeYears = current.life.years;
-  const firstYear = current.life.annualIncomeNeed;
-  const lastYear = incomeYears > 1 ? firstYear * ((1 + facts.inflation / 100) ** (incomeYears - 1)) : firstYear;
   $("tax-probate-note").textContent = taxSentence(current, facts);
-  $("life-caption").textContent = incomeYears > 0
-    ? `${incomeYears} years at ${Math.round(facts.replacement * 100)}% of ${clientName()}'s income. Year 1 is ${formatDollars(firstYear)}. Year ${incomeYears} is ${formatDollars(lastYear)} after ${facts.inflation}% inflation. The need is those years added together, plus debts and final expenses. ${formatDollars(facts.existingCoverage)} of life insurance is already in place.`
-    : `No years of income are left to replace. The need is debts and final expenses. ${formatDollars(facts.existingCoverage)} of life insurance is already in place.`;
-  fillBars(current.life);
+  $("life-caption").textContent = incomeCaption(clientName(), current.life, facts.inflation, facts.replacement, facts.existingCoverage);
+  fillBars($("need-bars"), current.life);
   drawSeries($("need-chart"), seriesFromNeed(current.needPath, `${clientName()} insurance need over time`));
   if (current.spouseLife) {
     $("spouse-life-figure").textContent = formatDollars(current.spouseLife.capitalNeed);
+    $("spouse-life-caption").textContent = incomeCaption(spouseName(), current.spouseLife, facts.inflation, facts.spouseReplacement, facts.spouseCoverage);
+    fillBars($("spouse-need-bars"), current.spouseLife);
     drawSeries($("spouse-need-chart"), seriesFromNeed(current.spouseNeedPath, `${spouseName()} insurance need over time`));
   }
 
@@ -1364,17 +1420,19 @@ function render() {
   showRoomNote("rec-rrsp-note", rrspRoom);
   renderContributionSchedule(recommended.portfolio);
   renderProjectionTable(recommended.portfolio, earlyAfter, facts);
-  const still = Math.max(0, Math.round(current.life.capitalNeed) - Math.round(num("rec-life")));
+  const roundedNeed = roundLife(current.life.capitalNeed);
+  const still = Math.max(0, roundedNeed - roundLife(num("rec-life")));
   $("after-life").textContent = formatDollars(still);
   $("after-life-note").textContent = still <= 0
-    ? "The new life insurance covers the illustrated need."
-    : "Illustrated need minus the new life insurance above.";
+    ? `The new life insurance covers the illustrated need, rounded to the nearest $50,000 (${formatDollars(roundedNeed)}).`
+    : `Illustrated need rounded to the nearest $50,000 (${formatDollars(roundedNeed)}) minus the new life insurance.`;
   if (current.spouseLife) {
-    const spouseStill = Math.max(0, Math.round(current.spouseLife.capitalNeed) - Math.round(num("rec-spouse-life")));
+    const spouseRounded = roundLife(current.spouseLife.capitalNeed);
+    const spouseStill = Math.max(0, spouseRounded - roundLife(num("rec-spouse-life")));
     $("after-spouse-life").textContent = formatDollars(spouseStill);
     $("after-spouse-life-note").textContent = spouseStill <= 0
-      ? "The spouse's new life insurance covers their illustrated need."
-      : "Illustrated need minus the spouse's new life insurance.";
+      ? `The new life insurance covers the illustrated need, rounded to the nearest $50,000 (${formatDollars(spouseRounded)}).`
+      : `Illustrated need rounded to the nearest $50,000 (${formatDollars(spouseRounded)}) minus the new life insurance.`;
   }
 
   renderPlan(facts, current, recommended, earlyNow, earlyAfter);
@@ -1386,12 +1444,10 @@ function loadSample() {
   $("client-name").value = "Alex Morgan";
   $("client-age").value = "42";
   $("income-last").value = "95000";
-  $("income-average").value = "90000";
   document.querySelector('input[name="spouse"][value="yes"]').checked = true;
   $("spouse-name").value = "Jordan Morgan";
   $("spouse-age").value = "40";
   $("spouse-income-last").value = "45000";
-  $("spouse-income-average").value = "42000";
   $("dependant-count").value = "2";
   ensureDependantInputs();
   const ages = [...document.querySelectorAll("[data-dep-age]")];
@@ -1476,17 +1532,23 @@ function init() {
     if (id === "rec-spouse-life" || id === "rec-spouse-life-slider") dirty.spouseLife = true;
     if (id === "rec-disability" || id === "rec-disability-slider") dirty.disability = true;
     if (id === "rec-spouse-disability" || id === "rec-spouse-disability-slider") dirty.spouseDisability = true;
-    if (id === "cpp-annual") dirty.cpp = true;
-    if (id === "oas-annual") dirty.oas = true;
-    if (id === "spouse-cpp") dirty.spouseCpp = true;
-    if (id === "spouse-oas") dirty.spouseOas = true;
+    if (id === "cpp-annual" || id === "cpp-slider") dirty.cpp = true;
+    if (id === "oas-annual" || id === "oas-slider") dirty.oas = true;
+    if (id === "spouse-cpp" || id === "spouse-cpp-slider") dirty.spouseCpp = true;
+    if (id === "spouse-oas" || id === "spouse-oas-slider") dirty.spouseOas = true;
     if (id === "early-now") dirty.earlyNow = true;
     if (id === "early-after") dirty.earlyAfter = true;
     pairSlider(event.target);
     render();
   });
   $("worksheet").addEventListener("change", (event) => {
-    if (event.target.type === "radio" || event.target.type === "checkbox" || event.target.tagName === "SELECT") render();
+    const id = event.target.id;
+    if (id === "rec-life" || id === "rec-spouse-life") {
+      event.target.value = moneyOrBlank(roundLife(readMoney(event.target.value)));
+      if (id === "rec-life") dirty.life = true;
+      if (id === "rec-spouse-life") dirty.spouseLife = true;
+    }
+    if (event.target.type === "radio" || event.target.type === "checkbox" || event.target.tagName === "SELECT" || id === "rec-life" || id === "rec-spouse-life") render();
   });
   $("worksheet").addEventListener("submit", (event) => event.preventDefault());
   $("print-plan").addEventListener("click", () => window.print());
