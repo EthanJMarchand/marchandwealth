@@ -618,7 +618,7 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
   }
   rows.push(
     ["Dependants", facts.ages.length ? facts.ages.join(", ") : "None"],
-    ["Income to replace", `${facts.incomeYears} years at ${Math.round(facts.replacement * 100)}%`],
+    ["If they die, income to replace", `${facts.incomeYears} years at ${Math.round(facts.replacement * 100)}% of their income`],
     ["Mortgage", formatDollars(facts.mortgage)],
     ["Other debts", formatDollars(facts.otherDebts)],
     ["Retirement age", String(facts.retirementAge)],
@@ -633,7 +633,7 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
 
   const insurance = planPage("If death comes now", "Insurance need");
   insurance.append(node("p", "mt-8 font-serif text-5xl text-navydeep nums", formatDollars(current.life.capitalNeed)));
-  insurance.append(node("p", "mt-2 text-sm text-inksoft", `${clientName()} · existing coverage ${formatDollars(facts.existingCoverage)}`));
+  insurance.append(node("p", "mt-2 text-sm text-inksoft", `${clientName()} · ${facts.incomeYears} years at ${Math.round(facts.replacement * 100)}% of income after death · ${formatDollars(facts.existingCoverage)} already in place`));
   const chart = node("div", "need-chart mt-8");
   insurance.append(chart);
   if (current.spouseLife) {
@@ -762,7 +762,7 @@ function render() {
 
   $("life-figure").textContent = formatDollars(current.life.capitalNeed);
   $("sticky-life").textContent = formatDollars(current.life.capitalNeed);
-  $("life-caption").textContent = `${clientName()} · ${formatDollars(facts.existingCoverage)} already in place`;
+  $("life-caption").textContent = `${facts.incomeYears} years at ${Math.round(facts.replacement * 100)}% of ${clientName()}'s income after death, plus debts and final expenses. ${formatDollars(facts.existingCoverage)} of life insurance is already in place.`;
   fillBars(current.life);
   drawSeries($("need-chart"), seriesFromNeed(current.needPath, `${clientName()} insurance need over time`));
   if (current.spouseLife) {

@@ -185,7 +185,7 @@
       </div>
       <div id="dependant-ages" class="mt-4 grid gap-3 sm:grid-cols-3"></div>
       <div id="dependant-extra" class="mt-4 hidden grid gap-4 sm:grid-cols-2">
-        <label class="block text-sm font-medium">Education amount, each dependant
+        <label class="block text-sm font-medium">Education amount, each dependant, if a parent dies
           <input id="education-amount" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
         </label>
         <label class="block text-sm font-medium">Age they are on their own
@@ -193,40 +193,48 @@
         </label>
       </div>
 
-      <h3 class="mt-8 font-serif text-xl font-semibold text-navydeep">Goals</h3>
+      <h3 class="mt-8 font-serif text-xl font-semibold text-navydeep">Life insurance, if this person dies</h3>
+      <p class="mt-2 text-sm leading-6 text-inksoft">The household keeps this share of their income for this many years. Debts and final expenses are paid off as well. That total is the life insurance picture below.</p>
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
-        <label class="block text-sm font-medium">Years of income to replace
+        <label class="block text-sm font-medium">Years of their income to replace after death
           <input id="income-years" inputmode="numeric" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
+          <span class="mt-1 block font-normal text-inksoft">How long that income has to last. It steps down once retirement is that close.</span>
         </label>
-        <label class="block text-sm font-medium">Percent of income to replace
+        <label class="block text-sm font-medium">Percent of their income the household keeps
           <input id="replacement-ratio" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
+          <span class="mt-1 block font-normal text-inksoft">70 means the household keeps 70% of this person's income.</span>
         </label>
-        <label class="block text-sm font-medium">Mortgage
+        <label class="block text-sm font-medium">Mortgage to clear
           <input id="debts" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
         </label>
         <label class="block text-sm font-medium">Years left on the mortgage
           <input id="mortgage-years" inputmode="numeric" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
         </label>
-        <label class="block text-sm font-medium">Other debts
+        <label class="block text-sm font-medium">Other debts to clear
           <input id="other-debts" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
         </label>
         <label class="block text-sm font-medium">Final expenses
           <input id="final-expenses" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
         </label>
-        <label class="block text-sm font-medium">Retirement age
-          <input id="retirement-age" inputmode="numeric" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
-        </label>
-        <label class="block text-sm font-medium">Retirement income, percent of income
-          <input id="retirement-replacement" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
-        </label>
         <label class="block text-sm font-medium">Life insurance already in place
           <input id="existing-coverage" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
+          <span class="mt-1 block font-normal text-inksoft">This reduces the amount still needed.</span>
         </label>
         <label id="spouse-coverage-wrap" class="hidden block text-sm font-medium">Spouse's life insurance already in place
           <input id="spouse-existing-coverage" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
         </label>
         <label class="block text-sm font-medium">Other value through the estate
           <input id="estate-value" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
+        </label>
+      </div>
+      <h3 class="mt-8 font-serif text-xl font-semibold text-navydeep">Retirement</h3>
+      <p class="mt-2 text-sm leading-6 text-inksoft">This is the income goal while they are living. It does not change the life insurance amount.</p>
+      <div class="mt-4 grid gap-4 sm:grid-cols-2">
+        <label class="block text-sm font-medium">Retirement age
+          <input id="retirement-age" inputmode="numeric" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
+        </label>
+        <label class="block text-sm font-medium">Retirement income, percent of income
+          <input id="retirement-replacement" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
         </label>
       </div>
       <label id="rollover-wrap" class="mt-4 hidden flex gap-2 text-sm font-medium">
@@ -287,8 +295,9 @@
 
     <section class="rounded-sm border border-line bg-white p-5 md:p-6 shadow-sm">
       <h2 class="font-serif font-semibold text-2xl text-navydeep">The path today</h2>
-      <p id="life-caption" class="mt-4 text-xs font-semibold uppercase tracking-[0.14em] text-inksoft">Life insurance need</p>
+      <p class="mt-4 text-xs font-semibold uppercase tracking-[0.14em] text-inksoft">Life insurance need</p>
       <p id="life-figure" class="figure nums font-serif text-5xl text-navydeep">$0</p>
+      <p id="life-caption" class="mt-2 text-sm leading-6 text-inksoft">Years of income after death, plus debts and final expenses.</p>
       <div id="need-bars" class="mt-6 space-y-3"></div>
       <div id="need-chart" class="need-chart mt-6"></div>
       <p class="mt-2 text-xs text-inksoft">Solid line: capital need. Dashed line: mortgage.</p>
