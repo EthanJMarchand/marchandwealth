@@ -1,4 +1,3 @@
-import { canadaInflation } from "../data/inflation-canada.js";
 import { cppAmounts } from "../data/cpp-amounts.js";
 import { lifeExpectancy } from "../data/life-expectancy.js";
 import { oasAmounts } from "../data/oas-amounts.js";
@@ -8,7 +7,6 @@ import { rrspLimits } from "../data/rrsp-limits.js";
 import { tfsaContributionLimit } from "../data/tfsa-contribution-limit.js";
 import { projectFutureRoom } from "./calc/contribution-room.js";
 import { deathTaxAtYear } from "./calc/death-tax.js";
-import { roundPercent, trailingAverage } from "./calc/inflation.js";
 import { calculateLifeNeed } from "./calc/life-need.js";
 import { formatDollars, readMoney } from "./calc/money.js";
 import { incomeYearsAtAge, projectLifeNeed } from "./calc/need-path.js";
@@ -18,8 +16,6 @@ import { calculateProbate } from "./calc/probate.js";
 import { criticalIllnessLumpSum, disabilityMonthlyBenefit } from "./calc/protection.js";
 
 const $ = (id) => document.getElementById(id);
-const inflationHistory = trailingAverage(canadaInflation.annualPercent, 100);
-const defaultInflation = roundPercent(inflationHistory.average);
 const planHorizonAge = Math.round(lifeExpectancy.canada[lifeExpectancy.year].both);
 
 const dirty = {
@@ -41,6 +37,11 @@ function todayISO() {
 
 function num(id) {
   return readMoney($(id).value);
+}
+
+function inflationPercent() {
+  if (!$("inflation-rate") || $("inflation-rate").value.trim() === "") return 2.2;
+  return num("inflation-rate");
 }
 
 function moneyOrBlank(amount) {
@@ -117,9 +118,9 @@ function applyNames() {
   const spouse = spouseName();
   setLabel("section-2-title", `If ${client} dies`);
   $("section-2").dataset.crumb = `Financial plan · Section 2 · If ${client} dies`;
-  setLabel("section-2-intro", `If ${client} dies, the household keeps this share of their income for this many years. Debts and final expenses are paid off as well. That total is the life insurance picture below.`);
+  setLabel("section-2-intro", `If ${client} dies, the household keeps this share of their income for this many years. Each later year of income is higher by the inflation rate. Debts and final expenses are paid off as well.`);
   setLabel("income-years-label", `Years of ${client}'s income to replace after death`);
-  setLabel("replacement-hint", `70 means the household keeps 70% of ${client}'s income.`);
+  setLabel("replacement-hint", `70 means each year the household keeps 70% of ${client}'s income. The amount rises with Slider 11.`);
   setLabel("spouse-coverage-label", `${spouse}'s life insurance already in place`);
   setLabel("illustration-3-label", `Illustration 3 · If ${spouse} dies`);
   $("illustration-3-label").dataset.crumb = `Financial plan · Section 5 · Illustration 3 · If ${spouse} dies`;
@@ -206,6 +207,8 @@ function fillDefaults() {
   $("spouse-nonreg-return").value = rate;
   $("ci-months").value = "12";
   $("ci-months-slider").value = "12";
+  $("inflation-rate").value = "2.2";
+  $("inflation-slider").value = "2.2";
   if ($("province").options.length) $("province").value = "AB";
 }
 
@@ -228,6 +231,7 @@ function pairSlider(eventTarget) {
     ["rec-disability-slider", "rec-disability", 50000],
     ["rec-spouse-disability-slider", "rec-spouse-disability", 50000],
     ["ci-months-slider", "ci-months", 36],
+    ["inflation-slider", "inflation-rate", 8],
   ];
   for (const [sliderId, inputId, max] of pairs) {
     if (eventTarget.id === sliderId) $(inputId).value = eventTarget.value;
@@ -294,7 +298,7 @@ function secondPersonDeposits(totalAnnual, firstDeposits, roomNow, newRoom) {
 }
 
 function buildPath(facts, monthly, mode) {
-  const inflation = defaultInflation;
+  const inflation = facts.inflation;
   const spouse = facts.spouse;
   const clientIncome = facts.clientIncome;
   const spouseIncome = spouse ? facts.spouseIncome : 0;
@@ -533,6 +537,7 @@ function readFacts() {
     spouseCoverage: spouse ? num("spouse-existing-coverage") : 0,
     estate: num("estate-value"),
     rollover: $("rrsp-rollover").checked,
+    inflation: inflationPercent(),
     tfsa: num("tfsa-balance"),
     tfsaMonthly: num("tfsa-monthly"),
     tfsaRoom: num("tfsa-room"),
@@ -782,6 +787,7 @@ function referenceKey() {
       "8 Client 2's disability",
       "9 Critical illness months",
       "10 Early death, after",
+      "11 Inflation",
     ]),
   );
   return block;
@@ -1212,7 +1218,12 @@ function render() {
 
   $("life-figure").textContent = formatDollars(current.life.capitalNeed);
   $("sticky-life").textContent = formatDollars(current.life.capitalNeed);
-  $("life-caption").textContent = `${facts.incomeYears} years at ${Math.round(facts.replacement * 100)}% of ${clientName()}'s income after death, plus debts and final expenses. ${formatDollars(facts.existingCoverage)} of life insurance is already in place.`;
+  const incomeYears = current.life.years;
+  const firstYear = current.life.annualIncomeNeed;
+  const lastYear = incomeYears > 1 ? firstYear * ((1 + facts.inflation / 100) ** (incomeYears - 1)) : firstYear;
+  $("life-caption").textContent = incomeYears > 0
+    ? `${incomeYears} years at ${Math.round(facts.replacement * 100)}% of ${clientName()}'s income. Year 1 is ${formatDollars(firstYear)}. Year ${incomeYears} is ${formatDollars(lastYear)} after ${facts.inflation}% inflation. The need is those years added together, plus debts and final expenses. ${formatDollars(facts.existingCoverage)} of life insurance is already in place.`
+    : `No years of income are left to replace. The need is debts and final expenses. ${formatDollars(facts.existingCoverage)} of life insurance is already in place.`;
   fillBars(current.life);
   drawSeries($("need-chart"), seriesFromNeed(current.needPath, `${clientName()} insurance need over time`));
   if (current.spouseLife) {

@@ -1,5 +1,5 @@
 import { inflate } from "./inflation.js";
-import { endOfLifeFloor } from "./life-need.js";
+import { endOfLifeFloor, inflatedIncomeCapital } from "./life-need.js";
 
 // Years of income to replace if death is at deathAge: from today until retirement,
 // or until that death if it comes before retirement.
@@ -63,7 +63,7 @@ export function lifeNeedAtYear({
     : incomeReplacementYears(age, retirementAge, deathAge);
   const annual = Math.max(0, personalIncome) * Math.max(0, replacementRatio);
   const priceRise = elapsed > 0 ? inflate(1, inflationPercent, elapsed) : 1;
-  const incomeCapital = annual * years * priceRise;
+  const incomeCapital = inflatedIncomeCapital(annual * priceRise, years, inflationPercent);
   const mortgageLeft = mortgageRemaining(mortgage, mortgageYears, elapsed);
   const plannedLeft = futureMortgageRemaining(futureMortgage, yearsUntilPurchase, amortizationYears, elapsed);
   let educationCount = dependantAges.filter((childAge) => Number.isFinite(childAge) && childAge + elapsed < independenceAge).length;

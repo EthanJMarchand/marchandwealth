@@ -11,7 +11,7 @@ import { projectFutureRoom, tfsaLimitForYear } from "../js/calc/contribution-roo
 import { deflate, inflate, purchasingPowerPath, roundPercent, trailingAverage } from "../js/calc/inflation.js";
 import { groupLimitYears, tfsaRoomEarned } from "../js/calc/tfsa-room.js";
 import { deathTaxAtYear } from "../js/calc/death-tax.js";
-import { calculateLifeNeed, endOfLifeFloor } from "../js/calc/life-need.js";
+import { calculateLifeNeed, endOfLifeFloor, inflatedIncomeCapital } from "../js/calc/life-need.js";
 import { annuityPayment, presentValue, presentValueOfAnnuity, readMoney, savingsForFutureValue } from "../js/calc/money.js";
 import { incomeReplacementYears, incomeYearsAtAge, projectLifeNeed } from "../js/calc/need-path.js";
 import { CPP_FULL_CAREER_YEARS, cppContributionYears, estimateCpp, estimateOas } from "../js/calc/pensions.js";
@@ -77,6 +77,25 @@ test("reads money typed with dollars and commas", () => {
 
 test("present value is payment times years when the rate is zero", () => {
   assert.equal(presentValueOfAnnuity(1000, 0, 10), 10000);
+});
+
+test("life insurance income rises with inflation across the years replaced", () => {
+  const rising = calculateLifeNeed({
+    personalIncome: 100000,
+    replacementRatio: 0.7,
+    years: 10,
+    dependantAges: [],
+    independenceAge: 22,
+    educationPerDependant: 0,
+    debts: 0,
+    finalExpenses: 0,
+    existingLifeInsurance: 0,
+    assetsAtDeath: 0,
+    inflationPercent: 2.2,
+  });
+  assert.equal(rising.annualIncomeNeed, 70000);
+  assert.equal(rising.incomeCapital, inflatedIncomeCapital(70000, 10, 2.2));
+  assert.ok(rising.incomeCapital > 700000);
 });
 
 test("income replacement is income times the percent times the years", () => {
@@ -699,13 +718,14 @@ test("the chart inflates living costs through the likely age at death and pays t
     assetsAtDeath: 0,
   }, 82);
   assert.equal(path.at(-1).age, 82);
-  assert.equal(path[0].incomeCapital, 1050000);
+  assert.equal(path[0].incomeCapital, inflatedIncomeCapital(70000, 15, 3));
+  assert.ok(path[0].incomeCapital > 1050000);
   assert.equal(path[0].mortgageLeft, 200000);
   assert.equal(path[0].floor, 15000);
   assert.equal(path[10].mortgageLeft, 100000);
   assert.equal(path[20].mortgageLeft, 0);
   assert.equal(path[10].years, 15);
-  assert.equal(path[10].incomeCapital, 1050000 * 1.03 ** 10);
+  assert.equal(path[10].incomeCapital, inflatedIncomeCapital(70000 * 1.03 ** 10, 15, 3));
   assert.equal(path[10].floor, 15000 * 1.03 ** 10);
   const atDeath = path.at(-1);
   assert.equal(atDeath.years, 0);
