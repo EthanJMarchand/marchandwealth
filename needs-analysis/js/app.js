@@ -10,7 +10,7 @@ import { deathTaxAtYear } from "./calc/death-tax.js";
 import { calculateLifeNeed } from "./calc/life-need.js";
 import { formatDollars, readMoney } from "./calc/money.js";
 import { incomeYearsAtAge, projectLifeNeed } from "./calc/need-path.js";
-import { cppContributionYears, estimateCpp, estimateOas, residenceYearsFromAge } from "./calc/pensions.js";
+import { estimateCpp, estimateOas, projectedCppYears, projectedOasYears } from "./calc/pensions.js";
 import { depositsOverYears, describeDeposits, projectPortfolio } from "./calc/portfolio-path.js";
 import { calculateProbate } from "./calc/probate.js";
 import { criticalIllnessLumpSum, disabilityMonthlyBenefit } from "./calc/protection.js";
@@ -26,6 +26,10 @@ const dirty = {
   spouseLife: false,
   disability: false,
   spouseDisability: false,
+  cpp: false,
+  oas: false,
+  spouseCpp: false,
+  spouseOas: false,
   earlyNow: false,
   earlyAfter: false,
 };
@@ -132,6 +136,10 @@ function applyNames() {
   setLabel("after-spouse-life-label", `${spouse}'s life insurance need not covered`);
   setLabel("client-accounts-heading", client);
   setLabel("spouse-accounts-heading", spouse);
+  setLabel("cpp-label", `${client} CPP at 65, a year`);
+  setLabel("oas-label", `${client} OAS at 65, a year`);
+  setLabel("spouse-cpp-label", `${spouse} CPP at 65, a year`);
+  setLabel("spouse-oas-label", `${spouse} OAS at 65, a year`);
 }
 
 function dependantAges() {
@@ -237,6 +245,35 @@ function pairSlider(eventTarget) {
     if (eventTarget.id === sliderId) $(inputId).value = eventTarget.value;
     if (eventTarget.id === inputId) $(sliderId).value = String(Math.min(max, Math.max(0, readMoney(eventTarget.value))));
   }
+}
+
+function pensionEstimate(income, age, retirementAge) {
+  return {
+    cpp: estimateCpp(income, cppAmounts.ympe, maxCpp(), projectedCppYears(age, retirementAge)),
+    oas: estimateOas(projectedOasYears(age, retirementAge), maxOas()),
+  };
+}
+
+function placeAmount(flag, id, amount) {
+  if (!dirty[flag]) $(id).value = moneyOrBlank(amount);
+}
+
+function syncPensions() {
+  const retire = num("retirement-age") || 65;
+  const client = pensionEstimate(planningIncome("income-last", "income-average"), ageOf("client-age"), retire);
+  const spouse = pensionEstimate(
+    hasSpouse() ? planningIncome("spouse-income-last", "spouse-income-average") : 0,
+    hasSpouse() ? ageOf("spouse-age") : null,
+    retire,
+  );
+  placeAmount("cpp", "cpp-annual", client.cpp);
+  placeAmount("oas", "oas-annual", client.oas);
+  placeAmount("spouseCpp", "spouse-cpp", spouse.cpp);
+  placeAmount("spouseOas", "spouse-oas", spouse.oas);
+  $("cpp-hint").textContent = `Estimate ${formatDollars(client.cpp)} a year from the five-year average through retirement. Type the CRA amount to replace it.`;
+  $("oas-hint").textContent = `Estimate ${formatDollars(client.oas)} a year if residence in Canada runs from age 18 to 65. Type the CRA amount to replace it.`;
+  $("spouse-cpp-hint").textContent = `Estimate ${formatDollars(spouse.cpp)} a year. Type the CRA amount to replace it.`;
+  $("spouse-oas-hint").textContent = `Estimate ${formatDollars(spouse.oas)} a year. Type the CRA amount to replace it.`;
 }
 
 function syncRecommendations() {
@@ -461,10 +498,10 @@ function buildPath(facts, monthly, mode) {
       rrspLimitsByYear: rrspLimits.dollarLimits,
       rrspPercent: rrspLimits.earnedIncomePercent,
     });
-    const cpp = estimateCpp(clientIncome, cppAmounts.ympe, maxCpp(), cppContributionYears(facts.age));
-    const oas = estimateOas(residenceYearsFromAge(facts.age), maxOas());
-    const spouseCpp = spouse ? estimateCpp(spouseIncome, cppAmounts.ympe, maxCpp(), cppContributionYears(facts.spouseAge)) : 0;
-    const spouseOas = spouse ? estimateOas(residenceYearsFromAge(facts.spouseAge), maxOas()) : 0;
+    const cpp = facts.cpp;
+    const oas = facts.oas;
+    const spouseCpp = spouse ? facts.spouseCpp : 0;
+    const spouseOas = spouse ? facts.spouseOas : 0;
     const desired = (clientIncome + spouseIncome) * facts.retirementReplacement;
     const clientTfsaNew = room.years.map((year) => year.clientTfsa || 0);
     const spouseTfsaNew = room.years.map((year) => year.partnerTfsa || 0);
@@ -575,6 +612,10 @@ function readFacts() {
     coverTax: document.querySelector('input[name="cover-tax"]:checked')?.value !== "no",
     rollover: $("rrsp-rollover").checked,
     inflation: inflationPercent(),
+    cpp: num("cpp-annual"),
+    oas: num("oas-annual"),
+    spouseCpp: spouse ? num("spouse-cpp") : 0,
+    spouseOas: spouse ? num("spouse-oas") : 0,
     tfsa: num("tfsa-balance"),
     tfsaMonthly: num("tfsa-monthly"),
     tfsaRoom: num("tfsa-room"),
@@ -876,6 +917,8 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
       [`${spouseName()} age`, facts.spouseAge == null ? "Not entered" : String(facts.spouseAge)],
       [`${spouseName()} last year`, formatDollars(num("spouse-income-last"))],
       [`${spouseName()} five-year average`, formatDollars(num("spouse-income-average"))],
+      [`${spouseName()} CPP at 65`, `${formatDollars(facts.spouseCpp)} a year`],
+      [`${spouseName()} OAS at 65`, `${formatDollars(facts.spouseOas)} a year`],
     );
   }
   rows.push(
@@ -885,6 +928,8 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
     ["Other debts", formatDollars(facts.otherDebts)],
     ["Retirement age", String(facts.retirementAge)],
     ["Retirement income", `${Math.round(facts.retirementReplacement * 100)}% of income`],
+    [`${clientName()} CPP at 65`, `${formatDollars(facts.cpp)} a year`],
+    [`${clientName()} OAS at 65`, `${formatDollars(facts.oas)} a year`],
     [`${clientName()} TFSA`, `${formatDollars(facts.tfsa)} · ${formatDollars(facts.tfsaMonthly)} a month`],
     [`${clientName()} RRSP`, `${formatDollars(facts.rrsp)} · ${formatDollars(facts.rrspMonthly)} a month`],
     [`${clientName()} non-registered`, `${formatDollars(facts.nonReg)} · ${formatDollars(facts.nonRegMonthly)} a month`],
@@ -1237,7 +1282,7 @@ function renderProjectionTable(portfolio, earlyAge, facts) {
     body.append(tr);
   }
   table.append(head, body);
-  note.textContent = "Each deposit is the slider amount or the room still available, whichever is smaller. A gold figure is below the slider because the room ran out. At retirement the deposits stop. CPP and OAS cover part of the income, and the accounts withdraw the rest. The red row is the early-death age. That tax is shown beside the balance. It is not taken off the path that continues.";
+  note.textContent = "Each deposit is the slider amount or the room still available, whichever is smaller. A gold figure is below the slider because the room ran out. Future TFSA room uses the published limits and Slider 11. At retirement the deposits stop. CPP and OAS are the amounts in Section 3, raised with that same inflation, and they cover part of the income. The accounts withdraw the rest. The red row is the early-death age. That tax is shown beside the balance. It is not taken off the path that continues.";
 }
 
 function labelMap(labels) {
@@ -1260,11 +1305,14 @@ function render() {
   $("rec-spouse-life-wrap").classList.toggle("hidden", !spouse);
   $("rec-spouse-disability-wrap").classList.toggle("hidden", !spouse);
   $("spouse-ci-line").classList.toggle("hidden", !spouse);
+  $("spouse-cpp-wrap").classList.toggle("hidden", !spouse);
+  $("spouse-oas-wrap").classList.toggle("hidden", !spouse);
   $("after-spouse-life-wrap").classList.toggle("hidden", !spouse);
   $("rollover-wrap").classList.toggle("hidden", !spouse);
   $("dependant-extra").classList.toggle("hidden", dependantCount() === 0);
   $("qc-wrap").classList.toggle("hidden", $("province").value !== "QC");
   syncRecommendations();
+  syncPensions();
 
   const facts = readFacts();
   const current = buildPath(facts, null, "current");
@@ -1428,6 +1476,10 @@ function init() {
     if (id === "rec-spouse-life" || id === "rec-spouse-life-slider") dirty.spouseLife = true;
     if (id === "rec-disability" || id === "rec-disability-slider") dirty.disability = true;
     if (id === "rec-spouse-disability" || id === "rec-spouse-disability-slider") dirty.spouseDisability = true;
+    if (id === "cpp-annual") dirty.cpp = true;
+    if (id === "oas-annual") dirty.oas = true;
+    if (id === "spouse-cpp") dirty.spouseCpp = true;
+    if (id === "spouse-oas") dirty.spouseOas = true;
     if (id === "early-now") dirty.earlyNow = true;
     if (id === "early-after") dirty.earlyAfter = true;
     pairSlider(event.target);

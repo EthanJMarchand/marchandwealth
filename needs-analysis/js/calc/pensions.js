@@ -23,3 +23,20 @@ export function residenceYearsFromAge(age) {
   if (!Number.isFinite(age)) return 0;
   return Math.max(0, Math.min(40, Math.floor(age - 18)));
 }
+
+// Assumes the five-year average keeps going until retirement, and contributions
+// stop at 65. Someone already past 65 keeps the years already earned.
+export function projectedCppYears(age, retirementAge) {
+  if (Number.isFinite(age) && age > 65) return cppContributionYears(age);
+  const retire = Number.isFinite(retirementAge) ? retirementAge : 65;
+  const end = Math.max(Number.isFinite(age) ? age : 18, Math.min(Math.max(retire, 18), 65));
+  return Math.max(0, Math.floor(end - 18));
+}
+
+// Assumes residence in Canada from 18 through the later of retirement and 65.
+export function projectedOasYears(age, retirementAge) {
+  if (Number.isFinite(age) && age >= 65) return residenceYearsFromAge(age);
+  const retire = Number.isFinite(retirementAge) ? retirementAge : 65;
+  const end = Math.max(Number.isFinite(age) ? age : 18, retire, 65);
+  return Math.min(40, Math.max(0, Math.floor(end - 18)));
+}

@@ -157,6 +157,7 @@
         </label>
         <label class="block text-sm font-medium">Average income, last 5 years
           <input id="income-average" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
+          <span class="mt-1 block font-normal text-inksoft">Employment income only. Do not include dividends. This is what predicts CPP and OAS.</span>
         </label>
       </div>
 
@@ -180,6 +181,7 @@
           </label>
           <label class="block text-sm font-medium">Average income, last 5 years
             <input id="spouse-income-average" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-white px-3.5 py-2.5 text-sm" autocomplete="off" />
+            <span class="mt-1 block font-normal text-inksoft">Employment income only. Do not include dividends.</span>
           </label>
         </div>
       </div>
@@ -261,6 +263,26 @@
           <input id="retirement-replacement" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
         </label>
       </div>
+      <h3 class="mt-6 font-serif text-xl font-semibold text-navydeep">CPP and OAS</h3>
+      <p class="mt-2 text-sm leading-6 text-inksoft">These start from the five-year average employment income, continued to retirement. Dividends are not part of that income. The amounts are a year, in today's dollars, and Slider 11 raises them after that. Type the figure from your CRA account when you have it.</p>
+      <div class="mt-4 grid gap-4 sm:grid-cols-2">
+        <label class="block text-sm font-medium"><span id="cpp-label">Client 1 CPP at 65, a year</span>
+          <input id="cpp-annual" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
+          <span id="cpp-hint" class="mt-1 block font-normal text-inksoft"></span>
+        </label>
+        <label class="block text-sm font-medium"><span id="oas-label">Client 1 OAS at 65, a year</span>
+          <input id="oas-annual" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
+          <span id="oas-hint" class="mt-1 block font-normal text-inksoft"></span>
+        </label>
+        <label id="spouse-cpp-wrap" class="hidden block text-sm font-medium"><span id="spouse-cpp-label">Client 2 CPP at 65, a year</span>
+          <input id="spouse-cpp" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
+          <span id="spouse-cpp-hint" class="mt-1 block font-normal text-inksoft"></span>
+        </label>
+        <label id="spouse-oas-wrap" class="hidden block text-sm font-medium"><span id="spouse-oas-label">Client 2 OAS at 65, a year</span>
+          <input id="spouse-oas" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
+          <span id="spouse-oas-hint" class="mt-1 block font-normal text-inksoft"></span>
+        </label>
+      </div>
       <label id="rollover-wrap" class="mt-4 hidden flex gap-2 text-sm font-medium">
         <input id="rrsp-rollover" type="checkbox" />
         The RRSP rolls to the spouse
@@ -284,6 +306,7 @@
           </label>
           <label class="mt-3 block text-sm font-medium">Contribution room
             <input id="tfsa-room" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
+            <span class="mt-1 block font-normal text-inksoft">Room available now. Later years are projected from the published TFSA limits and Slider 11.</span>
           </label>
           <label class="mt-3 block text-sm font-medium">Average return, 5 years (%)
             <input id="tfsa-return" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
@@ -340,6 +363,7 @@
             </label>
             <label class="mt-3 block text-sm font-medium">Contribution room
               <input id="spouse-tfsa-room" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-white px-3.5 py-2.5 text-sm" autocomplete="off" />
+            <span class="mt-1 block font-normal text-inksoft">Room available now. Later years are projected from the published TFSA limits and Slider 11.</span>
             </label>
             <label class="mt-3 block text-sm font-medium">Average return, 5 years (%)
               <input id="spouse-tfsa-return" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-white px-3.5 py-2.5 text-sm" />

@@ -14,7 +14,7 @@ import { deathTaxAtYear } from "../js/calc/death-tax.js";
 import { calculateLifeNeed, endOfLifeFloor, inflatedIncomeCapital } from "../js/calc/life-need.js";
 import { annuityPayment, presentValue, presentValueOfAnnuity, readMoney, savingsForFutureValue } from "../js/calc/money.js";
 import { incomeReplacementYears, incomeYearsAtAge, projectLifeNeed } from "../js/calc/need-path.js";
-import { CPP_FULL_CAREER_YEARS, cppContributionYears, estimateCpp, estimateOas } from "../js/calc/pensions.js";
+import { CPP_FULL_CAREER_YEARS, cppContributionYears, estimateCpp, estimateOas, projectedCppYears, projectedOasYears } from "../js/calc/pensions.js";
 import { calculateProbate } from "../js/calc/probate.js";
 import { criticalIllnessLumpSum, disabilityMonthlyBenefit } from "../js/calc/protection.js";
 import { calculateRetirement, taxableRetirementIncome } from "../js/calc/retirement.js";
@@ -770,6 +770,16 @@ test("the insurance path pays the mortgage down, and a future house stays out of
   assert.equal(buying[5].plannedLeft, 200000);
   assert.equal(buying[5].debts, 0);
   assert.equal(buying[5].capitalNeed, buying[4].capitalNeed);
+});
+
+test("CPP and OAS guesses look through to retirement, not only years already worked", () => {
+  assert.equal(projectedCppYears(42, 65), 47);
+  assert.equal(projectedOasYears(42, 65), 40);
+  assert.equal(projectedCppYears(70, 65), cppContributionYears(70));
+  const full = estimateCpp(90000, 74600, 1507.65 * 12, projectedCppYears(42, 65));
+  const already = estimateCpp(90000, 74600, 1507.65 * 12, cppContributionYears(42));
+  assert.ok(full > already);
+  assert.equal(estimateOas(projectedOasYears(42, 65), 762.5 * 12), 762.5 * 12);
 });
 
 test("CPP and OAS guesses use earnings and years in Canada", () => {
