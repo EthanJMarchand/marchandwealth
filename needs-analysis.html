@@ -146,8 +146,8 @@
         <label class="block text-sm font-medium">Province
           <select id="province" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm"></select>
         </label>
-        <label class="block text-sm font-medium">Client
-          <input id="client-name" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
+        <label class="block text-sm font-medium">Client 1
+          <input id="client-name" value="Client 1" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
         </label>
         <label class="block text-sm font-medium">Age
           <input id="client-age" inputmode="numeric" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
@@ -161,7 +161,7 @@
       </div>
 
       <fieldset class="mt-6">
-        <legend class="text-sm font-medium">Spouse</legend>
+        <legend class="text-sm font-medium">Client 2</legend>
         <div class="mt-2 flex flex-wrap gap-6">
           <label class="flex gap-2 text-sm font-medium"><input type="radio" name="spouse" value="no" checked /> No</label>
           <label class="flex gap-2 text-sm font-medium"><input type="radio" name="spouse" value="yes" /> Yes</label>
@@ -169,8 +169,8 @@
       </fieldset>
       <div id="spouse-fields" class="person-spouse mt-4 hidden rounded-sm p-4">
         <div class="grid gap-4 sm:grid-cols-2">
-          <label class="block text-sm font-medium">Spouse's name
-            <input id="spouse-name" class="mt-1 w-full rounded-sm border border-line bg-white px-3.5 py-2.5 text-sm" autocomplete="off" />
+          <label class="block text-sm font-medium">Name
+            <input id="spouse-name" value="Client 2" class="mt-1 w-full rounded-sm border border-line bg-white px-3.5 py-2.5 text-sm" autocomplete="off" />
           </label>
           <label class="block text-sm font-medium">Age
             <input id="spouse-age" inputmode="numeric" class="mt-1 w-full rounded-sm border border-line bg-white px-3.5 py-2.5 text-sm" />
@@ -185,13 +185,14 @@
       </div>
 
       <div class="mt-6 grid gap-4 sm:grid-cols-2">
-        <label class="block text-sm font-medium">Dependants
+        <label class="block text-sm font-medium">Children
           <input id="dependant-count" inputmode="numeric" value="0" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
+          <span class="mt-1 block font-normal text-inksoft">Child 1, Child 2, Child 3, and so on.</span>
         </label>
       </div>
       <div id="dependant-ages" class="mt-4 grid gap-3 sm:grid-cols-3"></div>
       <div id="dependant-extra" class="mt-4 hidden grid gap-4 sm:grid-cols-2">
-        <label class="block text-sm font-medium">Education amount, each dependant, if a parent dies
+        <label class="block text-sm font-medium">Education amount for each child, if a parent dies
           <input id="education-amount" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
         </label>
         <label class="block text-sm font-medium">Age they are on their own
@@ -199,16 +200,16 @@
         </label>
       </div>
 
-      <h3 id="section-2" class="mt-8 font-serif text-xl font-semibold text-navydeep" data-crumb="Financial plan · Section 2 · Life insurance, if this person dies"><span class="ref-tag">Section 2</span>Life insurance, if this person dies</h3>
-      <p class="mt-2 text-sm leading-6 text-inksoft">The household keeps this share of their income for this many years. Debts and final expenses are paid off as well. That total is the life insurance picture below.</p>
+      <h3 id="section-2" class="mt-8 font-serif text-xl font-semibold text-navydeep" data-crumb="Financial plan · Section 2 · If Client 1 dies"><span class="ref-tag">Section 2</span><span id="section-2-title">If Client 1 dies</span></h3>
+      <p id="section-2-intro" class="mt-2 text-sm leading-6 text-inksoft">If Client 1 dies, the household keeps this share of their income for this many years. Debts and final expenses are paid off as well. That total is the life insurance picture below.</p>
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
-        <label class="block text-sm font-medium">Years of their income to replace after death
+        <label class="block text-sm font-medium"><span id="income-years-label">Years of Client 1's income to replace after death</span>
           <input id="income-years" inputmode="numeric" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
           <span class="mt-1 block font-normal text-inksoft">How long that income has to last. It steps down once retirement is that close.</span>
         </label>
         <label class="block text-sm font-medium">Percent of their income the household keeps
           <input id="replacement-ratio" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
-          <span class="mt-1 block font-normal text-inksoft">70 means the household keeps 70% of this person's income.</span>
+          <span id="replacement-hint" class="mt-1 block font-normal text-inksoft">70 means the household keeps 70% of Client 1's income.</span>
         </label>
         <label class="block text-sm font-medium">Mortgage to clear
           <input id="debts" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
@@ -226,7 +227,7 @@
           <input id="existing-coverage" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
           <span class="mt-1 block font-normal text-inksoft">This reduces the amount still needed.</span>
         </label>
-        <label id="spouse-coverage-wrap" class="hidden block text-sm font-medium">Spouse's life insurance already in place
+        <label id="spouse-coverage-wrap" class="hidden block text-sm font-medium"><span id="spouse-coverage-label">Client 2's life insurance already in place</span>
           <input id="spouse-existing-coverage" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
         </label>
         <label class="block text-sm font-medium">Other value through the estate
@@ -309,7 +310,7 @@
       <div id="need-chart" class="need-chart mt-2"></div>
       <p class="mt-2 text-xs text-inksoft">Solid line: capital need. Dashed line: mortgage.</p>
       <div id="spouse-need-block" class="person-spouse mt-6 hidden rounded-sm p-4">
-        <p class="ref-tag" data-crumb="Financial plan · Section 5 · Illustration 3 · Spouse's need">Illustration 3 · Spouse's need</p>
+        <p id="illustration-3-label" class="ref-tag" data-crumb="Financial plan · Section 5 · Illustration 3 · If Client 2 dies">Illustration 3 · If Client 2 dies</p>
         <p id="spouse-life-figure" class="figure nums font-serif text-4xl text-navydeep">$0</p>
         <div id="spouse-need-chart" class="need-chart mt-4"></div>
       </div>
@@ -362,7 +363,7 @@
           <p class="mt-2 text-sm text-inksoft">Starts at the illustrated life insurance need.</p>
         </div>
         <div id="rec-spouse-life-wrap" class="hidden">
-          <label class="block text-sm font-medium" for="rec-spouse-life-slider" data-crumb="Financial plan · Section 7 · Slider 6 · Spouse's life insurance"><span class="ref-tag">Slider 6</span>New life insurance, spouse</label>
+          <label id="rec-spouse-life-label" class="block text-sm font-medium" for="rec-spouse-life-slider" data-crumb="Financial plan · Section 7 · Slider 6 · Client 2's life insurance"><span class="ref-tag">Slider 6</span><span id="rec-spouse-life-text">New life insurance, Client 2</span></label>
           <div class="mt-2 flex items-center gap-4">
             <input id="rec-spouse-life-slider" type="range" min="0" max="2000000" step="1000" value="0" class="w-full" />
             <input id="rec-spouse-life" inputmode="decimal" value="0" aria-label="New life insurance amount for the spouse" class="w-28 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
@@ -377,7 +378,7 @@
           <p id="disability-hint" class="mt-2 text-sm text-inksoft"></p>
         </div>
         <div id="rec-spouse-disability-wrap" class="hidden">
-          <label class="block text-sm font-medium" for="rec-spouse-disability-slider" data-crumb="Financial plan · Section 7 · Slider 8 · Spouse's disability"><span class="ref-tag">Slider 8</span>Spouse's disability benefit, monthly income to replace</label>
+          <label id="rec-spouse-disability-label" class="block text-sm font-medium" for="rec-spouse-disability-slider" data-crumb="Financial plan · Section 7 · Slider 8 · Client 2's disability"><span class="ref-tag">Slider 8</span><span id="rec-spouse-disability-text">Client 2's disability benefit, monthly income to replace</span></label>
           <div class="mt-2 flex items-center gap-4">
             <input id="rec-spouse-disability-slider" type="range" min="0" max="20000" step="50" value="0" class="w-full" />
             <input id="rec-spouse-disability" inputmode="decimal" value="0" aria-label="Spouse monthly disability income to replace" class="w-28 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
@@ -392,7 +393,7 @@
           </div>
           <p class="mt-2 text-sm text-inksoft">Stops at 6, 12, 18, 24, 30, or 36 months. The lump sum is that many months of income, at the percent in the life insurance goal.</p>
           <p class="mt-2 text-sm">Lump sum <span id="ci-amount" class="nums font-semibold">$0</span></p>
-          <p id="spouse-ci-line" class="mt-1 hidden text-sm">Spouse lump sum <span id="spouse-ci-amount" class="nums font-semibold">$0</span></p>
+          <p id="spouse-ci-line" class="mt-1 hidden text-sm"><span id="spouse-ci-label">Client 2 lump sum</span> <span id="spouse-ci-amount" class="nums font-semibold">$0</span></p>
         </div>
       </div>
     </section>
@@ -432,7 +433,7 @@
           <p id="after-life-note" class="mt-1 text-sm text-inksoft">Illustrated need minus the new life insurance.</p>
         </div>
         <div id="after-spouse-life-wrap" class="hidden">
-          <p class="text-xs uppercase tracking-wide text-inksoft">Spouse's life insurance need not covered</p>
+          <p id="after-spouse-life-label" class="text-xs uppercase tracking-wide text-inksoft">Client 2's life insurance need not covered</p>
           <p id="after-spouse-life" class="figure nums font-serif text-4xl text-navydeep">$0</p>
           <p id="after-spouse-life-note" class="mt-1 text-sm text-inksoft">Illustrated need minus the spouse's new life insurance.</p>
         </div>

@@ -49,11 +49,11 @@ function moneyOrBlank(amount) {
 }
 
 function clientName() {
-  return $("client-name").value.trim() || "Client";
+  return $("client-name").value.trim() || "Client 1";
 }
 
 function spouseName() {
-  return $("spouse-name").value.trim() || "Spouse";
+  return $("spouse-name").value.trim() || "Client 2";
 }
 
 function hasSpouse() {
@@ -74,13 +74,13 @@ function dependantCount() {
 function dependantField(index, value) {
   const label = document.createElement("label");
   label.className = "block text-sm font-medium";
-  label.textContent = `Dependant ${index + 1} age`;
+  label.append(document.createTextNode(`Child ${index + 1} age`));
   const input = document.createElement("input");
   input.className = "mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm";
   input.inputMode = "numeric";
   input.dataset.depAge = "true";
   input.value = value;
-  input.setAttribute("aria-label", `Age of dependant ${index + 1}`);
+  input.setAttribute("aria-label", `Age of child ${index + 1}`);
   label.append(input);
   return label;
 }
@@ -95,6 +95,40 @@ function ensureDependantInputs() {
   for (let index = 0; index < count; index += 1) {
     list.append(dependantField(index, ages[index] ?? ""));
   }
+}
+
+function childSummary() {
+  const items = [...document.querySelectorAll("[data-dep-age]")];
+  if (!items.length) return "None";
+  return items.map((input, index) => {
+    const age = input.value.trim();
+    return age ? `Child ${index + 1}, age ${age}` : `Child ${index + 1}`;
+  }).join("; ");
+}
+
+function setLabel(id, text) {
+  const element = $(id);
+  if (!element) return;
+  element.textContent = text;
+}
+
+function applyNames() {
+  const client = clientName();
+  const spouse = spouseName();
+  setLabel("section-2-title", `If ${client} dies`);
+  $("section-2").dataset.crumb = `Financial plan · Section 2 · If ${client} dies`;
+  setLabel("section-2-intro", `If ${client} dies, the household keeps this share of their income for this many years. Debts and final expenses are paid off as well. That total is the life insurance picture below.`);
+  setLabel("income-years-label", `Years of ${client}'s income to replace after death`);
+  setLabel("replacement-hint", `70 means the household keeps 70% of ${client}'s income.`);
+  setLabel("spouse-coverage-label", `${spouse}'s life insurance already in place`);
+  setLabel("illustration-3-label", `Illustration 3 · If ${spouse} dies`);
+  $("illustration-3-label").dataset.crumb = `Financial plan · Section 5 · Illustration 3 · If ${spouse} dies`;
+  setLabel("rec-spouse-life-text", `New life insurance, ${spouse}`);
+  $("rec-spouse-life-label").dataset.crumb = `Financial plan · Section 7 · Slider 6 · ${spouse}'s life insurance`;
+  setLabel("rec-spouse-disability-text", `${spouse}'s disability benefit, monthly income to replace`);
+  $("rec-spouse-disability-label").dataset.crumb = `Financial plan · Section 7 · Slider 8 · ${spouse}'s disability`;
+  setLabel("spouse-ci-label", `${spouse} lump sum`);
+  setLabel("after-spouse-life-label", `${spouse}'s life insurance need not covered`);
 }
 
 function dependantAges() {
@@ -150,8 +184,8 @@ function initProvinces() {
 
 function fillDefaults() {
   $("plan-date").value = todayISO();
-  $("client-name").value = "Client";
-  $("spouse-name").value = "Spouse";
+  $("client-name").value = "Client 1";
+  $("spouse-name").value = "Client 2";
   $("dependant-count").value = "0";
   $("income-years").value = "10";
   $("replacement-ratio").value = String(assumptions.survivorIncomeReplacement * 100);
@@ -627,7 +661,7 @@ function referenceKey() {
     col("Illustrations", [
       "1 Life insurance need",
       "2 Need over time",
-      "3 Spouse's need",
+      "3 Client 2's need",
       "4 Savings if nothing changes",
       "5 The two paths",
       "6 Year by year",
@@ -639,9 +673,9 @@ function referenceKey() {
       "3 RRSP",
       "4 Non-registered",
       "5 New life insurance",
-      "6 Spouse's life insurance",
+      "6 Client 2's life insurance",
       "7 Disability, monthly",
-      "8 Spouse's disability",
+      "8 Client 2's disability",
       "9 Critical illness months",
       "10 Early death, after",
     ]),
@@ -684,7 +718,7 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
     [clientName(), facts.age == null ? "Age not entered" : `Age ${facts.age}`],
     ["Last year's income", formatDollars(num("income-last"))],
     ["Five-year average income", formatDollars(num("income-average"))],
-    ["Spouse", hasSpouse() ? spouseName() : "No"],
+    ["Client 2", hasSpouse() ? spouseName() : "No"],
   ];
   if (hasSpouse()) {
     rows.push(
@@ -694,8 +728,8 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
     );
   }
   rows.push(
-    ["Dependants", facts.ages.length ? facts.ages.join(", ") : "None"],
-    ["If they die, income to replace", `${facts.incomeYears} years at ${Math.round(facts.replacement * 100)}% of their income`],
+    ["Children", childSummary()],
+    [`If ${clientName()} dies, income to replace`, `${facts.incomeYears} years at ${Math.round(facts.replacement * 100)}% of their income`],
     ["Mortgage", formatDollars(facts.mortgage)],
     ["Other debts", formatDollars(facts.otherDebts)],
     ["Retirement age", String(facts.retirementAge)],
@@ -705,7 +739,7 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
     ["Non-registered", `${formatDollars(facts.nonReg)} · ${formatDollars(facts.nonRegMonthly)} a month`],
   );
   const markers = {
-    "If they die, income to replace": "Section 2 · Life insurance goal",
+    [`If ${clientName()} dies, income to replace`]: "Section 2 · Life insurance goal",
     "Retirement age": "Section 3 · Retirement",
     "TFSA": "Section 4 · Accounts",
   };
@@ -724,7 +758,7 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
   const chart = node("div", "need-chart mt-2");
   insurance.append(chart);
   if (current.spouseLife) {
-    insurance.append(node("p", "ref-tag mt-8", "Illustration 3 · Spouse's need"));
+    insurance.append(node("p", "ref-tag mt-8", `Illustration 3 · If ${spouseName()} dies`));
     insurance.append(node("p", "mt-2 font-serif text-4xl text-navydeep nums", formatDollars(current.spouseLife.capitalNeed)));
     insurance.append(node("p", "mt-2 text-sm text-inksoft", spouseName()));
     const spouseChart = node("div", "need-chart mt-6");
@@ -1005,6 +1039,7 @@ function labelMap(labels) {
 
 function render() {
   ensureDependantInputs();
+  applyNames();
   const spouse = hasSpouse();
   $("spouse-fields").classList.toggle("hidden", !spouse);
   $("spouse-coverage-wrap").classList.toggle("hidden", !spouse);
