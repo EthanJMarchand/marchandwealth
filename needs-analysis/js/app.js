@@ -15,13 +15,24 @@ import { incomeYearsAtAge, projectLifeNeed } from "./calc/need-path.js";
 import { cppContributionYears, estimateCpp, estimateOas, residenceYearsFromAge } from "./calc/pensions.js";
 import { describeDeposits, projectPortfolio } from "./calc/portfolio-path.js";
 import { calculateProbate } from "./calc/probate.js";
+import { criticalIllnessLumpSum, disabilityMonthlyBenefit } from "./calc/protection.js";
 
 const $ = (id) => document.getElementById(id);
 const inflationHistory = trailingAverage(canadaInflation.annualPercent, 100);
 const defaultInflation = roundPercent(inflationHistory.average);
 const planHorizonAge = Math.round(lifeExpectancy.canada[lifeExpectancy.year].both);
 
-const dirty = { tfsa: false, rrsp: false, nonreg: false, life: false, spouseLife: false, earlyNow: false, earlyAfter: false };
+const dirty = {
+  tfsa: false,
+  rrsp: false,
+  nonreg: false,
+  life: false,
+  spouseLife: false,
+  disability: false,
+  spouseDisability: false,
+  earlyNow: false,
+  earlyAfter: false,
+};
 
 function todayISO() {
   const date = new Date();
@@ -154,7 +165,18 @@ function fillDefaults() {
   $("tfsa-return").value = rate;
   $("rrsp-return").value = rate;
   $("nonreg-return").value = rate;
+  $("ci-months").value = "12";
+  $("ci-months-slider").value = "12";
   if ($("province").options.length) $("province").value = "AB";
+}
+
+function placeBenefit(flag, inputId, sliderId, amount, max) {
+  const slider = $(sliderId);
+  const ceiling = Math.max(0, Math.ceil(max || 0));
+  slider.max = String(ceiling);
+  if (!dirty[flag]) $(inputId).value = moneyOrBlank(Math.max(0, amount || 0));
+  const chosen = Math.min(ceiling, Math.max(0, num(inputId)));
+  slider.value = String(Math.round(chosen));
 }
 
 function pairSlider(eventTarget) {
@@ -162,6 +184,11 @@ function pairSlider(eventTarget) {
     ["rec-tfsa-slider", "rec-tfsa", 10000],
     ["rec-rrsp-slider", "rec-rrsp", 10000],
     ["rec-nonreg-slider", "rec-nonreg", 10000],
+    ["rec-life-slider", "rec-life", 5000000],
+    ["rec-spouse-life-slider", "rec-spouse-life", 5000000],
+    ["rec-disability-slider", "rec-disability", 50000],
+    ["rec-spouse-disability-slider", "rec-spouse-disability", 50000],
+    ["ci-months-slider", "ci-months", 36],
   ];
   for (const [sliderId, inputId, max] of pairs) {
     if (eventTarget.id === sliderId) $(inputId).value = eventTarget.value;
@@ -664,6 +691,16 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
     planRow(`New life insurance, ${clientName()}`, formatDollars(num("rec-life"))),
   );
   if (hasSpouse()) adviceList.append(planRow(`New life insurance, ${spouseName()}`, formatDollars(num("rec-spouse-life"))));
+  adviceList.append(
+    planRow(`Disability benefit, ${clientName()}`, `${formatDollars(num("rec-disability"))} a month`),
+    planRow(`Critical illness, ${clientName()}`, `${formatDollars(criticalIllnessLumpSum(facts.clientIncome, facts.replacement, num("ci-months")))} for ${num("ci-months")} months`),
+  );
+  if (hasSpouse()) {
+    adviceList.append(
+      planRow(`Disability benefit, ${spouseName()}`, `${formatDollars(num("rec-spouse-disability"))} a month`),
+      planRow(`Critical illness, ${spouseName()}`, `${formatDollars(criticalIllnessLumpSum(facts.spouseIncome, facts.replacement, num("ci-months")))} for ${num("ci-months")} months`),
+    );
+  }
   advice.append(adviceList);
   const tfsaPlan = roomNote(recommended.portfolio, num("rec-tfsa") * 12, "tfsa");
   const rrspPlan = roomNote(recommended.portfolio, num("rec-rrsp") * 12, "rrsp");
@@ -679,9 +716,12 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
   after.append(compare);
   const afterRow = rowNearest(recommended.portfolio, earlyAfter);
   after.append(node("p", "mt-4 text-sm text-inksoft", deathLine(afterRow)));
-  const still = Math.max(0, current.life.capitalNeed - num("rec-life"));
-  after.append(node("p", "mt-6 font-serif text-3xl text-navydeep nums", formatDollars(still)));
-  after.append(node("p", "mt-1 text-sm text-inksoft", `Still open on ${clientName()} after the new life insurance.`));
+  const still = Math.max(0, Math.round(current.life.capitalNeed) - Math.round(num("rec-life")));
+  after.append(node("p", "mt-6 text-sm text-inksoft", "Life insurance need not covered"));
+  after.append(node("p", "font-serif text-3xl text-navydeep nums", formatDollars(still)));
+  after.append(node("p", "mt-1 text-sm text-inksoft", still <= 0
+    ? `The new life insurance covers ${clientName()}'s illustrated need.`
+    : `Illustrated need minus the new life insurance for ${clientName()}.`));
   after.append(node("p", "mt-10 text-xs leading-5 text-inksoft", "Illustration only. Not a policy, not a tax opinion, and not a specific contract. Figures stay in this tab and are not saved."));
   root.append(after);
   drawSeries(compare, compareSeries(current.portfolio, recommended.portfolio, earlyAfter));
@@ -907,6 +947,8 @@ function render() {
   $("spouse-coverage-wrap").classList.toggle("hidden", !spouse);
   $("spouse-need-block").classList.toggle("hidden", !spouse);
   $("rec-spouse-life-wrap").classList.toggle("hidden", !spouse);
+  $("rec-spouse-disability-wrap").classList.toggle("hidden", !spouse);
+  $("spouse-ci-line").classList.toggle("hidden", !spouse);
   $("after-spouse-life-wrap").classList.toggle("hidden", !spouse);
   $("rollover-wrap").classList.toggle("hidden", !spouse);
   $("dependant-extra").classList.toggle("hidden", dependantCount() === 0);
@@ -915,8 +957,17 @@ function render() {
 
   const facts = readFacts();
   const current = buildPath(facts, { tfsa: facts.tfsaMonthly, rrsp: facts.rrspMonthly, nonreg: facts.nonRegMonthly });
-  if (!dirty.life) $("rec-life").value = moneyOrBlank(current.life.capitalNeed);
-  if (!dirty.spouseLife && current.spouseLife) $("rec-spouse-life").value = moneyOrBlank(current.spouseLife.capitalNeed);
+  placeBenefit("life", "rec-life", "rec-life-slider", current.life.capitalNeed, Math.max(current.life.capitalNeed, 2000000));
+  if (current.spouseLife) placeBenefit("spouseLife", "rec-spouse-life", "rec-spouse-life-slider", current.spouseLife.capitalNeed, Math.max(current.spouseLife.capitalNeed, 2000000));
+  const disability = disabilityMonthlyBenefit(facts.clientIncome, facts.replacement);
+  const spouseDisability = disabilityMonthlyBenefit(facts.spouseIncome, facts.replacement);
+  placeBenefit("disability", "rec-disability", "rec-disability-slider", disability, Math.max(disability, facts.clientIncome / 12));
+  placeBenefit("spouseDisability", "rec-spouse-disability", "rec-spouse-disability-slider", spouseDisability, Math.max(spouseDisability, facts.spouseIncome / 12));
+  const months = Math.max(0, Math.min(36, num("ci-months")));
+  $("ci-amount").textContent = formatDollars(criticalIllnessLumpSum(facts.clientIncome, facts.replacement, months));
+  $("spouse-ci-amount").textContent = formatDollars(criticalIllnessLumpSum(facts.spouseIncome, facts.replacement, months));
+  $("disability-hint").textContent = `Starts at ${Math.round(facts.replacement * 100)}% of monthly income, ${formatDollars(disability)}. Slide it to recommend a different monthly benefit.`;
+  $("spouse-disability-hint").textContent = `Starts at ${formatDollars(spouseDisability)} a month.`;
   const recommended = buildPath(facts, { tfsa: num("rec-tfsa"), rrsp: num("rec-rrsp"), nonreg: num("rec-nonreg") });
 
   $("life-figure").textContent = formatDollars(current.life.capitalNeed);
@@ -948,11 +999,17 @@ function render() {
   showRoomNote("rec-rrsp-note", rrspRoom);
   renderContributionSchedule(recommended.portfolio);
   renderProjectionTable(recommended.portfolio, earlyAfter, facts);
-  const still = Math.max(0, current.life.capitalNeed - num("rec-life"));
+  const still = Math.max(0, Math.round(current.life.capitalNeed) - Math.round(num("rec-life")));
   $("after-life").textContent = formatDollars(still);
+  $("after-life-note").textContent = still <= 0
+    ? "The new life insurance covers the illustrated need."
+    : "Illustrated need minus the new life insurance above.";
   if (current.spouseLife) {
-    const spouseStill = Math.max(0, current.spouseLife.capitalNeed - num("rec-spouse-life"));
+    const spouseStill = Math.max(0, Math.round(current.spouseLife.capitalNeed) - Math.round(num("rec-spouse-life")));
     $("after-spouse-life").textContent = formatDollars(spouseStill);
+    $("after-spouse-life-note").textContent = spouseStill <= 0
+      ? "The spouse's new life insurance covers their illustrated need."
+      : "Illustrated need minus the spouse's new life insurance.";
   }
 
   renderPlan(facts, current, recommended, earlyNow, earlyAfter);
@@ -1022,8 +1079,10 @@ function init() {
     if (id === "rec-tfsa" || id === "rec-tfsa-slider") dirty.tfsa = true;
     if (id === "rec-rrsp" || id === "rec-rrsp-slider") dirty.rrsp = true;
     if (id === "rec-nonreg" || id === "rec-nonreg-slider") dirty.nonreg = true;
-    if (id === "rec-life") dirty.life = true;
-    if (id === "rec-spouse-life") dirty.spouseLife = true;
+    if (id === "rec-life" || id === "rec-life-slider") dirty.life = true;
+    if (id === "rec-spouse-life" || id === "rec-spouse-life-slider") dirty.spouseLife = true;
+    if (id === "rec-disability" || id === "rec-disability-slider") dirty.disability = true;
+    if (id === "rec-spouse-disability" || id === "rec-spouse-disability-slider") dirty.spouseDisability = true;
     if (id === "early-now") dirty.earlyNow = true;
     if (id === "early-after") dirty.earlyAfter = true;
     pairSlider(event.target);

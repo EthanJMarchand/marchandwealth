@@ -316,7 +316,7 @@
 
     <section class="rounded-sm border border-line bg-white p-5 md:p-6 shadow-sm">
       <h2 class="font-serif font-semibold text-2xl text-navydeep">Recommendation</h2>
-      <p class="mt-2 text-sm text-inksoft">Monthly savings, and the new life insurance that covers the need above.</p>
+      <p class="mt-2 text-sm text-inksoft">Monthly savings, then the new life insurance, disability benefit, and critical illness amount.</p>
       <div class="mt-6 space-y-5">
         <div>
           <label class="block text-sm font-medium" for="rec-tfsa-slider">TFSA, monthly</label>
@@ -342,13 +342,50 @@
           </div>
         </div>
       </div>
-      <div class="mt-6 grid gap-4 sm:grid-cols-2">
-        <label class="block text-sm font-medium">New life insurance
-          <input id="rec-life" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
-        </label>
-        <label id="rec-spouse-life-wrap" class="hidden block text-sm font-medium">New life insurance, spouse
-          <input id="rec-spouse-life" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
-        </label>
+      <h3 class="mt-8 font-serif text-xl font-semibold text-navydeep">New coverage</h3>
+      <p class="mt-2 text-sm leading-6 text-inksoft">Life insurance is the lump sum if they die. Disability replaces monthly income while they cannot work. Critical illness is one payment for a set number of months of income.</p>
+      <div class="mt-6 space-y-5">
+        <div>
+          <label class="block text-sm font-medium" for="rec-life-slider">New life insurance</label>
+          <div class="mt-2 flex items-center gap-4">
+            <input id="rec-life-slider" type="range" min="0" max="2000000" step="1000" value="0" class="w-full" />
+            <input id="rec-life" inputmode="decimal" value="0" aria-label="New life insurance amount" class="w-28 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
+          </div>
+          <p class="mt-2 text-sm text-inksoft">Starts at the illustrated life insurance need.</p>
+        </div>
+        <div id="rec-spouse-life-wrap" class="hidden">
+          <label class="block text-sm font-medium" for="rec-spouse-life-slider">New life insurance, spouse</label>
+          <div class="mt-2 flex items-center gap-4">
+            <input id="rec-spouse-life-slider" type="range" min="0" max="2000000" step="1000" value="0" class="w-full" />
+            <input id="rec-spouse-life" inputmode="decimal" value="0" aria-label="New life insurance amount for the spouse" class="w-28 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium" for="rec-disability-slider">New disability benefit, monthly income to replace</label>
+          <div class="mt-2 flex items-center gap-4">
+            <input id="rec-disability-slider" type="range" min="0" max="20000" step="50" value="0" class="w-full" />
+            <input id="rec-disability" inputmode="decimal" value="0" aria-label="Monthly disability income to replace" class="w-28 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
+          </div>
+          <p id="disability-hint" class="mt-2 text-sm text-inksoft"></p>
+        </div>
+        <div id="rec-spouse-disability-wrap" class="hidden">
+          <label class="block text-sm font-medium" for="rec-spouse-disability-slider">Spouse's disability benefit, monthly income to replace</label>
+          <div class="mt-2 flex items-center gap-4">
+            <input id="rec-spouse-disability-slider" type="range" min="0" max="20000" step="50" value="0" class="w-full" />
+            <input id="rec-spouse-disability" inputmode="decimal" value="0" aria-label="Spouse monthly disability income to replace" class="w-28 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
+          </div>
+          <p id="spouse-disability-hint" class="mt-2 text-sm text-inksoft"></p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium" for="ci-months-slider">New critical illness, months of income to cover</label>
+          <div class="mt-2 flex items-center gap-4">
+            <input id="ci-months-slider" type="range" min="0" max="36" step="6" value="12" class="w-full" />
+            <input id="ci-months" inputmode="numeric" value="12" aria-label="Months of income the critical illness benefit covers" class="w-24 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
+          </div>
+          <p class="mt-2 text-sm text-inksoft">Stops at 6, 12, 18, 24, 30, or 36 months. The lump sum is that many months of income, at the percent in the life insurance goal.</p>
+          <p class="mt-2 text-sm">Lump sum <span id="ci-amount" class="nums font-semibold">$0</span></p>
+          <p id="spouse-ci-line" class="mt-1 hidden text-sm">Spouse lump sum <span id="spouse-ci-amount" class="nums font-semibold">$0</span></p>
+        </div>
       </div>
     </section>
 
@@ -381,12 +418,14 @@
       <p id="early-after-readout" class="mt-2 text-sm text-inksoft"></p>
       <div class="mt-6 grid gap-4 sm:grid-cols-2">
         <div>
-          <p class="text-xs uppercase tracking-wide text-inksoft">Still open</p>
+          <p class="text-xs uppercase tracking-wide text-inksoft">Life insurance need not covered</p>
           <p id="after-life" class="figure nums font-serif text-4xl text-navydeep">$0</p>
+          <p id="after-life-note" class="mt-1 text-sm text-inksoft">Illustrated need minus the new life insurance.</p>
         </div>
         <div id="after-spouse-life-wrap" class="hidden">
-          <p class="text-xs uppercase tracking-wide text-inksoft">Spouse, still open</p>
+          <p class="text-xs uppercase tracking-wide text-inksoft">Spouse's life insurance need not covered</p>
           <p id="after-spouse-life" class="figure nums font-serif text-4xl text-navydeep">$0</p>
+          <p id="after-spouse-life-note" class="mt-1 text-sm text-inksoft">Illustrated need minus the spouse's new life insurance.</p>
         </div>
       </div>
       <div id="contribution-schedule-wrap" class="mt-8 hidden">
