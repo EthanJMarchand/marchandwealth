@@ -1134,6 +1134,27 @@ test("only the growth on other assets is taxed, and a rollover drops the RRSP de
   assert.equal(rolled.rows[0].deathTax, 0);
 });
 
+test("each registered account can grow at its own 5-year return", () => {
+  const path = projectPortfolio({
+    currentAge: 40,
+    retirementAge: 65,
+    years: 0,
+    useAccountReturns: true,
+    tfsaReturn: 0.1,
+    rrspReturn: 0,
+    nonRegReturn: 0,
+    savingsReturn: 0,
+    retirementReturn: 0,
+    tfsaOpening: 1000,
+    rrspOpening: 1000,
+    nonRegOpening: 1000,
+    province: "AB",
+  });
+  assert.ok(path.rows[0].tfsa > 1000);
+  assert.equal(Math.round(path.rows[0].rrsp), 1000);
+  assert.equal(Math.round(path.rows[0].nonReg), 1000);
+});
+
 if (failed > 0) {
   process.exitCode = 1;
 }

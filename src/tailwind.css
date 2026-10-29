@@ -242,33 +242,38 @@ body.needs-worksheet #file-copy li > span:first-child {
   }
 }
 
+body.needs-worksheet .plan-page {
+  background: #fff;
+  border: 1px solid #ddd7ca;
+  padding: 2.25rem 1.5rem;
+}
+@media (min-width: 768px) {
+  body.needs-worksheet .plan-page { padding: 3.25rem 3rem; }
+}
+body.needs-worksheet .plan-rule {
+  height: 1px;
+  background: #c1a57b;
+  border: 0;
+}
+
 @media print {
   body.needs-worksheet .no-print,
   body.needs-worksheet header,
   body.needs-worksheet form,
-  body.needs-worksheet aside,
   body.needs-worksheet footer {
     display: none !important;
   }
   body.needs-worksheet { background: white !important; }
-  body.needs-worksheet #client-letter,
-  body.needs-worksheet #advisor-record {
-    border: none !important;
-    box-shadow: none !important;
-    margin-top: 0 !important;
-    padding: 0 !important;
+  body.needs-worksheet .plan-page {
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    margin: 0;
+    break-after: page;
+    page-break-after: always;
   }
-  body.needs-worksheet .report-break {
-    break-before: page;
-    page-break-before: always;
+  body.needs-worksheet .plan-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
   }
-  body.needs-worksheet[data-print="advisor"] #advisor-record {
-    break-before: auto !important;
-    page-break-before: auto !important;
-  }
-  body.needs-worksheet[data-print="client"] #advisor-record,
-  body.needs-worksheet[data-print="advisor"] #client-letter {
-    display: none !important;
-  }
-  body.needs-worksheet main > .grid { display: none !important; }
 }

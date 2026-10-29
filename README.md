@@ -107,9 +107,9 @@ Nothing else in the codebase needs to be touched:
 
 ## The needs analysis worksheet
 
-[`needs-analysis.html`](needs-analysis.html) is the Alberta life insurance and retirement needs worksheet. It is a normal page on this site, with the same header, footer, and colours as the rest of Marchand Wealth. The calculation code lives in [`needs-analysis/`](needs-analysis/) and is loaded by the page. Nothing in the worksheet is posted to a server, and nothing is written to the browser. Print the client letter and the advisor record, or copy the letter, when a copy needs to be kept.
+[`needs-analysis.html`](needs-analysis.html) is the Marchand Wealth financial plan. It is a normal page on this site, with the same header, footer, and colours as the rest of Marchand Wealth. The calculation code lives in [`needs-analysis/`](needs-analysis/) and is loaded by the page. Nothing on the page is posted to a server, and nothing is written to the browser. Print the financial plan when a copy needs to be kept.
 
-The meeting starts by choosing life insurance, disability, and critical illness, financial planning, or both. Sections that do not belong to that choice stay off the page and out of the letter. The page does not choose a product.
+Facts for the client, and for a spouse when there is one, sit in one section. The pictures show the life insurance need, what happens if death comes early, and the savings path after the recommended monthly contributions. The page does not choose a product.
 
 Preview it through a local server (`python3 -m http.server` or `npx serve .`). Opening the file directly will not load the worksheet, because the browser blocks its JavaScript modules from a `file://` address.
 

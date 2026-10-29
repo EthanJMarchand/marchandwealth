@@ -103,6 +103,10 @@ export function projectPortfolio({
   savingsReturn = 0,
   retirementReturn = 0,
   otherReturn = 0,
+  useAccountReturns = false,
+  tfsaReturn,
+  rrspReturn,
+  nonRegReturn,
   desiredIncomeToday = 0,
   tfsaAnnual = 0,
   rrspAnnual = 0,
@@ -149,9 +153,10 @@ export function projectPortfolio({
     const retired = Number.isFinite(retire) && age >= retire;
     const factor = (1 + inflation) ** year;
     const portfolioRate = retired ? retirementReturn : savingsReturn;
-    tfsa = grow(tfsa, portfolioRate);
-    rrsp = grow(rrsp, portfolioRate);
-    nonReg = grow(nonReg, portfolioRate);
+    const rateFor = (specific) => (useAccountReturns && Number.isFinite(specific) ? specific : portfolioRate);
+    tfsa = grow(tfsa, rateFor(tfsaReturn));
+    rrsp = grow(rrsp, rateFor(rrspReturn));
+    nonReg = grow(nonReg, rateFor(nonRegReturn));
     other = grow(other, otherReturn);
     let tfsaIn = 0;
     let rrspIn = 0;
