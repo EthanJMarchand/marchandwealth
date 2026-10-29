@@ -600,6 +600,55 @@ function node(tag, className, text) {
   return element;
 }
 
+function referenceKey() {
+  const block = node("div", "mt-4 grid gap-6 sm:grid-cols-3 text-sm");
+  block.dataset.referenceList = "true";
+  const col = (title, lines) => {
+    const wrap = node("div");
+    wrap.append(node("p", "text-xs font-semibold uppercase tracking-[0.14em] text-golddim", title));
+    const list = node("ul", "mt-2 space-y-1");
+    for (const line of lines) list.append(node("li", "", line));
+    wrap.append(list);
+    return wrap;
+  };
+  block.append(
+    col("Sections", [
+      "1 Facts",
+      "2 Life insurance goal",
+      "3 Retirement",
+      "4 Accounts",
+      "5 The path today",
+      "6 Recommendation",
+      "7 New coverage",
+      "8 After the recommendation",
+      "9 Above the room",
+      "10 Year by year",
+    ]),
+    col("Illustrations", [
+      "1 Life insurance need",
+      "2 Need over time",
+      "3 Spouse's need",
+      "4 Savings if nothing changes",
+      "5 The two paths",
+      "6 Year by year",
+      "7 How a high contribution comes down",
+    ]),
+    col("Sliders", [
+      "1 Early death, today",
+      "2 TFSA",
+      "3 RRSP",
+      "4 Non-registered",
+      "5 New life insurance",
+      "6 Spouse's life insurance",
+      "7 Disability, monthly",
+      "8 Spouse's disability",
+      "9 Critical illness months",
+      "10 Early death, after",
+    ]),
+  );
+  return block;
+}
+
 function planPage(kicker, title) {
   const page = node("section", "plan-page");
   page.append(node("p", "text-xs font-semibold uppercase tracking-[0.16em] text-golddim", kicker));
@@ -623,11 +672,12 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
     node("p", "mt-8 font-serif text-3xl text-navydeep", clientName()),
     node("p", "mt-2 text-sm text-inksoft", hasSpouse() ? `and ${spouseName()}` : "Individual plan"),
     node("p", "mt-6 text-sm text-inksoft", `${date} · Prepared by Ethan Marchand`),
-    node("p", "mt-10 max-w-md text-sm leading-6 text-inksoft", "Insurance need, the savings path if nothing changes, and the path after the recommendation."),
+    node("p", "mt-10 max-w-md text-sm leading-6 text-inksoft", "The same section, illustration, and slider numbers are on the screen and in this plan. A missing number is the spouse's item, or illustration 7 when the contribution fits inside the room."),
+    referenceKey(),
   );
   root.append(cover);
 
-  const household = planPage("Facts", "Household");
+  const household = planPage("Section 1 · Facts", "Household");
   const factsList = node("div", "mt-6");
   const rows = [
     ["Plan date", date],
@@ -654,17 +704,28 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
     ["RRSP", `${formatDollars(facts.rrsp)} · ${formatDollars(facts.rrspMonthly)} a month`],
     ["Non-registered", `${formatDollars(facts.nonReg)} · ${formatDollars(facts.nonRegMonthly)} a month`],
   );
-  for (const [label, value] of rows) factsList.append(planRow(label, value));
+  const markers = {
+    "If they die, income to replace": "Section 2 · Life insurance goal",
+    "Retirement age": "Section 3 · Retirement",
+    "TFSA": "Section 4 · Accounts",
+  };
+  for (const [label, value] of rows) {
+    if (markers[label]) factsList.append(node("p", "ref-tag mt-6", markers[label]));
+    factsList.append(planRow(label, value));
+  }
   household.append(factsList);
   root.append(household);
 
-  const insurance = planPage("If death comes now", "Insurance need");
-  insurance.append(node("p", "mt-8 font-serif text-5xl text-navydeep nums", formatDollars(current.life.capitalNeed)));
+  const insurance = planPage("Section 5 · Illustration 1", "Insurance need");
+  insurance.append(node("p", "ref-tag mt-6", "Illustration 1 · Life insurance need"));
+  insurance.append(node("p", "mt-2 font-serif text-5xl text-navydeep nums", formatDollars(current.life.capitalNeed)));
   insurance.append(node("p", "mt-2 text-sm text-inksoft", `${clientName()} · ${facts.incomeYears} years at ${Math.round(facts.replacement * 100)}% of income after death · ${formatDollars(facts.existingCoverage)} already in place`));
-  const chart = node("div", "need-chart mt-8");
+  insurance.append(node("p", "ref-tag mt-8", "Illustration 2 · Need over time"));
+  const chart = node("div", "need-chart mt-2");
   insurance.append(chart);
   if (current.spouseLife) {
-    insurance.append(node("p", "mt-8 font-serif text-4xl text-navydeep nums", formatDollars(current.spouseLife.capitalNeed)));
+    insurance.append(node("p", "ref-tag mt-8", "Illustration 3 · Spouse's need"));
+    insurance.append(node("p", "mt-2 font-serif text-4xl text-navydeep nums", formatDollars(current.spouseLife.capitalNeed)));
     insurance.append(node("p", "mt-2 text-sm text-inksoft", spouseName()));
     const spouseChart = node("div", "need-chart mt-6");
     insurance.append(spouseChart);
@@ -673,15 +734,16 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
   root.append(insurance);
   drawSeries(chart, seriesFromNeed(current.needPath, `${clientName()} insurance need`));
 
-  const today = planPage("If nothing changes", "Savings path");
+  const today = planPage("Section 5 · Illustration 4 · Slider 1", "Savings path");
   const nowRow = rowNearest(current.portfolio, earlyNow);
-  today.append(node("p", "mt-8 text-sm text-inksoft", deathLine(nowRow) || "Add an age to see the path."));
+  today.append(node("p", "ref-tag mt-6", "Illustration 4 · Savings if nothing changes"));
+  today.append(node("p", "mt-2 text-sm text-inksoft", deathLine(nowRow) || "Add an age to see the path."));
   const wealth = node("div", "need-chart mt-6");
   today.append(wealth);
   root.append(today);
   drawSeries(wealth, seriesFromWealth(current.portfolio, earlyNow, "Savings if contributions stay where they are"));
 
-  const advice = planPage("Recommendation", "What changes");
+  const advice = planPage("Sections 6 and 7 · Sliders 2–9", "What changes");
   advice.append(node("p", "mt-8 font-serif text-4xl text-navydeep nums", `${formatDollars(num("rec-tfsa") + num("rec-rrsp") + num("rec-nonreg"))} / month`));
   const adviceList = node("div", "mt-6");
   adviceList.append(
@@ -708,11 +770,12 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
   if (rrspPlan.text) advice.append(node("p", "mt-2 text-sm leading-6", rrspPlan.text));
   root.append(advice);
 
-  const after = planPage("After the recommendation", "The two paths");
+  const after = planPage("Section 8 · Illustration 5 · Slider 10", "The two paths");
+  after.append(node("p", "ref-tag mt-6", "Illustration 5 · The two paths"));
   const atRetireNow = rowNearest(current.portfolio, facts.retirementAge)?.total ?? 0;
   const atRetireNext = rowNearest(recommended.portfolio, facts.retirementAge)?.total ?? 0;
   after.append(node("p", "mt-8 text-sm text-inksoft", `At retirement: ${formatDollars(atRetireNow)} on the current path, ${formatDollars(atRetireNext)} after the recommendation.`));
-  const compare = node("div", "need-chart mt-6");
+  const compare = node("div", "need-chart mt-2");
   after.append(compare);
   const afterRow = rowNearest(recommended.portfolio, earlyAfter);
   after.append(node("p", "mt-4 text-sm text-inksoft", deathLine(afterRow)));
@@ -1073,7 +1136,19 @@ function init() {
   clearLegacyStorage();
   initProvinces();
   fillDefaults();
+  $("reference-key").append(referenceKey());
   render();
+  const trail = $("crumb-trail");
+  const updateCrumb = () => {
+    const marks = [...document.querySelectorAll("[data-crumb]")].filter((mark) => mark.getClientRects().length > 0);
+    let current = marks[0];
+    for (const mark of marks) {
+      if (mark.getBoundingClientRect().top <= 150) current = mark;
+    }
+    if (current) trail.textContent = current.dataset.crumb;
+  };
+  document.addEventListener("scroll", updateCrumb, { passive: true });
+  updateCrumb();
   $("worksheet").addEventListener("input", (event) => {
     const id = event.target.id;
     if (id === "rec-tfsa" || id === "rec-tfsa-slider") dirty.tfsa = true;

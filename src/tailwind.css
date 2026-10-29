@@ -312,6 +312,15 @@ body.needs-worksheet .plan-rule {
   background: #c1a57b;
   border: 0;
 }
+body.needs-worksheet .ref-tag {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #a68a61;
+}
 
 @media print {
   body.needs-worksheet .no-print,
