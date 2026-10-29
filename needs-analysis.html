@@ -254,7 +254,9 @@
       </label>
 
       <h3 id="section-4" class="mt-8 font-serif text-xl font-semibold text-navydeep" data-crumb="Financial plan · Section 4 · Accounts"><span class="ref-tag">Section 4</span>Accounts</h3>
-      <div class="mt-4 grid gap-4 lg:grid-cols-3">
+      <p class="mt-2 text-sm leading-6 text-inksoft">Each person has their own balance, monthly contribution, and room. The pictures add the two together. One person's room cannot be used by the other.</p>
+      <p id="client-accounts-heading" class="mt-4 text-xs font-semibold uppercase tracking-[0.14em] text-inksoft">Client 1</p>
+      <div class="mt-3 grid gap-4 lg:grid-cols-3">
         <fieldset class="rounded-sm border border-line p-4">
           <legend class="px-1 text-sm font-semibold">TFSA</legend>
           <label class="mt-2 block text-sm font-medium">Balance
@@ -297,6 +299,53 @@
             <input id="nonreg-return" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
           </label>
         </fieldset>
+      </div>
+      <div id="spouse-accounts" class="mt-6 hidden">
+        <p id="spouse-accounts-heading" class="text-xs font-semibold uppercase tracking-[0.14em] text-olive">Client 2</p>
+        <div class="mt-3 grid gap-4 lg:grid-cols-3">
+          <fieldset class="person-spouse rounded-sm p-4">
+            <legend class="px-1 text-sm font-semibold">TFSA</legend>
+            <label class="mt-2 block text-sm font-medium">Balance
+              <input id="spouse-tfsa-balance" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-white px-3.5 py-2.5 text-sm" autocomplete="off" />
+            </label>
+            <label class="mt-3 block text-sm font-medium">Monthly contribution
+              <input id="spouse-tfsa-monthly" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-white px-3.5 py-2.5 text-sm" autocomplete="off" />
+            </label>
+            <label class="mt-3 block text-sm font-medium">Contribution room
+              <input id="spouse-tfsa-room" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-white px-3.5 py-2.5 text-sm" autocomplete="off" />
+            </label>
+            <label class="mt-3 block text-sm font-medium">Average return, 5 years (%)
+              <input id="spouse-tfsa-return" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-white px-3.5 py-2.5 text-sm" />
+            </label>
+          </fieldset>
+          <fieldset class="person-spouse rounded-sm p-4">
+            <legend class="px-1 text-sm font-semibold">RRSP</legend>
+            <label class="mt-2 block text-sm font-medium">Balance
+              <input id="spouse-rrsp-balance" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-white px-3.5 py-2.5 text-sm" autocomplete="off" />
+            </label>
+            <label class="mt-3 block text-sm font-medium">Monthly contribution
+              <input id="spouse-rrsp-monthly" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-white px-3.5 py-2.5 text-sm" autocomplete="off" />
+            </label>
+            <label class="mt-3 block text-sm font-medium">Contribution room
+              <input id="spouse-rrsp-room" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-white px-3.5 py-2.5 text-sm" autocomplete="off" />
+            </label>
+            <label class="mt-3 block text-sm font-medium">Average return, 5 years (%)
+              <input id="spouse-rrsp-return" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-white px-3.5 py-2.5 text-sm" />
+            </label>
+          </fieldset>
+          <fieldset class="person-spouse rounded-sm p-4">
+            <legend class="px-1 text-sm font-semibold">Non-registered</legend>
+            <label class="mt-2 block text-sm font-medium">Balance
+              <input id="spouse-nonreg-balance" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-white px-3.5 py-2.5 text-sm" autocomplete="off" />
+            </label>
+            <label class="mt-3 block text-sm font-medium">Monthly contribution
+              <input id="spouse-nonreg-monthly" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-white px-3.5 py-2.5 text-sm" autocomplete="off" />
+            </label>
+            <label class="mt-3 block text-sm font-medium">Average return, 5 years (%)
+              <input id="spouse-nonreg-return" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-white px-3.5 py-2.5 text-sm" />
+            </label>
+          </fieldset>
+        </div>
       </div>
     </section>
 

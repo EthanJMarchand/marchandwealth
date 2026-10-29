@@ -119,6 +119,8 @@ export function projectPortfolio({
   rrspRoomNow = 0,
   tfsaNewRoom = [],
   rrspNewRoom = [],
+  tfsaDepositsOverride,
+  rrspDepositsOverride,
   province = "AB",
   clientCppToday = 0,
   clientOasToday = 0,
@@ -137,8 +139,12 @@ export function projectPortfolio({
   const retire = Number(retirementAge);
   const inflation = Number.isFinite(inflationRate) ? inflationRate : 0;
   const savingYears = Number.isFinite(ageNow) && Number.isFinite(retire) ? Math.max(0, retire - ageNow) : 0;
-  const tfsaDeposits = depositsOverYears({ desiredAnnual: tfsaAnnual, openingRoom: tfsaRoomNow, newRoomByYear: tfsaNewRoom, years: savingYears });
-  const rrspDeposits = depositsOverYears({ desiredAnnual: rrspAnnual, openingRoom: rrspRoomNow, newRoomByYear: rrspNewRoom, years: savingYears });
+  const tfsaDeposits = Array.isArray(tfsaDepositsOverride)
+    ? tfsaDepositsOverride
+    : depositsOverYears({ desiredAnnual: tfsaAnnual, openingRoom: tfsaRoomNow, newRoomByYear: tfsaNewRoom, years: savingYears });
+  const rrspDeposits = Array.isArray(rrspDepositsOverride)
+    ? rrspDepositsOverride
+    : depositsOverYears({ desiredAnnual: rrspAnnual, openingRoom: rrspRoomNow, newRoomByYear: rrspNewRoom, years: savingYears });
   let tfsa = Math.max(0, tfsaOpening);
   let rrsp = Math.max(0, rrspOpening);
   let nonReg = Math.max(0, nonRegOpening);

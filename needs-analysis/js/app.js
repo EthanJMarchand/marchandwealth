@@ -13,7 +13,7 @@ import { calculateLifeNeed } from "./calc/life-need.js";
 import { formatDollars, readMoney } from "./calc/money.js";
 import { incomeYearsAtAge, projectLifeNeed } from "./calc/need-path.js";
 import { cppContributionYears, estimateCpp, estimateOas, residenceYearsFromAge } from "./calc/pensions.js";
-import { describeDeposits, projectPortfolio } from "./calc/portfolio-path.js";
+import { depositsOverYears, describeDeposits, projectPortfolio } from "./calc/portfolio-path.js";
 import { calculateProbate } from "./calc/probate.js";
 import { criticalIllnessLumpSum, disabilityMonthlyBenefit } from "./calc/protection.js";
 
@@ -129,6 +129,8 @@ function applyNames() {
   $("rec-spouse-disability-label").dataset.crumb = `Financial plan · Section 7 · Slider 8 · ${spouse}'s disability`;
   setLabel("spouse-ci-label", `${spouse} lump sum`);
   setLabel("after-spouse-life-label", `${spouse}'s life insurance need not covered`);
+  setLabel("client-accounts-heading", client);
+  setLabel("spouse-accounts-heading", spouse);
 }
 
 function dependantAges() {
@@ -199,6 +201,9 @@ function fillDefaults() {
   $("tfsa-return").value = rate;
   $("rrsp-return").value = rate;
   $("nonreg-return").value = rate;
+  $("spouse-tfsa-return").value = rate;
+  $("spouse-rrsp-return").value = rate;
+  $("spouse-nonreg-return").value = rate;
   $("ci-months").value = "12";
   $("ci-months-slider").value = "12";
   if ($("province").options.length) $("province").value = "AB";
@@ -231,15 +236,15 @@ function pairSlider(eventTarget) {
 }
 
 function syncRecommendations() {
-  const copy = (flag, monthlyId, inputId, sliderId) => {
+  const copy = (flag, amount, inputId, sliderId) => {
     if (dirty[flag]) return;
-    const amount = num(monthlyId);
     $(inputId).value = moneyOrBlank(amount);
     $(sliderId).value = String(Math.min(10000, Math.max(0, amount)));
   };
-  copy("tfsa", "tfsa-monthly", "rec-tfsa", "rec-tfsa-slider");
-  copy("rrsp", "rrsp-monthly", "rec-rrsp", "rec-rrsp-slider");
-  copy("nonreg", "nonreg-monthly", "rec-nonreg", "rec-nonreg-slider");
+  const both = (first, second) => num(first) + (hasSpouse() ? num(second) : 0);
+  copy("tfsa", both("tfsa-monthly", "spouse-tfsa-monthly"), "rec-tfsa", "rec-tfsa-slider");
+  copy("rrsp", both("rrsp-monthly", "spouse-rrsp-monthly"), "rec-rrsp", "rec-rrsp-slider");
+  copy("nonreg", both("nonreg-monthly", "spouse-nonreg-monthly"), "rec-nonreg", "rec-nonreg-slider");
 }
 
 function placeRange(id, age, end, flag) {
@@ -255,7 +260,40 @@ function placeRange(id, age, end, flag) {
   return Math.min(Number(slider.max), Math.max(Number(slider.min), Number(slider.value)));
 }
 
-function buildPath(facts, monthly) {
+function addLists(first, second) {
+  const count = Math.max(first.length, second.length);
+  const out = [];
+  for (let i = 0; i < count; i += 1) out.push((first[i] || 0) + (second[i] || 0));
+  return out;
+}
+
+function weightedRate(parts) {
+  const weight = parts.reduce((sum, part) => sum + part.weight, 0);
+  if (weight <= 0) return parts[0]?.rate || 0;
+  return parts.reduce((sum, part) => sum + part.weight * part.rate, 0) / weight;
+}
+
+function ownDeposits(annual, roomNow, newRoom, years) {
+  return depositsOverYears({
+    desiredAnnual: Math.max(0, annual),
+    openingRoom: Math.max(0, roomNow),
+    newRoomByYear: newRoom,
+    years,
+  });
+}
+
+function secondPersonDeposits(totalAnnual, firstDeposits, roomNow, newRoom) {
+  let available = Math.max(0, roomNow);
+  return firstDeposits.map((got, year) => {
+    if (year > 0) available += Math.max(0, newRoom[year - 1] || 0);
+    const want = Math.max(0, totalAnnual - got);
+    const deposit = Math.min(want, available);
+    available -= deposit;
+    return deposit;
+  });
+}
+
+function buildPath(facts, monthly, mode) {
   const inflation = defaultInflation;
   const spouse = facts.spouse;
   const clientIncome = facts.clientIncome;
@@ -263,17 +301,31 @@ function buildPath(facts, monthly) {
   const province = facts.province;
   const rollover = spouse && facts.rollover;
   const probate = calculateProbate(province, facts.estate, { courtVerification: facts.qcVerification });
-  const blend = (facts.rrspReturn + facts.nonRegReturn) / 2;
+  const clientBlend = (facts.rrspReturn + facts.nonRegReturn) / 2;
+  const spouseBlend = (facts.spouseRrspReturn + facts.spouseNonRegReturn) / 2;
   const deathBase = {
     estate: facts.estate,
     rollover,
     province,
-    savingsReturn: blend,
     inflationPercent: inflation,
   };
-  const clientTax = deathTaxAtYear({ ...deathBase, income: clientIncome, rrsp: facts.rrsp, nonReg: facts.nonReg, years: 0 });
+  const clientTax = deathTaxAtYear({
+    ...deathBase,
+    savingsReturn: clientBlend,
+    income: clientIncome,
+    rrsp: facts.rrsp,
+    nonReg: facts.nonReg,
+    years: 0,
+  });
   const spouseTax = spouse
-    ? deathTaxAtYear({ ...deathBase, income: spouseIncome, rrsp: 0, nonReg: 0, years: 0 })
+    ? deathTaxAtYear({
+        ...deathBase,
+        savingsReturn: spouseBlend,
+        income: spouseIncome,
+        rrsp: facts.spouseRrsp,
+        nonReg: facts.spouseNonReg,
+        years: 0,
+      })
     : null;
   const years = facts.age == null ? facts.incomeYears : incomeYearsAtAge(facts.age, facts.incomeYears, facts.retirementAge);
   const spouseYears = facts.spouseAge == null ? facts.incomeYears : incomeYearsAtAge(facts.spouseAge, facts.incomeYears, facts.retirementAge);
@@ -301,9 +353,9 @@ function buildPath(facts, monthly) {
         personalIncome: spouseIncome,
         replacementRatio: facts.replacement,
         years: spouseYears,
-        existingLifeInsurance: facts.spouseCoverage,
-        assetsAtDeath: 0,
-        deathTax: spouseTax.total,
+    existingLifeInsurance: facts.spouseCoverage,
+    assetsAtDeath: facts.spouseTfsa,
+    deathTax: spouseTax.total,
       })
     : null;
   const until = endAge(facts.age);
@@ -328,6 +380,7 @@ function buildPath(facts, monthly) {
     inflationPercent: inflation,
     taxAtYear: (elapsed) => deathTaxAtYear({
       ...deathBase,
+      savingsReturn: clientBlend,
       income: clientIncome,
       rrsp: facts.rrsp,
       nonReg: facts.nonReg,
@@ -344,17 +397,19 @@ function buildPath(facts, monthly) {
         personalIncome: spouseIncome,
         taxAtYear: (elapsed) => deathTaxAtYear({
           ...deathBase,
+          savingsReturn: spouseBlend,
           income: spouseIncome,
-          rrsp: 0,
-          nonReg: 0,
+          rrsp: facts.spouseRrsp,
+          nonReg: facts.spouseNonReg,
           years: elapsed,
         }).total,
         existingLifeInsurance: facts.spouseCoverage,
-        assetsAtDeath: 0,
+        assetsAtDeath: facts.spouseTfsa,
       }, endAge(facts.spouseAge))
     : [];
 
   let portfolio = null;
+  let accountPlan = null;
   if (facts.age != null) {
     const span = Math.max(0, until - facts.age);
     const workYears = Math.max(0, (facts.retirementAge ?? until) - facts.age);
@@ -376,28 +431,66 @@ function buildPath(facts, monthly) {
     const spouseCpp = spouse ? estimateCpp(spouseIncome, cppAmounts.ympe, maxCpp(), cppContributionYears(facts.spouseAge)) : 0;
     const spouseOas = spouse ? estimateOas(residenceYearsFromAge(facts.spouseAge), maxOas()) : 0;
     const desired = (clientIncome + spouseIncome) * facts.retirementReplacement;
+    const clientTfsaNew = room.years.map((year) => year.clientTfsa || 0);
+    const spouseTfsaNew = room.years.map((year) => year.partnerTfsa || 0);
+    const clientRrspNew = room.years.map((year) => year.clientRrsp || 0);
+    const spouseRrspNew = room.years.map((year) => year.partnerRrsp || 0);
+    const tfsaAsked = mode === "recommended"
+      ? { client: monthly.tfsa * 12, spouse: 0 }
+      : { client: facts.tfsaMonthly * 12, spouse: facts.spouseTfsaMonthly * 12 };
+    const rrspAsked = mode === "recommended"
+      ? { client: monthly.rrsp * 12, spouse: 0 }
+      : { client: facts.rrspMonthly * 12, spouse: facts.spouseRrspMonthly * 12 };
+    const clientTfsaDeposits = ownDeposits(tfsaAsked.client, facts.tfsaRoom, clientTfsaNew, workYears);
+    const spouseTfsaDeposits = mode === "recommended"
+      ? secondPersonDeposits(monthly.tfsa * 12, clientTfsaDeposits, facts.spouseTfsaRoom, spouseTfsaNew)
+      : ownDeposits(tfsaAsked.spouse, facts.spouseTfsaRoom, spouseTfsaNew, workYears);
+    const clientRrspDeposits = ownDeposits(rrspAsked.client, facts.rrspRoom, clientRrspNew, workYears);
+    const spouseRrspDeposits = mode === "recommended"
+      ? secondPersonDeposits(monthly.rrsp * 12, clientRrspDeposits, facts.spouseRrspRoom, spouseRrspNew)
+      : ownDeposits(rrspAsked.spouse, facts.spouseRrspRoom, spouseRrspNew, workYears);
+    if (mode === "recommended") {
+      tfsaAsked.spouse = Math.max(0, monthly.tfsa * 12 - (clientTfsaDeposits[0] || 0));
+      rrspAsked.spouse = Math.max(0, monthly.rrsp * 12 - (clientRrspDeposits[0] || 0));
+    }
+    accountPlan = {
+      tfsa: { client: clientTfsaDeposits, spouse: spouseTfsaDeposits, clientWant: tfsaAsked.client, spouseWant: tfsaAsked.spouse },
+      rrsp: { client: clientRrspDeposits, spouse: spouseRrspDeposits, clientWant: rrspAsked.client, spouseWant: rrspAsked.spouse },
+    };
+    const tfsaReturn = weightedRate([
+      { weight: facts.tfsa + facts.tfsaMonthly * 12, rate: facts.tfsaReturn },
+      { weight: facts.spouseTfsa + facts.spouseTfsaMonthly * 12, rate: facts.spouseTfsaReturn },
+    ]);
+    const rrspReturn = weightedRate([
+      { weight: facts.rrsp + facts.rrspMonthly * 12, rate: facts.rrspReturn },
+      { weight: facts.spouseRrsp + facts.spouseRrspMonthly * 12, rate: facts.spouseRrspReturn },
+    ]);
+    const nonRegReturn = weightedRate([
+      { weight: facts.nonReg + facts.nonRegMonthly * 12, rate: facts.nonRegReturn },
+      { weight: facts.spouseNonReg + facts.spouseNonRegMonthly * 12, rate: facts.spouseNonRegReturn },
+    ]);
     portfolio = projectPortfolio({
       currentAge: facts.age,
       retirementAge: facts.retirementAge ?? 200,
       years: span,
       inflationRate: inflation / 100,
-      savingsReturn: blend,
-      retirementReturn: blend,
+      savingsReturn: clientBlend,
+      retirementReturn: clientBlend,
       useAccountReturns: true,
-      tfsaReturn: facts.tfsaReturn,
-      rrspReturn: facts.rrspReturn,
-      nonRegReturn: facts.nonRegReturn,
+      tfsaReturn,
+      rrspReturn,
+      nonRegReturn,
       desiredIncomeToday: desired,
-      tfsaAnnual: monthly.tfsa * 12,
-      rrspAnnual: monthly.rrsp * 12,
-      nonRegAnnual: monthly.nonreg * 12,
-      tfsaOpening: facts.tfsa,
-      rrspOpening: facts.rrsp,
-      nonRegOpening: facts.nonReg,
-      tfsaRoomNow: facts.tfsaRoom,
-      rrspRoomNow: facts.rrspRoom,
-      tfsaNewRoom: room.years.map((year) => (year.clientTfsa || 0) + (year.partnerTfsa || 0)),
-      rrspNewRoom: room.years.map((year) => (year.clientRrsp || 0) + (year.partnerRrsp || 0)),
+      tfsaAnnual: (mode === "recommended" ? monthly.tfsa : facts.tfsaMonthly + facts.spouseTfsaMonthly) * 12,
+      rrspAnnual: (mode === "recommended" ? monthly.rrsp : facts.rrspMonthly + facts.spouseRrspMonthly) * 12,
+      nonRegAnnual: (mode === "recommended" ? monthly.nonreg : facts.nonRegMonthly + facts.spouseNonRegMonthly) * 12,
+      tfsaOpening: facts.tfsa + facts.spouseTfsa,
+      rrspOpening: facts.rrsp + facts.spouseRrsp,
+      nonRegOpening: facts.nonReg + facts.spouseNonReg,
+      tfsaDepositsOverride: addLists(clientTfsaDeposits, spouseTfsaDeposits),
+      rrspDepositsOverride: addLists(clientRrspDeposits, spouseRrspDeposits),
+      tfsaNewRoom: addLists(clientTfsaNew, spouseTfsaNew),
+      rrspNewRoom: addLists(clientRrspNew, spouseRrspNew),
       province,
       clientCppToday: cpp,
       clientOasToday: oas,
@@ -412,7 +505,7 @@ function buildPath(facts, monthly) {
     });
   }
 
-  return { life, spouseLife, needPath, spouseNeedPath, portfolio, probate, clientTax, spouseTax };
+  return { life, spouseLife, needPath, spouseNeedPath, portfolio, probate, clientTax, spouseTax, accountPlan };
 }
 
 function readFacts() {
@@ -451,6 +544,17 @@ function readFacts() {
     nonReg: num("nonreg-balance"),
     nonRegMonthly: num("nonreg-monthly"),
     nonRegReturn: num("nonreg-return") / 100,
+    spouseTfsa: spouse ? num("spouse-tfsa-balance") : 0,
+    spouseTfsaMonthly: spouse ? num("spouse-tfsa-monthly") : 0,
+    spouseTfsaRoom: spouse ? num("spouse-tfsa-room") : 0,
+    spouseTfsaReturn: spouse ? num("spouse-tfsa-return") / 100 : 0,
+    spouseRrsp: spouse ? num("spouse-rrsp-balance") : 0,
+    spouseRrspMonthly: spouse ? num("spouse-rrsp-monthly") : 0,
+    spouseRrspRoom: spouse ? num("spouse-rrsp-room") : 0,
+    spouseRrspReturn: spouse ? num("spouse-rrsp-return") / 100 : 0,
+    spouseNonReg: spouse ? num("spouse-nonreg-balance") : 0,
+    spouseNonRegMonthly: spouse ? num("spouse-nonreg-monthly") : 0,
+    spouseNonRegReturn: spouse ? num("spouse-nonreg-return") / 100 : 0,
   };
 }
 
@@ -734,14 +838,21 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
     ["Other debts", formatDollars(facts.otherDebts)],
     ["Retirement age", String(facts.retirementAge)],
     ["Retirement income", `${Math.round(facts.retirementReplacement * 100)}% of income`],
-    ["TFSA", `${formatDollars(facts.tfsa)} · ${formatDollars(facts.tfsaMonthly)} a month`],
-    ["RRSP", `${formatDollars(facts.rrsp)} · ${formatDollars(facts.rrspMonthly)} a month`],
-    ["Non-registered", `${formatDollars(facts.nonReg)} · ${formatDollars(facts.nonRegMonthly)} a month`],
+    [`${clientName()} TFSA`, `${formatDollars(facts.tfsa)} · ${formatDollars(facts.tfsaMonthly)} a month`],
+    [`${clientName()} RRSP`, `${formatDollars(facts.rrsp)} · ${formatDollars(facts.rrspMonthly)} a month`],
+    [`${clientName()} non-registered`, `${formatDollars(facts.nonReg)} · ${formatDollars(facts.nonRegMonthly)} a month`],
   );
+  if (hasSpouse()) {
+    rows.push(
+      [`${spouseName()} TFSA`, `${formatDollars(facts.spouseTfsa)} · ${formatDollars(facts.spouseTfsaMonthly)} a month`],
+      [`${spouseName()} RRSP`, `${formatDollars(facts.spouseRrsp)} · ${formatDollars(facts.spouseRrspMonthly)} a month`],
+      [`${spouseName()} non-registered`, `${formatDollars(facts.spouseNonReg)} · ${formatDollars(facts.spouseNonRegMonthly)} a month`],
+    );
+  }
   const markers = {
     [`If ${clientName()} dies, income to replace`]: "Section 2 · Life insurance goal",
     "Retirement age": "Section 3 · Retirement",
-    "TFSA": "Section 4 · Accounts",
+    [`${clientName()} TFSA`]: "Section 4 · Accounts",
   };
   for (const [label, value] of rows) {
     if (markers[label]) factsList.append(node("p", "ref-tag mt-6", markers[label]));
@@ -798,8 +909,8 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
     );
   }
   advice.append(adviceList);
-  const tfsaPlan = roomNote(recommended.portfolio, num("rec-tfsa") * 12, "tfsa");
-  const rrspPlan = roomNote(recommended.portfolio, num("rec-rrsp") * 12, "rrsp");
+  const tfsaPlan = accountRoomNote(recommended, "tfsa", "TFSA");
+  const rrspPlan = accountRoomNote(recommended, "rrsp", "RRSP");
   if (tfsaPlan.text) advice.append(node("p", "mt-4 text-sm leading-6", tfsaPlan.text));
   if (rrspPlan.text) advice.append(node("p", "mt-2 text-sm leading-6", rrspPlan.text));
   root.append(advice);
@@ -870,6 +981,36 @@ function compareSeries(current, recommended, earlyAge) {
       formatDollars(nextValues[index] || 0),
       `Today ${formatDollars(currentValues[index] || 0)}`,
     ],
+  };
+}
+
+function depositLine(name, account, deposits, asked) {
+  if (!deposits || (asked <= 0 && !(deposits[0] > 0))) return "";
+  const first = deposits[0] || 0;
+  const yearOf = (index) => tfsaContributionLimit.taxYear + index;
+  if (first + 0.5 < asked && first <= 0.5) {
+    const next = deposits.findIndex((amount, index) => index > 0 && amount > 0.5);
+    const later = next > 0 ? ` In ${yearOf(next)} the deposit is ${formatDollars(deposits[next])}.` : "";
+    return `${name}'s ${account} is maxed. Nothing more goes in this year.${later}`;
+  }
+  if (first + 0.5 < asked) return `${name}'s ${account} room allows ${formatDollars(first)} this year, not ${formatDollars(asked)}.`;
+  const drop = deposits.findIndex((amount, index) => index > 0 && amount + 0.5 < asked);
+  if (drop > 0) return `${name}'s ${account} covers ${formatDollars(asked)} a year through ${yearOf(drop) - 1}, then comes down to ${formatDollars(deposits[drop])}.`;
+  return `${name}'s ${account} room covers ${formatDollars(asked)} a year.`;
+}
+
+function accountRoomNote(model, key, account) {
+  const plan = model?.accountPlan?.[key];
+  if (!plan) return { text: "", limited: false, maxed: false };
+  const lines = [
+    depositLine(clientName(), account, plan.client, plan.clientWant),
+    depositLine(spouseName(), account, plan.spouse, plan.spouseWant),
+  ].filter(Boolean);
+  const text = lines.join(" ");
+  return {
+    text,
+    limited: /maxed|not |comes down/.test(text),
+    maxed: text.includes("maxed"),
   };
 }
 
@@ -1042,6 +1183,7 @@ function render() {
   applyNames();
   const spouse = hasSpouse();
   $("spouse-fields").classList.toggle("hidden", !spouse);
+  $("spouse-accounts").classList.toggle("hidden", !spouse);
   $("spouse-coverage-wrap").classList.toggle("hidden", !spouse);
   $("spouse-need-block").classList.toggle("hidden", !spouse);
   $("rec-spouse-life-wrap").classList.toggle("hidden", !spouse);
@@ -1054,7 +1196,7 @@ function render() {
   syncRecommendations();
 
   const facts = readFacts();
-  const current = buildPath(facts, { tfsa: facts.tfsaMonthly, rrsp: facts.rrspMonthly, nonreg: facts.nonRegMonthly });
+  const current = buildPath(facts, null, "current");
   placeBenefit("life", "rec-life", "rec-life-slider", current.life.capitalNeed, Math.max(current.life.capitalNeed, 2000000));
   if (current.spouseLife) placeBenefit("spouseLife", "rec-spouse-life", "rec-spouse-life-slider", current.spouseLife.capitalNeed, Math.max(current.spouseLife.capitalNeed, 2000000));
   const disability = disabilityMonthlyBenefit(facts.clientIncome, facts.replacement);
@@ -1066,7 +1208,7 @@ function render() {
   $("spouse-ci-amount").textContent = formatDollars(criticalIllnessLumpSum(facts.spouseIncome, facts.replacement, months));
   $("disability-hint").textContent = `Starts at ${Math.round(facts.replacement * 100)}% of monthly income, ${formatDollars(disability)}. Slide it to recommend a different monthly benefit.`;
   $("spouse-disability-hint").textContent = `Starts at ${formatDollars(spouseDisability)} a month.`;
-  const recommended = buildPath(facts, { tfsa: num("rec-tfsa"), rrsp: num("rec-rrsp"), nonreg: num("rec-nonreg") });
+  const recommended = buildPath(facts, { tfsa: num("rec-tfsa"), rrsp: num("rec-rrsp"), nonreg: num("rec-nonreg") }, "recommended");
 
   $("life-figure").textContent = formatDollars(current.life.capitalNeed);
   $("sticky-life").textContent = formatDollars(current.life.capitalNeed);
@@ -1084,15 +1226,15 @@ function render() {
 
   const monthly = num("rec-tfsa") + num("rec-rrsp") + num("rec-nonreg");
   $("sticky-monthly").textContent = formatDollars(monthly);
-  $("compare-today").textContent = formatDollars(facts.tfsaMonthly + facts.rrspMonthly + facts.nonRegMonthly);
+  $("compare-today").textContent = formatDollars(facts.tfsaMonthly + facts.spouseTfsaMonthly + facts.rrspMonthly + facts.spouseRrspMonthly + facts.nonRegMonthly + facts.spouseNonRegMonthly);
   $("compare-rec").textContent = formatDollars(monthly);
   $("retire-today").textContent = formatDollars(rowNearest(current.portfolio, facts.retirementAge)?.total ?? 0);
   $("retire-rec").textContent = formatDollars(rowNearest(recommended.portfolio, facts.retirementAge)?.total ?? 0);
   const earlyAfter = placeRange("early-after", facts.age, endAge(facts.age), "earlyAfter");
   $("early-after-readout").textContent = deathLine(rowNearest(recommended.portfolio, earlyAfter));
   drawSeries($("compare-chart"), compareSeries(current.portfolio, recommended.portfolio, earlyAfter));
-  const tfsaRoom = roomNote(recommended.portfolio, num("rec-tfsa") * 12, "tfsa");
-  const rrspRoom = roomNote(recommended.portfolio, num("rec-rrsp") * 12, "rrsp");
+  const tfsaRoom = accountRoomNote(recommended, "tfsa", "TFSA");
+  const rrspRoom = accountRoomNote(recommended, "rrsp", "RRSP");
   showRoomNote("rec-tfsa-note", tfsaRoom);
   showRoomNote("rec-rrsp-note", rrspRoom);
   renderContributionSchedule(recommended.portfolio);
@@ -1145,6 +1287,17 @@ function loadSample() {
   $("nonreg-balance").value = "20000";
   $("nonreg-monthly").value = "0";
   $("nonreg-return").value = "4";
+  $("spouse-tfsa-balance").value = "15000";
+  $("spouse-tfsa-monthly").value = "100";
+  $("spouse-tfsa-room").value = "8000";
+  $("spouse-tfsa-return").value = "5";
+  $("spouse-rrsp-balance").value = "25000";
+  $("spouse-rrsp-monthly").value = "150";
+  $("spouse-rrsp-room").value = "6000";
+  $("spouse-rrsp-return").value = "5";
+  $("spouse-nonreg-balance").value = "10000";
+  $("spouse-nonreg-monthly").value = "50";
+  $("spouse-nonreg-return").value = "4";
   dirty.tfsa = true;
   dirty.rrsp = true;
   dirty.nonreg = true;

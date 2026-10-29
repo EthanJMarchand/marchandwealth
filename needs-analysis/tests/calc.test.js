@@ -1134,6 +1134,22 @@ test("only the growth on other assets is taxed, and a rollover drops the RRSP de
   assert.equal(rolled.rows[0].deathTax, 0);
 });
 
+test("a supplied deposit schedule is used instead of one combined room", () => {
+  const path = projectPortfolio({
+    currentAge: 40,
+    retirementAge: 42,
+    years: 1,
+    tfsaAnnual: 20000,
+    tfsaOpening: 0,
+    tfsaRoomNow: 0,
+    tfsaDepositsOverride: [3000, 4000],
+    province: "AB",
+    savingsReturn: 0,
+    retirementReturn: 0,
+  });
+  assert.equal(path.rows[0].tfsaIn, 3000);
+});
+
 test("each registered account can grow at its own 5-year return", () => {
   const path = projectPortfolio({
     currentAge: 40,
