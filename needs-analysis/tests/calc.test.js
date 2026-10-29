@@ -1154,6 +1154,26 @@ test("only the growth on other assets is taxed, and a rollover drops the RRSP de
   assert.equal(rolled.rows[0].deathTax, 0);
 });
 
+test("other investments are taxed on the growth only", () => {
+  const grown = deathTaxAtYear({
+    income: 50000,
+    other: 100000,
+    otherReturn: 0.05,
+    years: 10,
+    province: "AB",
+  });
+  assert.ok(grown.otherTax > 0);
+  assert.ok(grown.otherBalance > 100000);
+  const flat = deathTaxAtYear({
+    income: 50000,
+    other: 100000,
+    otherReturn: 0,
+    years: 10,
+    province: "AB",
+  });
+  assert.equal(flat.otherTax, 0);
+});
+
 test("a supplied deposit schedule is used instead of one combined room", () => {
   const path = projectPortfolio({
     currentAge: 40,

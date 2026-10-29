@@ -238,10 +238,19 @@
         <label id="spouse-coverage-wrap" class="hidden block text-sm font-medium"><span id="spouse-coverage-label">Client 2's life insurance already in place</span>
           <input id="spouse-existing-coverage" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
         </label>
-        <label class="block text-sm font-medium">Other value through the estate
+        <label class="block text-sm font-medium">Value that goes through probate
           <input id="estate-value" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
+          <span class="mt-1 block font-normal text-inksoft">The court fee is calculated on this. A TFSA, and life insurance with a named beneficiary, usually stay out.</span>
         </label>
       </div>
+      <fieldset class="mt-4">
+        <legend class="text-sm font-medium">Do you want the life insurance to cover taxes and probate?</legend>
+        <div class="mt-2 flex flex-wrap gap-6">
+          <label class="flex gap-2 text-sm font-medium"><input type="radio" name="cover-tax" value="yes" checked /> Yes</label>
+          <label class="flex gap-2 text-sm font-medium"><input type="radio" name="cover-tax" value="no" /> No</label>
+        </div>
+      </fieldset>
+      <p id="tax-probate-note" class="mt-2 text-sm leading-6 text-inksoft"></p>
       <h3 id="section-3" class="mt-8 font-serif text-xl font-semibold text-navydeep" data-crumb="Financial plan · Section 3 · Retirement"><span class="ref-tag">Section 3</span>Retirement</h3>
       <p class="mt-2 text-sm leading-6 text-inksoft">This is the income goal while they are living. It does not change the life insurance amount.</p>
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
@@ -307,6 +316,16 @@
             <input id="nonreg-return" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
           </label>
         </fieldset>
+        <fieldset class="rounded-sm border border-line p-4">
+          <legend class="px-1 text-sm font-semibold">Other investments</legend>
+          <label class="mt-2 block text-sm font-medium">Balance
+            <input id="other-balance" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
+            <span class="mt-1 block font-normal text-inksoft">Real estate or anything outside the TFSA, RRSP, and non-registered account. Only the growth is taxed.</span>
+          </label>
+          <label class="mt-3 block text-sm font-medium">Average return (%)
+            <input id="other-return" inputmode="decimal" value="0" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
+          </label>
+        </fieldset>
       </div>
       <div id="spouse-accounts" class="mt-6 hidden">
         <p id="spouse-accounts-heading" class="text-xs font-semibold uppercase tracking-[0.14em] text-olive">Client 2</p>
@@ -349,11 +368,21 @@
             <label class="mt-3 block text-sm font-medium">Monthly contribution
               <input id="spouse-nonreg-monthly" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-white px-3.5 py-2.5 text-sm" autocomplete="off" />
             </label>
-            <label class="mt-3 block text-sm font-medium">Average return, 5 years (%)
-              <input id="spouse-nonreg-return" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-white px-3.5 py-2.5 text-sm" />
-            </label>
-          </fieldset>
-        </div>
+          <label class="mt-3 block text-sm font-medium">Average return, 5 years (%)
+            <input id="spouse-nonreg-return" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-white px-3.5 py-2.5 text-sm" />
+          </label>
+        </fieldset>
+        <fieldset class="person-spouse rounded-sm p-4">
+          <legend class="px-1 text-sm font-semibold">Other investments</legend>
+          <label class="mt-2 block text-sm font-medium">Balance
+            <input id="spouse-other-balance" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-white px-3.5 py-2.5 text-sm" autocomplete="off" />
+            <span class="mt-1 block font-normal text-inksoft">Only the growth is taxed.</span>
+          </label>
+          <label class="mt-3 block text-sm font-medium">Average return (%)
+            <input id="spouse-other-return" inputmode="decimal" value="0" class="mt-1 w-full rounded-sm border border-line bg-white px-3.5 py-2.5 text-sm" />
+          </label>
+        </fieldset>
+      </div>
       </div>
     </section>
 

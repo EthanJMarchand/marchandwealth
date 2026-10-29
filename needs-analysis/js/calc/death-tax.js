@@ -19,6 +19,8 @@ export function deathTaxAtYear({
   rrsp = 0,
   nonReg = 0,
   estate = 0,
+  other = 0,
+  otherReturn,
   rollover = false,
   province,
   savingsReturn = 0,
@@ -27,26 +29,34 @@ export function deathTaxAtYear({
 }) {
   const elapsed = Math.max(0, years || 0);
   const baseIncome = Math.max(0, income);
+  const otherRate = Number.isFinite(otherReturn) ? otherReturn : savingsReturn;
+  const otherCost = Math.max(0, other);
+  const otherGrown = futureValue(otherCost, otherRate, elapsed);
   const rrspBalance = rollover ? 0 : futureValue(Math.max(0, rrsp), savingsReturn, elapsed);
   const nonRegBalance = futureValue(Math.max(0, nonReg), savingsReturn, elapsed);
   const estateValue = inflate(Math.max(0, estate), inflationPercent, elapsed);
   const nonRegInclusion = nonRegBalance * CAPITAL_GAINS_INCLUSION;
+  const otherInclusion = Math.max(0, otherGrown - otherCost) * CAPITAL_GAINS_INCLUSION;
   const estateInclusion = estateValue * CAPITAL_GAINS_INCLUSION;
   const nonRegSlice = sliceTax(baseIncome, nonRegInclusion, province);
-  const estateSlice = sliceTax(baseIncome + nonRegInclusion, estateInclusion, province);
-  const rrspSlice = sliceTax(baseIncome + nonRegInclusion + estateInclusion, rrspBalance, province);
+  const otherSlice = sliceTax(baseIncome + nonRegInclusion, otherInclusion, province);
+  const estateSlice = sliceTax(baseIncome + nonRegInclusion + otherInclusion, estateInclusion, province);
+  const rrspSlice = sliceTax(baseIncome + nonRegInclusion + otherInclusion + estateInclusion, rrspBalance, province);
   return {
     rolledOver: Boolean(rollover),
     rrspBalance,
     nonRegBalance,
+    otherBalance: otherGrown,
     estateValue,
     nonRegInclusion,
+    otherInclusion,
     estateInclusion,
     rrspInclusion: rrspBalance,
     nonRegTax: nonRegSlice.tax,
+    otherTax: otherSlice.tax,
     estateTax: estateSlice.tax,
     rrspTax: rrspSlice.tax,
     rrspRate: rrspSlice.rate,
-    total: nonRegSlice.tax + estateSlice.tax + rrspSlice.tax,
+    total: nonRegSlice.tax + otherSlice.tax + estateSlice.tax + rrspSlice.tax,
   };
 }

@@ -313,12 +313,15 @@ function buildPath(facts, monthly, mode) {
     province,
     inflationPercent: inflation,
   };
+  const includeTax = facts.coverTax;
   const clientTax = deathTaxAtYear({
     ...deathBase,
     savingsReturn: clientBlend,
     income: clientIncome,
     rrsp: facts.rrsp,
     nonReg: facts.nonReg,
+    other: facts.other,
+    otherReturn: facts.otherReturn,
     years: 0,
   });
   const spouseTax = spouse
@@ -328,7 +331,31 @@ function buildPath(facts, monthly, mode) {
         income: spouseIncome,
         rrsp: facts.spouseRrsp,
         nonReg: facts.spouseNonReg,
+        other: facts.spouseOther,
+        otherReturn: facts.spouseOtherReturn,
         years: 0,
+      })
+    : null;
+  const clientTaxLater = deathTaxAtYear({
+    ...deathBase,
+    savingsReturn: clientBlend,
+    income: clientIncome,
+    rrsp: facts.rrsp,
+    nonReg: facts.nonReg,
+    other: facts.other,
+    otherReturn: facts.otherReturn,
+    years: 10,
+  });
+  const spouseTaxLater = spouse
+    ? deathTaxAtYear({
+        ...deathBase,
+        savingsReturn: spouseBlend,
+        income: spouseIncome,
+        rrsp: facts.spouseRrsp,
+        nonReg: facts.spouseNonReg,
+        other: facts.spouseOther,
+        otherReturn: facts.spouseOtherReturn,
+        years: 10,
       })
     : null;
   const years = facts.age == null ? facts.incomeYears : incomeYearsAtAge(facts.age, facts.incomeYears, facts.retirementAge);
@@ -339,7 +366,7 @@ function buildPath(facts, monthly, mode) {
     educationPerDependant: facts.education,
     debts: facts.mortgage + facts.otherDebts,
     finalExpenses: facts.finalExpenses,
-    probateFee: probate.fee,
+    probateFee: includeTax ? probate.fee : 0,
     inflationPercent: inflation,
   };
   const life = calculateLifeNeed({
@@ -349,7 +376,7 @@ function buildPath(facts, monthly, mode) {
     years,
     existingLifeInsurance: facts.existingCoverage,
     assetsAtDeath: facts.tfsa,
-    deathTax: clientTax.total,
+    deathTax: includeTax ? clientTax.total : 0,
   });
   const spouseLife = spouse
     ? calculateLifeNeed({
@@ -359,7 +386,7 @@ function buildPath(facts, monthly, mode) {
         years: spouseYears,
     existingLifeInsurance: facts.spouseCoverage,
     assetsAtDeath: facts.spouseTfsa,
-    deathTax: spouseTax.total,
+    deathTax: includeTax ? spouseTax.total : 0,
       })
     : null;
   const until = endAge(facts.age);
@@ -380,16 +407,18 @@ function buildPath(facts, monthly, mode) {
     yearsUntilPurchase: 0,
     amortizationYears: 0,
     finalExpenses: facts.finalExpenses,
-    probateFee: probate.fee,
+    probateFee: includeTax ? probate.fee : 0,
     inflationPercent: inflation,
-    taxAtYear: (elapsed) => deathTaxAtYear({
+    taxAtYear: (elapsed) => includeTax ? deathTaxAtYear({
       ...deathBase,
       savingsReturn: clientBlend,
       income: clientIncome,
       rrsp: facts.rrsp,
       nonReg: facts.nonReg,
+      other: facts.other,
+      otherReturn: facts.otherReturn,
       years: elapsed,
-    }).total,
+    }).total : 0,
     existingLifeInsurance: facts.existingCoverage,
     assetsAtDeath: facts.tfsa,
   };
@@ -399,14 +428,16 @@ function buildPath(facts, monthly, mode) {
         ...pathInput,
         currentAge: facts.spouseAge,
         personalIncome: spouseIncome,
-        taxAtYear: (elapsed) => deathTaxAtYear({
+        taxAtYear: (elapsed) => includeTax ? deathTaxAtYear({
           ...deathBase,
           savingsReturn: spouseBlend,
           income: spouseIncome,
           rrsp: facts.spouseRrsp,
           nonReg: facts.spouseNonReg,
+          other: facts.spouseOther,
+          otherReturn: facts.spouseOtherReturn,
           years: elapsed,
-        }).total,
+        }).total : 0,
         existingLifeInsurance: facts.spouseCoverage,
         assetsAtDeath: facts.spouseTfsa,
       }, endAge(facts.spouseAge))
@@ -491,6 +522,11 @@ function buildPath(facts, monthly, mode) {
       tfsaOpening: facts.tfsa + facts.spouseTfsa,
       rrspOpening: facts.rrsp + facts.spouseRrsp,
       nonRegOpening: facts.nonReg + facts.spouseNonReg,
+      otherOpening: facts.other + facts.spouseOther,
+      otherReturn: weightedRate([
+        { weight: facts.other, rate: facts.otherReturn },
+        { weight: facts.spouseOther, rate: facts.spouseOtherReturn },
+      ]),
       tfsaDepositsOverride: addLists(clientTfsaDeposits, spouseTfsaDeposits),
       rrspDepositsOverride: addLists(clientRrspDeposits, spouseRrspDeposits),
       tfsaNewRoom: addLists(clientTfsaNew, spouseTfsaNew),
@@ -509,7 +545,7 @@ function buildPath(facts, monthly, mode) {
     });
   }
 
-  return { life, spouseLife, needPath, spouseNeedPath, portfolio, probate, clientTax, spouseTax, accountPlan };
+  return { life, spouseLife, needPath, spouseNeedPath, portfolio, probate, clientTax, spouseTax, clientTaxLater, spouseTaxLater, accountPlan };
 }
 
 function readFacts() {
@@ -536,6 +572,7 @@ function readFacts() {
     existingCoverage: num("existing-coverage"),
     spouseCoverage: spouse ? num("spouse-existing-coverage") : 0,
     estate: num("estate-value"),
+    coverTax: document.querySelector('input[name="cover-tax"]:checked')?.value !== "no",
     rollover: $("rrsp-rollover").checked,
     inflation: inflationPercent(),
     tfsa: num("tfsa-balance"),
@@ -560,6 +597,10 @@ function readFacts() {
     spouseNonReg: spouse ? num("spouse-nonreg-balance") : 0,
     spouseNonRegMonthly: spouse ? num("spouse-nonreg-monthly") : 0,
     spouseNonRegReturn: spouse ? num("spouse-nonreg-return") / 100 : 0,
+    other: num("other-balance"),
+    otherReturn: num("other-return") / 100,
+    spouseOther: spouse ? num("spouse-other-balance") : 0,
+    spouseOtherReturn: spouse ? num("spouse-other-return") / 100 : 0,
   };
 }
 
@@ -847,12 +888,14 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
     [`${clientName()} TFSA`, `${formatDollars(facts.tfsa)} · ${formatDollars(facts.tfsaMonthly)} a month`],
     [`${clientName()} RRSP`, `${formatDollars(facts.rrsp)} · ${formatDollars(facts.rrspMonthly)} a month`],
     [`${clientName()} non-registered`, `${formatDollars(facts.nonReg)} · ${formatDollars(facts.nonRegMonthly)} a month`],
+    [`${clientName()} other investments`, `${formatDollars(facts.other)} · ${Math.round(facts.otherReturn * 1000) / 10}%`],
   );
   if (hasSpouse()) {
     rows.push(
       [`${spouseName()} TFSA`, `${formatDollars(facts.spouseTfsa)} · ${formatDollars(facts.spouseTfsaMonthly)} a month`],
       [`${spouseName()} RRSP`, `${formatDollars(facts.spouseRrsp)} · ${formatDollars(facts.spouseRrspMonthly)} a month`],
       [`${spouseName()} non-registered`, `${formatDollars(facts.spouseNonReg)} · ${formatDollars(facts.spouseNonRegMonthly)} a month`],
+      [`${spouseName()} other investments`, `${formatDollars(facts.spouseOther)} · ${Math.round(facts.spouseOtherReturn * 1000) / 10}%`],
     );
   }
   const markers = {
@@ -871,6 +914,7 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
   insurance.append(node("p", "ref-tag mt-6", "Illustration 1 · Life insurance need"));
   insurance.append(node("p", "mt-2 font-serif text-5xl text-navydeep nums", formatDollars(current.life.capitalNeed)));
   insurance.append(node("p", "mt-2 text-sm text-inksoft", `${clientName()} · ${facts.incomeYears} years at ${Math.round(facts.replacement * 100)}% of income after death · ${formatDollars(facts.existingCoverage)} already in place`));
+  insurance.append(node("p", "mt-2 text-sm leading-6 text-inksoft", taxSentence(current, facts)));
   insurance.append(node("p", "ref-tag mt-8", "Illustration 2 · Need over time"));
   const chart = node("div", "need-chart mt-2");
   insurance.append(chart);
@@ -988,6 +1032,26 @@ function compareSeries(current, recommended, earlyAge) {
       `Today ${formatDollars(currentValues[index] || 0)}`,
     ],
   };
+}
+
+function taxSentence(model, facts) {
+  const client = model?.clientTax;
+  if (!client) return "";
+  const lines = [
+    `${clientName()}: RRSP tax ${formatDollars(client.rrspTax)}, non-registered ${formatDollars(client.nonRegTax)}, other investments ${formatDollars(client.otherTax)}, tax on the probate value ${formatDollars(client.estateTax)}`,
+  ];
+  if (model.spouseTax) {
+    lines.push(`${spouseName()}: RRSP tax ${formatDollars(model.spouseTax.rrspTax)}, non-registered ${formatDollars(model.spouseTax.nonRegTax)}, other investments ${formatDollars(model.spouseTax.otherTax)}`);
+  }
+  if (model.clientTaxLater) {
+    lines.push(`In 10 years, ${clientName()}'s tax on the RRSP, non-registered account, and other investments is ${formatDollars(model.clientTaxLater.rrspTax + model.clientTaxLater.nonRegTax + model.clientTaxLater.otherTax)}`);
+  }
+  if (model.spouseTaxLater) {
+    lines.push(`In 10 years, ${spouseName()}'s tax on those accounts is ${formatDollars(model.spouseTaxLater.rrspTax + model.spouseTaxLater.nonRegTax + model.spouseTaxLater.otherTax)}`);
+  }
+  lines.push(`Probate ${formatDollars(model.probate.fee)}`);
+  lines.push(facts.coverTax ? "The life insurance need includes these." : "The life insurance need leaves these out.");
+  return lines.join(". ");
 }
 
 function depositLine(name, account, deposits, asked) {
@@ -1133,7 +1197,7 @@ function renderProjectionTable(portfolio, earlyAge, facts) {
   const spouse = facts.spouse && facts.spouseAge != null;
   const labels = ["Year", "Age"];
   if (spouse) labels.push(`${spouseName()} age`);
-  labels.push("TFSA in", "RRSP in", "Non-reg in", "TFSA", "RRSP", "Non-reg", "Total", "CPP and OAS", "From the accounts", "Tax on withdrawal", "Tax if death");
+  labels.push("TFSA in", "RRSP in", "Non-reg in", "TFSA", "RRSP", "Non-reg", "Other", "Total", "CPP and OAS", "From the accounts", "Tax on withdrawal", "Tax if death");
   const head = document.createElement("thead");
   const headRow = document.createElement("tr");
   for (const label of labels) {
@@ -1160,6 +1224,7 @@ function renderProjectionTable(portfolio, earlyAge, facts) {
       [formatDollars(row.tfsa), ""],
       [formatDollars(row.rrsp), ""],
       [formatDollars(row.nonReg), ""],
+      [formatDollars(row.other), ""],
       [formatDollars(row.total), ""],
       [formatDollars(row.pension), ""],
       [formatDollars(row.withdrawal), ""],
@@ -1221,6 +1286,7 @@ function render() {
   const incomeYears = current.life.years;
   const firstYear = current.life.annualIncomeNeed;
   const lastYear = incomeYears > 1 ? firstYear * ((1 + facts.inflation / 100) ** (incomeYears - 1)) : firstYear;
+  $("tax-probate-note").textContent = taxSentence(current, facts);
   $("life-caption").textContent = incomeYears > 0
     ? `${incomeYears} years at ${Math.round(facts.replacement * 100)}% of ${clientName()}'s income. Year 1 is ${formatDollars(firstYear)}. Year ${incomeYears} is ${formatDollars(lastYear)} after ${facts.inflation}% inflation. The need is those years added together, plus debts and final expenses. ${formatDollars(facts.existingCoverage)} of life insurance is already in place.`
     : `No years of income are left to replace. The need is debts and final expenses. ${formatDollars(facts.existingCoverage)} of life insurance is already in place.`;
@@ -1298,6 +1364,9 @@ function loadSample() {
   $("nonreg-balance").value = "20000";
   $("nonreg-monthly").value = "0";
   $("nonreg-return").value = "4";
+  $("other-balance").value = "80000";
+  $("other-return").value = "3";
+  $("estate-value").value = "200000";
   $("spouse-tfsa-balance").value = "15000";
   $("spouse-tfsa-monthly").value = "100";
   $("spouse-tfsa-room").value = "8000";
@@ -1309,6 +1378,8 @@ function loadSample() {
   $("spouse-nonreg-balance").value = "10000";
   $("spouse-nonreg-monthly").value = "50";
   $("spouse-nonreg-return").value = "4";
+  $("spouse-other-balance").value = "40000";
+  $("spouse-other-return").value = "3";
   dirty.tfsa = true;
   dirty.rrsp = true;
   dirty.nonreg = true;
