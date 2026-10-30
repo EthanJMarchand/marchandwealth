@@ -593,18 +593,32 @@ function contributionHeadline(model) {
   return { label, monthly: annual / 12 };
 }
 
-// Spousal RRSP/RRIF rollover follows the household: with a spouse or partner on
-// the plan, Tax if death leaves the RRSP out; without one, the RRSP is taxed.
+// Eligible TFSA successor holder / RRSP–RRIF rollover follows the household:
+// with a spouse or partner on the plan, Tax if death leaves the RRSP out;
+// without one, the RRSP is taxed.
 function rolloverChosen() {
   return hasPartner();
 }
 
 function syncRolloverNote() {
   const note = $("rrsp-rollover-note");
+  const tip = $("rrsp-rollover-tip");
   if (!note) return;
-  note.textContent = hasPartner()
-    ? `A spouse or partner is on this plan, so Tax if death (Table F3) and Fig. D1 / D2 treat the RRSP or RRIF as rolling to ${partnerName()}. That balance is not taxed at death.`
-    : "No spouse or partner is on this plan, so Tax if death includes the full RRSP or RRIF on the final return.";
+  if (hasPartner()) {
+    note.textContent =
+      "An eligible TFSA & RRSP successor holder is on this plan, so Tax if death (Table F3) and Fig. D1 / D2 treat the TFSA as continuing to that person and the RRSP or RRIF as rolling over. Those balances are not taxed at death.";
+    if (tip) {
+      tip.classList.add("hidden");
+      tip.textContent = "";
+    }
+    return;
+  }
+  note.textContent =
+    "No eligible TFSA & RRSP successor holder is on this plan, so Tax if death includes the full RRSP or RRIF on the final return.";
+  if (tip) {
+    tip.classList.add("hidden");
+    tip.textContent = "";
+  }
 }
 
 // Fig. D1 / D2 tax at death is per person: that person's share of the plan
@@ -1847,7 +1861,7 @@ function renderWealthChart(model) {
   if (note) {
     const legacy = goal > 0 ? ` The gold line is the legacy goal of ${formatDollars(goal)}.` : "";
     const ages = hasPartner() ? ` Ages on the chart are ${personName()}'s age. The plan ends at the later death.` : "";
-    note.textContent = `The solid line is the combined TFSA, RRSP, non-registered, and other assets. Contributions run until age ${retire == null ? "retirement" : Math.round(retire)}. After that, CPP and OAS cover part of the income and the accounts withdraw the rest.${legacy} The red mark is the tax if death is at the age on the slider.${ages}`;
+    note.textContent = `The solid line is the combined TFSA, RRSP, non-registered, and other assets. Contributions run until age ${retire == null ? "retirement" : Math.round(retire)}. After that, CPP and OAS cover part of the income and the accounts withdraw the rest.${legacy} The red mark drops from that year's balance by the tax if death is at the age on the slider — the same tax as Table F3.${ages}`;
   }
 }
 
@@ -1897,17 +1911,22 @@ function drawPortfolioChart(root, rows, model) {
   const early = portfolioRow(model, model.earlyAge);
   const deathIndex = early ? rows.indexOf(early) : -1;
   if (deathIndex >= 0) {
-    const atDeath = rows[deathIndex].totalAtDeath ?? rows[deathIndex].total;
-    const afterTax = Math.max(0, atDeath - rows[deathIndex].deathTax);
+    // Tax if death is reckoned on balances before that year's withdrawal (Table F3).
+    // The solid line is the plan if you live (after withdrawal). Show the tax as a
+    // drop from the line so the mark cannot sit above the graph.
+    const lineTotal = rows[deathIndex].total;
+    const tax = Math.max(0, rows[deathIndex].deathTax || 0);
+    const afterTax = Math.max(0, lineTotal - tax);
+    const x = xFor(deathIndex);
     const drop = document.createElementNS("http://www.w3.org/2000/svg", "line");
-    drop.setAttribute("x1", String(xFor(deathIndex)));
-    drop.setAttribute("x2", String(xFor(deathIndex)));
-    drop.setAttribute("y1", String(yFor(atDeath)));
+    drop.setAttribute("x1", String(x));
+    drop.setAttribute("x2", String(x));
+    drop.setAttribute("y1", String(yFor(lineTotal)));
     drop.setAttribute("y2", String(yFor(afterTax)));
     drop.setAttribute("stroke", "#b42318");
     drop.setAttribute("stroke-width", "3");
     const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    dot.setAttribute("cx", String(xFor(deathIndex)));
+    dot.setAttribute("cx", String(x));
     dot.setAttribute("cy", String(yFor(afterTax)));
     dot.setAttribute("r", "4");
     dot.setAttribute("fill", "#b42318");
@@ -1971,21 +1990,63 @@ function drawPortfolioChart(root, rows, model) {
   root.replaceChildren(svg, guideY, guideX, tip);
 }
 
+function portfolioMetaCells(row, partnerStart, clientStart) {
+  const cells = [String(row.calendarYear), String(Math.round(row.age))];
+  if (partnerStart != null) cells.push(String(Math.round(partnerStart + (row.age - clientStart))));
+  return cells;
+}
+
+function fillPortfolioTable(table, labels, rowValues, { stickyYear = false, earlyIndex = -1, emphasizeCol = -1 } = {}) {
+  table.replaceChildren();
+  const head = document.createElement("thead");
+  const headRow = document.createElement("tr");
+  labels.forEach((label, index) => {
+    const cell = document.createElement("th");
+    cell.className = "border-b border-line px-2 py-2 font-medium";
+    if (stickyYear && index === 0) cell.classList.add("portfolio-sticky-year");
+    cell.textContent = label;
+    headRow.append(cell);
+  });
+  head.append(headRow);
+  const body = document.createElement("tbody");
+  rowValues.forEach((values, rowIndex) => {
+    const tr = document.createElement("tr");
+    if (rowIndex === earlyIndex) tr.className = "portfolio-early-row";
+    values.forEach((value, index) => {
+      const cell = document.createElement("td");
+      cell.className = "whitespace-nowrap border-b border-line px-2 py-1 nums";
+      if (stickyYear && index === 0) cell.classList.add("portfolio-sticky-year");
+      if (rowIndex === earlyIndex && index === emphasizeCol) {
+        cell.className += " font-semibold text-red-700";
+      }
+      cell.textContent = value;
+      tr.append(cell);
+    });
+    body.append(tr);
+  });
+  table.append(head, body);
+}
+
 function renderPortfolioTable(model) {
   const table = $("portfolio-table");
+  const printRoot = $("portfolio-print");
   const note = $("allocation-note");
   const rows = model.portfolio?.rows || [];
   table.replaceChildren();
+  if (printRoot) printRoot.replaceChildren();
   if (!rows.length) {
     if (note) note.textContent = "";
     return;
   }
   const early = portfolioRow(model, model.earlyAge);
+  const earlyIndex = early ? rows.indexOf(early) : -1;
   const partnerStart = hasPartner() ? ageOrNull("partner-age") : null;
   const clientStart = rows[0].age;
-  const labels = ["Year", "Age"];
-  if (partnerStart != null) labels.push(`${partnerName()} age`);
-  labels.push(
+  const partnerLabel = partnerStart != null ? `${partnerName()} age` : null;
+  const metaLabels = partnerLabel ? ["Year", "Age", partnerLabel] : ["Year", "Age"];
+
+  const screenLabels = [
+    ...metaLabels,
     "TFSA in",
     "RRSP in",
     "Non-reg in",
@@ -2000,51 +2061,82 @@ function renderPortfolioTable(model) {
     "Retirement income taken",
     "Tax on withdrawal",
     "Tax if death",
-  );
-  const head = document.createElement("thead");
-  const headRow = document.createElement("tr");
-  labels.forEach((label, index) => {
-    const cell = document.createElement("th");
-    cell.className = "border-b border-line px-2 py-2 font-medium";
-    if (index === 0) cell.classList.add("portfolio-sticky-year");
-    cell.textContent = label;
-    headRow.append(cell);
+  ];
+  const screenRows = rows.map((row) => [
+    ...portfolioMetaCells(row, partnerStart, clientStart),
+    formatDollars(row.tfsaIn),
+    formatDollars(row.rrspIn),
+    formatDollars(row.nonRegIn),
+    formatDollars(row.tfsa),
+    formatDollars(row.rrsp),
+    formatDollars(row.nonReg),
+    formatDollars(row.other),
+    formatDollars(row.total),
+    formatDollars(row.incomeRequested),
+    formatDollars(row.pensionNet),
+    formatDollars(row.withdrawal),
+    formatDollars(row.incomeTaken),
+    formatDollars(row.tax),
+    formatDollars(row.deathTax),
+  ]);
+  fillPortfolioTable(table, screenLabels, screenRows, {
+    stickyYear: true,
+    earlyIndex,
+    emphasizeCol: screenLabels.length - 1,
   });
-  head.append(headRow);
-  const body = document.createElement("tbody");
-  for (const row of rows) {
-    const hit = early && row === early;
-    const values = [String(row.calendarYear), String(Math.round(row.age))];
-    if (partnerStart != null) values.push(String(Math.round(partnerStart + (row.age - clientStart))));
-    values.push(
-      formatDollars(row.tfsaIn),
-      formatDollars(row.rrspIn),
-      formatDollars(row.nonRegIn),
-      formatDollars(row.tfsa),
-      formatDollars(row.rrsp),
-      formatDollars(row.nonReg),
-      formatDollars(row.other),
-      formatDollars(row.total),
-      formatDollars(row.incomeRequested),
-      formatDollars(row.pensionNet),
-      formatDollars(row.withdrawal),
-      formatDollars(row.incomeTaken),
-      formatDollars(row.tax),
-      formatDollars(row.deathTax),
-    );
-    const tr = document.createElement("tr");
-    if (hit) tr.className = "portfolio-early-row";
-    values.forEach((value, index) => {
-      const cell = document.createElement("td");
-      cell.className = "whitespace-nowrap border-b border-line px-2 py-1 nums";
-      if (index === 0) cell.classList.add("portfolio-sticky-year");
-      if (hit && index === values.length - 1) cell.className += " font-semibold text-red-700";
-      cell.textContent = value;
-      tr.append(cell);
+
+  if (printRoot) {
+    const printMeta = partnerStart != null ? ["Year", "Age", "Sp."] : ["Year", "Age"];
+    const printLabels = [
+      ...printMeta,
+      "TFSA in",
+      "RRSP in",
+      "Non-reg in",
+      "TFSA",
+      "RRSP",
+      "Non-reg",
+      "Other",
+      "Total",
+      "Requested",
+      "CPP/OAS",
+      "From accts",
+      "Taken",
+      "Tax wd",
+      "Tax death",
+    ];
+    const printRows = rows.map((row) => [
+      ...portfolioMetaCells(row, partnerStart, clientStart),
+      compactDollars(row.tfsaIn),
+      compactDollars(row.rrspIn),
+      compactDollars(row.nonRegIn),
+      compactDollars(row.tfsa),
+      compactDollars(row.rrsp),
+      compactDollars(row.nonReg),
+      compactDollars(row.other),
+      compactDollars(row.total),
+      compactDollars(row.incomeRequested),
+      compactDollars(row.pensionNet),
+      compactDollars(row.withdrawal),
+      compactDollars(row.incomeTaken),
+      compactDollars(row.tax),
+      compactDollars(row.deathTax),
+    ]);
+
+    const block = document.createElement("div");
+    block.className = "portfolio-print-block";
+    const caption = document.createElement("p");
+    caption.className = "portfolio-print-caption";
+    caption.textContent = "Table F3 · Year path ($k / $M)";
+    const printTable = document.createElement("table");
+    printTable.className = "portfolio-print-table";
+    fillPortfolioTable(printTable, printLabels, printRows, {
+      earlyIndex,
+      emphasizeCol: printLabels.length - 1,
     });
-    body.append(tr);
+    block.append(caption, printTable);
+    printRoot.append(block);
   }
-  table.append(head, body);
+
   if (note) {
     note.textContent = hasPartner()
       ? "Each year shows the deposit the room allows, up to the monthly slider. At retirement the deposits stop. Retirement income requested is the after-tax amount chosen at the start of retirement, raised with inflation each year. CPP and OAS (after tax on those benefits) are kept in full even when they exceed that request, and nothing is taken from the accounts in those years. When they fall short, the shortfall is taken from Other, non-registered, and the RRSP in proportion to those balances so they run down together. The TFSA is used only after that pool is gone. Retirement income taken is CPP and OAS plus from the accounts. Tax if death is the tax on that year's balances before the retirement withdrawal: with a spouse on the plan the RRSP rolls over and is not taxed, non-registered and other assets tax only the gain, and the TFSA is not taxed. The red row is the age on the early-death slider."
@@ -2066,7 +2158,7 @@ function renderEarlyDeath(model) {
     ? ` The RRSP rolls to ${partnerName()}, so it is not in this tax.`
     : " There is no spouse on this plan, so the RRSP is included in full.";
   $("early-death-note").textContent = row
-    ? `If death is at age ${age}, tax on these accounts before that year's retirement withdrawal is ${formatDollars(row.deathTax)}. That year is the red row in the table. The solid line keeps going. The red mark is the balance after that tax.${rollover}`
+    ? `If death is at age ${age}, tax on these accounts before that year's retirement withdrawal is ${formatDollars(row.deathTax)}. That year is the red row in the table. On Fig. F2 the red mark drops from the solid line by that tax.${rollover}`
     : "";
 }
 

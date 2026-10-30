@@ -316,8 +316,8 @@ body.needs-worksheet .print-only {
 
 @media print {
   @page {
-    size: letter;
-    margin: 0.55in 0.6in;
+    size: letter landscape;
+    margin: 0.4in 0.45in;
   }
 
   body.needs-worksheet .plan-ref,
@@ -449,11 +449,26 @@ body.needs-worksheet .print-only {
   }
   body.needs-worksheet #worksheet h2,
   body.needs-worksheet #worksheet h3 {
-    font-size: 14pt !important;
-    margin: 0 0 0.35rem !important;
+    font-size: 12pt !important;
+    margin: 0 0 0.3rem !important;
+    break-after: avoid;
+    page-break-after: avoid;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  body.needs-worksheet #worksheet h2 + p,
+  body.needs-worksheet #worksheet h3 + p,
+  body.needs-worksheet .plan-ref-fig {
+    break-after: avoid;
+    page-break-after: avoid;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  body.needs-worksheet #allocation-note {
+    display: none !important;
   }
   body.needs-worksheet #worksheet .text-sm {
-    font-size: 9.5pt !important;
+    font-size: 8.5pt !important;
   }
   body.needs-worksheet #worksheet .mt-8,
   body.needs-worksheet #worksheet .mt-6,
@@ -505,9 +520,20 @@ body.needs-worksheet .print-only {
     max-width: none !important;
   }
 
+  /*
+    Illustrations (Fig. D1, D2, F1, F2): keep the figure block on one page when it fits.
+    Browsers still split if the block is taller than the page.
+    Table F3 is excluded — it can run longer than one page.
+  */
+  body.needs-worksheet [data-plan-ref^="Fig."] {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    break-before: auto;
+    page-break-before: auto;
+  }
   body.needs-worksheet .need-chart {
-    break-inside: auto;
-    page-break-inside: auto;
+    break-inside: avoid;
+    page-break-inside: avoid;
     margin-top: 0.35rem !important;
     max-height: 2.6in;
     overflow: hidden;
@@ -522,28 +548,80 @@ body.needs-worksheet .print-only {
   body.needs-worksheet .need-tip {
     display: none !important;
   }
-  body.needs-worksheet .portfolio-scroll {
-    overflow: visible !important;
+  /* Table F3 print: start on a fresh page so a long year path is not stranded mid-page. */
+  body.needs-worksheet #ref-table-f3 {
+    break-before: page;
+    page-break-before: always;
   }
-  body.needs-worksheet #portfolio-table {
+  body.needs-worksheet .portfolio-print {
+    display: block !important;
+    width: 100%;
+    max-width: 100%;
+  }
+  body.needs-worksheet .portfolio-print-block {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+  body.needs-worksheet .portfolio-print-caption {
+    margin: 0.2rem 0 0.15rem;
+    font-size: 7pt;
+    font-weight: 600;
+    color: #8a734f !important;
+    break-after: avoid;
+    page-break-after: avoid;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  /* Caption on the print block is the Table F3 heading; avoid a lone label on the prior page. */
+  body.needs-worksheet #ref-table-f3 > .plan-ref-fig {
+    display: none !important;
+  }
+  body.needs-worksheet .portfolio-print-table {
     width: 100% !important;
     max-width: 100% !important;
-    font-size: 7.5pt;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-size: 6pt;
+    line-height: 1.15;
   }
-  body.needs-worksheet #portfolio-table th,
-  body.needs-worksheet #portfolio-table td {
-    padding: 0.12rem 0.22rem !important;
+  body.needs-worksheet .portfolio-print-table thead {
+    display: table-header-group;
   }
-  body.needs-worksheet #portfolio-table thead th {
-    max-width: 4.4rem !important;
-    font-size: 6.5pt !important;
-    line-height: 1.15 !important;
-    white-space: normal !important;
-    overflow-wrap: break-word !important;
+  body.needs-worksheet .portfolio-print-table tbody {
+    display: table-row-group;
   }
-  body.needs-worksheet #portfolio-table thead th.portfolio-sticky-year {
-    max-width: 2.6rem !important;
+  body.needs-worksheet .portfolio-print-table tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  body.needs-worksheet .portfolio-print-table th,
+  body.needs-worksheet .portfolio-print-table td {
+    padding: 0.05rem 0.08rem !important;
+    border-bottom: 0.4pt solid #ddd7ca !important;
     white-space: nowrap !important;
+    overflow: hidden;
+    text-overflow: clip;
+    vertical-align: middle;
+  }
+  body.needs-worksheet .portfolio-print-table thead th {
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    z-index: auto !important;
+    max-width: none !important;
+    font-size: 5.5pt !important;
+    font-weight: 600;
+    line-height: 1.1 !important;
+    background: #f7f4ee !important;
+    box-shadow: none !important;
+  }
+  body.needs-worksheet .portfolio-print-table .portfolio-sticky-year {
+    position: static !important;
+    left: auto !important;
+    box-shadow: none !important;
+  }
+  body.needs-worksheet .portfolio-print-table tr.portfolio-early-row td {
+    background: #fef2f2 !important;
   }
   body.needs-worksheet details > summary {
     list-style: none;

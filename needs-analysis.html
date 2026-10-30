@@ -192,8 +192,9 @@
           <h2 class="font-serif font-semibold text-2xl text-navydeep"><span class="plan-ref" title="Section C">C</span>Household</h2>
           <label class="mt-4 flex items-center gap-2 text-sm font-medium">
             <input id="has-partner" type="checkbox" />
-            There is a spouse or partner
+            There is an eligible TFSA &amp; RRSP successor holder
           </label>
+          <p id="successor-holder-tip" class="mt-1.5 max-w-3xl text-xs leading-5 text-inksoft">Under the Income Tax Act, that person must be the survivor spouse (legally married) or common-law partner: living in a conjugal relationship for at least 12 continuous months, or the parents of a child together by birth or adoption, or with custody and control of a wholly dependent child. For a TFSA, they must be named successor holder in the contract or will where provincial law allows the designation. For an RRSP or RRIF, they must be the designated beneficiary (or RRIF successor annuitant) so the amount can transfer to their own registered plan on a tax-deferred basis. Checking this assumes those designations are in place. It is not a tax opinion.</p>
           <div class="mt-4 grid gap-4 lg:grid-cols-2">
             <div class="rounded-sm border border-line bg-white p-4">
               <p id="person-heading-household" class="text-xs font-semibold uppercase tracking-[0.14em] text-inksoft">Person 1</p>
@@ -585,6 +586,7 @@
               </div>
               <p class="mt-2 text-sm text-inksoft">The most you would contribute. Combined room for both people is the limit.</p>
               <p id="rrsp-rollover-note" class="mt-3 text-sm leading-6 text-inksoft"></p>
+              <p id="rrsp-rollover-tip" class="mt-1.5 hidden text-xs leading-5 text-inksoft"></p>
             </div>
             <div class="sm:col-span-2">
               <label class="block text-sm font-medium" for="nonreg-contribution-slider"><span class="plan-ref plan-ref-control" title="Slider S.11">S.11</span>Non-registered contribution, monthly</label>
@@ -609,9 +611,10 @@
               </div>
               <div id="ref-table-f3" data-plan-ref="Table F3" class="mt-4 min-w-0 max-w-full">
                 <p class="plan-ref plan-ref-fig">Table F3</p>
-                <div class="portfolio-scroll mt-2 min-w-0 max-w-full">
+                <div class="portfolio-scroll no-print mt-2 min-w-0 max-w-full">
                   <table id="portfolio-table" class="w-max min-w-full text-left text-xs"></table>
                 </div>
+                <div id="portfolio-print" class="portfolio-print print-only mt-2" aria-hidden="true"></div>
               </div>
               <p id="allocation-note" class="mt-3 text-sm leading-6"></p>
             </div>
