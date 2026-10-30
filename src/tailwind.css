@@ -93,15 +93,14 @@ body.needs-worksheet input[type="date"] {
   min-inline-size: 0;
   text-align: left;
 }
-/* The year-by-year balances stay a table. Only this scroller moves sideways. */
+/* The year-by-year table stays a table and scrolls sideways, including on a phone. */
 body.needs-worksheet .portfolio-scroll {
   min-width: 0;
   max-width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
-body.needs-worksheet #portfolio-table,
-body.needs-worksheet #contribution-schedule {
+body.needs-worksheet #portfolio-table {
   width: max-content;
   min-width: 100%;
   max-width: none;
@@ -114,7 +113,7 @@ body.needs-worksheet .need-chart svg {
   max-width: 100%;
 }
 body.needs-worksheet .need-tip {
-  max-width: min(12rem, calc(100% - 0.5rem));
+  max-width: min(22rem, calc(100% - 0.5rem));
   overflow-wrap: anywhere;
   box-sizing: border-box;
 }
@@ -243,59 +242,6 @@ body.needs-worksheet #file-copy li > span:first-child {
     display: block;
     width: 100%;
     height: auto;
-  }
-  body.needs-worksheet .portfolio-scroll {
-    overflow: visible;
-  }
-  body.needs-worksheet #portfolio-table,
-  body.needs-worksheet #contribution-schedule,
-  body.needs-worksheet #portfolio-table tbody,
-  body.needs-worksheet #contribution-schedule tbody,
-  body.needs-worksheet #portfolio-table tr,
-  body.needs-worksheet #contribution-schedule tr {
-    display: block;
-    width: 100%;
-    min-width: 0;
-    max-width: 100%;
-  }
-  body.needs-worksheet #portfolio-table thead,
-  body.needs-worksheet #contribution-schedule thead {
-    display: none;
-  }
-  body.needs-worksheet #portfolio-table tr,
-  body.needs-worksheet #contribution-schedule tr {
-    margin-bottom: 0.75rem;
-    border: 1px solid #ddd7ca;
-    border-radius: 0.125rem;
-    padding: 0.25rem 0.75rem;
-  }
-  body.needs-worksheet #portfolio-table tr.death-row,
-  body.needs-worksheet #contribution-schedule tr.death-row {
-    border-color: #b42318;
-  }
-  body.needs-worksheet #portfolio-table td,
-  body.needs-worksheet #contribution-schedule td {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 0.75rem;
-    width: auto;
-    white-space: normal;
-    border-bottom: 1px solid #eeeae3;
-    padding: 0.5rem 0;
-  }
-  body.needs-worksheet #portfolio-table td::before,
-  body.needs-worksheet #contribution-schedule td::before {
-    content: attr(data-label);
-    flex: 1 1 auto;
-    min-width: 0;
-    color: #565f6c;
-    font-weight: 500;
-    text-align: left;
-  }
-  body.needs-worksheet #portfolio-table td:last-child,
-  body.needs-worksheet #contribution-schedule td:last-child {
-    border-bottom: 0;
   }
 }
 

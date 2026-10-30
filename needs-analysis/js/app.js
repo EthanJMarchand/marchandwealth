@@ -10,7 +10,7 @@ import { deathTaxAtYear } from "./calc/death-tax.js";
 import { calculateLifeNeed } from "./calc/life-need.js";
 import { formatDollars, readMoney } from "./calc/money.js";
 import { incomeYearsAtAge, projectLifeNeed } from "./calc/need-path.js";
-import { estimateCpp, estimateOas, projectedCppYears, projectedOasYears } from "./calc/pensions.js";
+import { adjustCppForStart, adjustOasForStart, cppStartAge, cppStartChangePercent, estimateCpp, estimateOas, oasStartAge, oasStartChangePercent, projectedCppYears, projectedOasYears } from "./calc/pensions.js";
 import { depositsOverYears, describeDeposits, projectPortfolio } from "./calc/portfolio-path.js";
 import { calculateProbate } from "./calc/probate.js";
 import { criticalIllnessLumpSum, disabilityMonthlyBenefit } from "./calc/protection.js";
@@ -152,10 +152,10 @@ function applyNames() {
   setLabel("after-spouse-life-label", `${spouse}'s life insurance need not covered`);
   setLabel("client-accounts-heading", client);
   setLabel("spouse-accounts-heading", spouse);
-  setLabel("cpp-label", `${client} CPP at 65, a year`);
-  setLabel("oas-label", `${client} OAS at 65, a year`);
-  setLabel("spouse-cpp-label", `${spouse} CPP at 65, a year`);
-  setLabel("spouse-oas-label", `${spouse} OAS at 65, a year`);
+  setPensionLabel("cpp-label", "cpp-annual", client, "CPP", acceptedRetirementAge());
+  setPensionLabel("oas-label", "oas-annual", client, "OAS", acceptedRetirementAge());
+  setPensionLabel("spouse-cpp-label", "spouse-cpp", spouse, "CPP", acceptedRetirementAge());
+  setPensionLabel("spouse-oas-label", "spouse-oas", spouse, "OAS", acceptedRetirementAge());
 }
 
 function dependantAges() {
@@ -187,6 +187,102 @@ function maxCpp() {
 
 function maxOas() {
   return oasAmounts.maxMonthlyAge65to74 * 12;
+}
+
+const MIN_RETIREMENT_AGE = 50;
+const MAX_RETIREMENT_AGE = 80;
+
+function retirementFloor() {
+  const current = ageOf("client-age");
+  if (current == null || current < 18) return MIN_RETIREMENT_AGE;
+  return Math.max(MIN_RETIREMENT_AGE, Math.ceil(current));
+}
+
+function acceptedRetirementAge() {
+  const entered = num("retirement-age");
+  const floor = retirementFloor();
+  if (!Number.isFinite(entered) || entered <= 0) return Math.max(floor, 65);
+  return Math.min(MAX_RETIREMENT_AGE, Math.max(floor, entered));
+}
+
+function retirementAgeNote() {
+  const note = $("retirement-age-note");
+  if (!note) return;
+  const entered = num("retirement-age");
+  const floor = retirementFloor();
+  const accepted = acceptedRetirementAge();
+  if (entered > 0 && entered < floor) {
+    note.textContent = `Retirement age has to be at least ${floor}. The plan uses ${accepted} until you enter a later age.`;
+  } else if (entered > MAX_RETIREMENT_AGE) {
+    note.textContent = `The plan stops at age ${MAX_RETIREMENT_AGE}. It uses ${accepted} until you enter an earlier age.`;
+  } else {
+    note.textContent = "";
+  }
+}
+
+function pensionLabel(person, kind, retirementAge) {
+  const start = kind === "CPP" ? cppStartAge(retirementAge) : oasStartAge(retirementAge);
+  return `${person} ${kind} at ${start}, a year`;
+}
+
+function pensionHint(at65, payable, retirementAge, kind, dirtyFlag) {
+  const start = kind === "CPP" ? cppStartAge(retirementAge) : oasStartAge(retirementAge);
+  const change = kind === "CPP" ? cppStartChangePercent(retirementAge) : oasStartChangePercent(retirementAge);
+  const rounded = Math.round(Math.abs(change) * 10) / 10;
+  const percent = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+  const shift = change === 0
+    ? `Starting at ${start} leaves the age-65 estimate unchanged.`
+    : change > 0
+      ? `Starting at ${start} raises the age-65 estimate ${percent}%, to ${formatDollars(payable)}.`
+      : `Starting at ${start} lowers the age-65 estimate ${percent}%, to ${formatDollars(payable)}.`;
+  const early = start !== Math.round(retirementAge)
+    ? ` Retirement at ${Math.round(retirementAge)} does not start ${kind} before ${start}.`
+    : "";
+  const entered = dirty[dirtyFlag]
+    ? " Using the amount you entered."
+    : " Type the CRA amount at this start age to replace it.";
+  return `Age-65 estimate ${formatDollars(at65)} a year. ${shift}${early}${entered}`;
+}
+
+function setPensionLabel(id, inputId, person, kind, retirementAge) {
+  const text = pensionLabel(person, kind, retirementAge);
+  setLabel(id, text);
+  const input = $(inputId);
+  if (input) input.setAttribute("aria-label", text);
+}
+
+function insuranceGapOf(life) {
+  if (!life) return 0;
+  return Math.max(0, (life.grossNeed || 0) - (life.offsets || 0));
+}
+
+function gapNote(life) {
+  if (!life) return "";
+  const gap = insuranceGapOf(life);
+  if (gap <= 0 && life.capitalNeed > 0) {
+    return `Zero means life insurance and assets already cover the insurable need. The illustrated need stays at ${formatDollars(life.capitalNeed)} for final expenses and tax.`;
+  }
+  if (gap <= 0) return "Zero means the life insurance and assets already in place cover this need.";
+  return "Insurable need minus the life insurance and assets already in place.";
+}
+
+function showNeedFigures(prefix, life) {
+  const need = $(prefix ? `${prefix}-insurable-need` : "insurable-need");
+  const gap = $(prefix ? `${prefix}-insurance-gap` : "insurance-gap");
+  const note = $(prefix ? `${prefix}-insurance-gap-note` : "insurance-gap-note");
+  if (need) need.textContent = formatDollars(life?.grossNeed || 0);
+  if (gap) gap.textContent = formatDollars(insuranceGapOf(life));
+  if (note) note.textContent = gapNote(life);
+}
+
+function needAt(points, age) {
+  if (!points?.length || age == null) return null;
+  return points.reduce((best, point) => (Math.abs(point.age - age) < Math.abs(best.age - age) ? point : best));
+}
+
+function disabilityBreakdown(name, annual, ratio, benefit) {
+  const monthly = Math.max(0, annual) / 12;
+  return `${name}'s income is ${formatDollars(annual)} a year, ${formatDollars(monthly)} a month. Section 2 keeps ${Math.round(ratio * 100)}% of that, so the starting benefit is ${formatDollars(benefit)} a month. Slide it to recommend a different amount.`;
 }
 
 function clearLegacyStorage() {
@@ -238,20 +334,34 @@ function fillDefaults() {
   if ($("province").options.length) $("province").value = "AB";
 }
 
+function rangeHeld(slider) {
+  return Boolean(slider) && document.activeElement === slider;
+}
+
 function placeBenefit(flag, inputId, sliderId, amount, max) {
   const life = flag === "life" || flag === "spouseLife";
   const slider = $(sliderId);
   const target = life ? roundLife(amount) : Math.max(0, amount || 0);
-  const ceiling = life ? Math.max(roundLife(max || 0), target, 50000) : Math.max(0, Math.ceil(max || 0));
-  slider.max = String(ceiling);
-  slider.step = life ? "50000" : slider.step;
+  const htmlMax = Number(slider.getAttribute("max")) || (life ? 2000000 : 20000);
+  const htmlStep = life ? 50000 : 1;
+  let ceiling = life
+    ? Math.max(roundLife(max || 0), target, 50000)
+    : Math.max(0, Math.ceil(max || 0), Math.ceil(target));
+  if (!life && ceiling <= 0) ceiling = htmlMax;
+  const step = !life && ceiling < htmlStep ? 1 : htmlStep;
+  const held = rangeHeld(slider);
+  if (!held) {
+    slider.max = String(ceiling);
+    slider.step = String(step);
+  }
   const input = $(inputId);
   const focused = document.activeElement === input;
   if (!dirty[flag]) input.value = moneyOrBlank(target);
-  const raw = Math.min(ceiling, Math.max(0, num(inputId)));
+  const cap = Number(slider.max) || ceiling;
+  const raw = Math.min(cap, Math.max(0, num(inputId)));
   const chosen = life ? roundLife(raw) : raw;
-  if (life && !focused) input.value = moneyOrBlank(chosen);
-  slider.value = String(Math.round(chosen));
+  if (life && !focused && !held) input.value = moneyOrBlank(chosen);
+  if (!held) slider.value = String(Math.round(chosen));
 }
 
 function pairSlider(eventTarget) {
@@ -295,27 +405,40 @@ function placeAmount(flag, id, amount) {
 
 function placePension(flag, inputId, sliderId, estimate, max) {
   const slider = $(sliderId);
-  slider.max = String(Math.max(100, Math.round(max || 0)));
+  const held = rangeHeld(slider);
+  if (!held) {
+    slider.max = String(Math.max(100, Math.round(max || 0)));
+    slider.step = "1";
+  }
   if (!dirty[flag]) $(inputId).value = moneyOrBlank(estimate);
-  slider.value = String(Math.min(Number(slider.max), Math.max(0, Math.round(num(inputId)))));
+  if (!held) {
+    slider.value = String(Math.min(Number(slider.max), Math.max(0, Math.round(num(inputId)))));
+  }
 }
 
 function syncPensions() {
-  const retire = num("retirement-age") || 65;
+  const retire = acceptedRetirementAge();
   const client = pensionEstimate(planningIncome("income-last"), ageOf("client-age"), retire);
   const spouse = pensionEstimate(
     hasSpouse() ? planningIncome("spouse-income-last") : 0,
     hasSpouse() ? ageOf("spouse-age") : null,
     retire,
   );
-  placePension("cpp", "cpp-annual", "cpp-slider", client.cpp, maxCpp());
-  placePension("oas", "oas-annual", "oas-slider", client.oas, maxOas());
-  placePension("spouseCpp", "spouse-cpp", "spouse-cpp-slider", spouse.cpp, maxCpp());
-  placePension("spouseOas", "spouse-oas", "spouse-oas-slider", spouse.oas, maxOas());
-  $("cpp-hint").textContent = `Estimate ${formatDollars(client.cpp)} a year from last year's employment income through retirement. Not dividends. Type the CRA amount to replace it.`;
-  $("oas-hint").textContent = `Estimate ${formatDollars(client.oas)} a year if residence in Canada runs from age 18 to 65. Type the CRA amount to replace it.`;
-  $("spouse-cpp-hint").textContent = `Estimate ${formatDollars(spouse.cpp)} a year. Type the CRA amount to replace it.`;
-  $("spouse-oas-hint").textContent = `Estimate ${formatDollars(spouse.oas)} a year. Type the CRA amount to replace it.`;
+  const clientCpp = adjustCppForStart(client.cpp, retire);
+  const clientOas = adjustOasForStart(client.oas, retire);
+  const spouseCpp = adjustCppForStart(spouse.cpp, retire);
+  const spouseOas = adjustOasForStart(spouse.oas, retire);
+  const cppMax = Math.max(maxCpp() * 1.5, clientCpp, spouseCpp, num("cpp-annual"), num("spouse-cpp"));
+  const oasMax = Math.max(maxOas() * 1.5, clientOas, spouseOas, num("oas-annual"), num("spouse-oas"));
+  placePension("cpp", "cpp-annual", "cpp-slider", clientCpp, cppMax);
+  placePension("oas", "oas-annual", "oas-slider", clientOas, oasMax);
+  placePension("spouseCpp", "spouse-cpp", "spouse-cpp-slider", spouseCpp, cppMax);
+  placePension("spouseOas", "spouse-oas", "spouse-oas-slider", spouseOas, oasMax);
+  $("cpp-hint").textContent = pensionHint(client.cpp, clientCpp, retire, "CPP", "cpp");
+  $("oas-hint").textContent = pensionHint(client.oas, clientOas, retire, "OAS", "oas");
+  $("spouse-cpp-hint").textContent = pensionHint(spouse.cpp, spouseCpp, retire, "CPP", "spouseCpp");
+  $("spouse-oas-hint").textContent = pensionHint(spouse.oas, spouseOas, retire, "OAS", "spouseOas");
+  retirementAgeNote();
 }
 
 function syncRecommendations() {
@@ -332,14 +455,22 @@ function syncRecommendations() {
 
 function placeRange(id, age, end, flag) {
   const slider = $(id);
+  const held = rangeHeld(slider);
   if (age == null || end <= age) {
-    slider.disabled = true;
+    if (!held) slider.disabled = false;
     return null;
   }
-  slider.disabled = false;
-  slider.min = String(Math.ceil(age));
-  slider.max = String(Math.floor(end));
-  if (!dirty[flag]) slider.value = String(Math.round(Math.min(end - 1, Math.max(age + 1, age + 15))));
+  if (!held) {
+    slider.disabled = false;
+    slider.min = String(Math.ceil(age));
+    slider.max = String(Math.floor(end));
+    if (!dirty[flag]) {
+      slider.value = String(Math.round(Math.min(end - 1, Math.max(age + 1, age + 15))));
+    } else {
+      const value = Number(slider.value);
+      slider.value = String(Math.min(Number(slider.max), Math.max(Number(slider.min), value)));
+    }
+  }
   return Math.min(Number(slider.max), Math.max(Number(slider.min), Number(slider.value)));
 }
 
@@ -650,7 +781,7 @@ function readFacts() {
     finalExpenses: num("final-expenses"),
     education: num("education-amount"),
     independenceAge: num("independence-age") || assumptions.dependantIndependenceAge,
-    retirementAge: num("retirement-age") || 65,
+    retirementAge: acceptedRetirementAge(),
     retirementReplacement: num("retirement-replacement") / 100,
     existingCoverage: num("existing-coverage"),
     spouseCoverage: spouse ? num("spouse-existing-coverage") : 0,
@@ -803,7 +934,7 @@ function drawSeries(root, { series, xLabels, aria, mark, tipAt }) {
       paragraph.textContent = line;
       tip.append(paragraph);
     });
-    const tipWidth = Math.min(180, Math.max(112, box.width - 8));
+    const tipWidth = Math.min(280, Math.max(160, box.width - 8));
     tip.style.maxWidth = `${tipWidth}px`;
     tip.style.opacity = "1";
     let left = (xFor(point) / width) * box.width + 8;
@@ -860,10 +991,11 @@ function rowNearest(portfolio, age) {
   return portfolio.rows.reduce((best, row) => (Math.abs(row.age - age) < Math.abs(best.age - age) ? row : best));
 }
 
-function deathLine(row) {
+function deathLine(row, needPoint) {
   if (!row) return "";
   const after = Math.max(0, row.total - row.deathTax);
-  return `Age ${Math.round(row.age)} · tax ${formatDollars(row.deathTax)} · ${formatDollars(after)} left`;
+  const income = needPoint?.incomeCapital || 0;
+  return `Age ${Math.round(row.age)}. Tax at death ${formatDollars(row.deathTax)}. Left after tax ${formatDollars(after)}. Income the household loses ${formatDollars(income)}.`;
 }
 
 function markFor(portfolio, age) {
@@ -897,12 +1029,11 @@ function referenceKey() {
       "2 Life insurance",
       "3 Retirement",
       "4 Accounts",
-      "5 The path today",
+      "5 If death comes early",
       "6 Recommendation",
       "7 New coverage",
       "8 After the recommendation",
-      "9 Above the room",
-      "10 Year by year",
+      "9 Year by year",
     ]),
     col("Illustrations", [
       "1 If Client 1 dies",
@@ -911,7 +1042,6 @@ function referenceKey() {
       "4 Savings if nothing changes",
       "5 The two paths",
       "6 Year by year",
-      "7 How a high contribution comes down",
     ]),
     col("Sliders", [
       "1 Early death, today",
@@ -957,7 +1087,7 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
     node("p", "mt-8 font-serif text-3xl text-navydeep", clientName()),
     node("p", "mt-2 text-sm text-inksoft", hasSpouse() ? `and ${spouseName()}` : "Individual plan"),
     node("p", "mt-6 text-sm text-inksoft", `${date} · Prepared by Ethan Marchand`),
-    node("p", "mt-10 max-w-md text-sm leading-6 text-inksoft", "The same section, illustration, and slider numbers are on the screen and in this plan. A missing number is the spouse's item, or illustration 7 when the contribution fits inside the room."),
+    node("p", "mt-10 max-w-md text-sm leading-6 text-inksoft", "The same section, illustration, and slider numbers are on the screen and in this plan. A missing number is the spouse's item."),
     referenceKey(),
   );
   root.append(cover);
@@ -975,8 +1105,8 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
       [`${spouseName()} age`, facts.spouseAge == null ? "Not entered" : String(facts.spouseAge)],
       [`${spouseName()} employment income`, formatDollars(num("spouse-income-last"))],
       [`If ${spouseName()} dies, income to replace`, `${facts.spouseIncomeYears} years at ${Math.round(facts.spouseReplacement * 100)}%`],
-      [`${spouseName()} CPP at 65`, `${formatDollars(facts.spouseCpp)} a year`],
-      [`${spouseName()} OAS at 65`, `${formatDollars(facts.spouseOas)} a year`],
+      [`${spouseName()} CPP at ${cppStartAge(facts.retirementAge)}`, `${formatDollars(facts.spouseCpp)} a year`],
+      [`${spouseName()} OAS at ${oasStartAge(facts.retirementAge)}`, `${formatDollars(facts.spouseOas)} a year`],
     );
   }
   rows.push(
@@ -986,8 +1116,8 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
     ["Other debts", formatDollars(facts.otherDebts)],
     ["Retirement age", String(facts.retirementAge)],
     ["Retirement income", `${Math.round(facts.retirementReplacement * 100)}% of income`],
-    [`${clientName()} CPP at 65`, `${formatDollars(facts.cpp)} a year`],
-    [`${clientName()} OAS at 65`, `${formatDollars(facts.oas)} a year`],
+    [`${clientName()} CPP at ${cppStartAge(facts.retirementAge)}`, `${formatDollars(facts.cpp)} a year`],
+    [`${clientName()} OAS at ${oasStartAge(facts.retirementAge)}`, `${formatDollars(facts.oas)} a year`],
     [`${clientName()} TFSA`, `${formatDollars(facts.tfsa)} · ${formatDollars(facts.tfsaMonthly)} a month`],
     [`${clientName()} RRSP`, `${formatDollars(facts.rrsp)} · ${formatDollars(facts.rrspMonthly)} a month`],
     [`${clientName()} non-registered`, `${formatDollars(facts.nonReg)} · ${formatDollars(facts.nonRegMonthly)} a month`],
@@ -1017,14 +1147,17 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
   insurance.append(node("p", "ref-tag mt-6", `Illustration 1 · If ${clientName()} dies`));
   insurance.append(node("p", "mt-2 font-serif text-5xl text-navydeep nums", formatDollars(current.life.capitalNeed)));
   insurance.append(node("p", "mt-2 text-sm text-inksoft", `${clientName()} · ${facts.incomeYears} years at ${Math.round(facts.replacement * 100)}% of their income · ${formatDollars(facts.existingCoverage)} already in place`));
+  insurance.append(node("p", "mt-2 text-sm leading-6 text-inksoft", `Insurable need ${formatDollars(current.life.grossNeed)}. Insurance gap ${formatDollars(insuranceGapOf(current.life))}. ${gapNote(current.life)}`));
   insurance.append(node("p", "mt-2 text-sm leading-6 text-inksoft", taxSentence(current, facts)));
   insurance.append(node("p", "ref-tag mt-8", "Illustration 2 · Need over time"));
   const chart = node("div", "need-chart mt-2");
   insurance.append(chart);
+  insurance.append(node("p", "mt-2 text-xs text-inksoft", "Solid line: insurable need at each age. Dashed line: insurance gap. Zero means coverage and assets already meet the need."));
   if (current.spouseLife) {
     insurance.append(node("p", "ref-tag mt-8", `Illustration 3 · If ${spouseName()} dies`));
     insurance.append(node("p", "mt-2 font-serif text-4xl text-navydeep nums", formatDollars(current.spouseLife.capitalNeed)));
     insurance.append(node("p", "mt-2 text-sm text-inksoft", `${spouseName()} · ${facts.spouseIncomeYears} years at ${Math.round(facts.spouseReplacement * 100)}% of their income · ${formatDollars(facts.spouseCoverage)} already in place`));
+    insurance.append(node("p", "mt-2 text-sm leading-6 text-inksoft", `Insurable need ${formatDollars(current.spouseLife.grossNeed)}. Insurance gap ${formatDollars(insuranceGapOf(current.spouseLife))}. ${gapNote(current.spouseLife)}`));
     const spouseChart = node("div", "need-chart mt-6");
     insurance.append(spouseChart);
     drawSeries(spouseChart, seriesFromNeed(current.spouseNeedPath, `${spouseName()} insurance need`));
@@ -1035,7 +1168,7 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
   const today = planPage("Section 5 · Illustration 4 · Slider 1", "Savings path");
   const nowRow = rowNearest(current.portfolio, earlyNow);
   today.append(node("p", "ref-tag mt-6", "Illustration 4 · Savings if nothing changes"));
-  today.append(node("p", "mt-2 text-sm text-inksoft", deathLine(nowRow) || "Add an age to see the path."));
+  today.append(node("p", "mt-2 text-sm text-inksoft", deathLine(nowRow, needAt(current.needPath, earlyNow)) || "Add an age to see the path."));
   const wealth = node("div", "need-chart mt-6");
   today.append(wealth);
   root.append(today);
@@ -1077,7 +1210,7 @@ function renderPlan(facts, current, recommended, earlyNow, earlyAfter) {
   const compare = node("div", "need-chart mt-2");
   after.append(compare);
   const afterRow = rowNearest(recommended.portfolio, earlyAfter);
-  after.append(node("p", "mt-4 text-sm text-inksoft", deathLine(afterRow)));
+  after.append(node("p", "mt-4 text-sm text-inksoft", deathLine(afterRow, needAt(recommended.needPath, num("early-after")))));
   const still = Math.max(0, Math.round(current.life.capitalNeed) - Math.round(num("rec-life")));
   after.append(node("p", "mt-6 text-sm text-inksoft", "Life insurance need not covered"));
   after.append(node("p", "font-serif text-3xl text-navydeep nums", formatDollars(still)));
@@ -1093,13 +1226,21 @@ function seriesFromNeed(points, aria) {
   return {
     aria,
     series: [
-      { values: points.map((point) => point.capitalNeed), color: "#2f3744" },
-      { values: points.map((point) => point.mortgageLeft), color: "#a68a61", dash: "5 4", width: "2" },
+      { values: points.map((point) => point.insurableNeed), color: "#2f3744" },
+      { values: points.map((point) => point.insuranceGap), color: "#a68a61", dash: "5 4", width: "2" },
     ],
-    xLabels: labelMap(points.map((point) => String(point.age))),
     tipAt: (index) => {
       const point = points[index];
-      return [`Age ${point.age}`, formatDollars(point.capitalNeed), point.mortgageLeft > 0 ? `Mortgage ${formatDollars(point.mortgageLeft)}` : "Capital need"];
+      const gap = point.insuranceGap <= 0
+        ? "Insurance gap $0. Coverage and assets already meet the need."
+        : `Insurance gap ${formatDollars(point.insuranceGap)}. Dashed line.`;
+      const lines = [
+        `Age ${point.age}`,
+        `Insurable need ${formatDollars(point.insurableNeed)}. Solid line.`,
+        gap,
+      ];
+      if (point.mortgageLeft > 0) lines.push(`Mortgage still owing ${formatDollars(point.mortgageLeft)}.`);
+      return lines;
     },
   };
 }
@@ -1113,7 +1254,13 @@ function seriesFromWealth(portfolio, earlyAge, aria) {
     mark: markFor(portfolio, earlyAge),
     tipAt: (index) => {
       const row = rows[index];
-      return [`Age ${Math.round(row.age)}`, formatDollars(row.total)];
+      const after = Math.max(0, row.total - row.deathTax);
+      return [
+        `Age ${Math.round(row.age)}`,
+        formatDollars(row.total),
+        "Savings if nothing changes.",
+        `Tax at death ${formatDollars(row.deathTax)}. Left after tax ${formatDollars(after)}.`,
+      ];
     },
   };
 }
@@ -1132,8 +1279,8 @@ function compareSeries(current, recommended, earlyAge) {
     mark: markFor(recommended, earlyAge),
     tipAt: (index) => [
       `Age ${Math.round(rows[index].age)}`,
-      formatDollars(nextValues[index] || 0),
-      `Today ${formatDollars(currentValues[index] || 0)}`,
+      `After the recommendation ${formatDollars(nextValues[index] || 0)}. Solid line.`,
+      `Today's path ${formatDollars(currentValues[index] || 0)}. Dashed line.`,
     ],
   };
 }
@@ -1250,45 +1397,6 @@ function tableCell(label, value, className) {
   return cell;
 }
 
-function renderContributionSchedule(portfolio) {
-  const wrap = $("contribution-schedule-wrap");
-  const table = $("contribution-schedule");
-  const rows = (portfolio?.rows || []).filter((row) => !row.retired);
-  const tfsaWant = num("rec-tfsa") * 12;
-  const rrspWant = num("rec-rrsp") * 12;
-  const limited = rows.some((row) => (row.tfsaIn || 0) + 0.5 < tfsaWant || (row.rrspIn || 0) + 0.5 < rrspWant);
-  table.replaceChildren();
-  wrap.classList.toggle("hidden", !limited || !rows.length);
-  if (!limited || !rows.length) return;
-  const labels = ["Year", "Age", "TFSA asked", "TFSA deposited", "RRSP asked", "RRSP deposited"];
-  const head = document.createElement("thead");
-  const headRow = document.createElement("tr");
-  for (const label of labels) {
-    const cell = document.createElement("th");
-    cell.className = "whitespace-nowrap border-b border-line px-2 py-2 font-medium";
-    cell.textContent = label;
-    headRow.append(cell);
-  }
-  head.append(headRow);
-  const body = document.createElement("tbody");
-  for (const row of rows) {
-    const tr = document.createElement("tr");
-    const values = [
-      [String(row.calendarYear), false],
-      [String(Math.round(row.age)), false],
-      [formatDollars(tfsaWant), false],
-      [formatDollars(row.tfsaIn), row.tfsaIn + 0.5 < tfsaWant],
-      [formatDollars(rrspWant), false],
-      [formatDollars(row.rrspIn), row.rrspIn + 0.5 < rrspWant],
-    ];
-    values.forEach(([value, short], index) => {
-      tr.append(tableCell(labels[index], value, `whitespace-nowrap border-b border-line px-2 py-1${short ? " room-short" : ""}`));
-    });
-    body.append(tr);
-  }
-  table.append(head, body);
-}
-
 function renderProjectionTable(portfolio, earlyAge, facts) {
   const table = $("portfolio-table");
   const note = $("projection-note");
@@ -1301,7 +1409,7 @@ function renderProjectionTable(portfolio, earlyAge, facts) {
   const spouse = facts.spouse && facts.spouseAge != null;
   const labels = ["Year", "Age"];
   if (spouse) labels.push(`${spouseName()} age`);
-  labels.push("TFSA in", "RRSP in", "Non-reg in", "TFSA", "RRSP", "Non-reg", "Other", "Total", "CPP and OAS", "From the accounts", "Tax on withdrawal", "Tax if death");
+  labels.push("TFSA entered", "TFSA deposited", "RRSP entered", "RRSP deposited", "Non-reg in", "TFSA", "RRSP", "Non-reg", "Other", "Total", "CPP and OAS", "From the accounts", "Tax on withdrawal", "Tax if death");
   const head = document.createElement("thead");
   const headRow = document.createElement("tr");
   for (const label of labels) {
@@ -1322,7 +1430,9 @@ function renderProjectionTable(portfolio, earlyAge, facts) {
     const values = [[String(row.calendarYear), ""], [String(Math.round(row.age)), ""]];
     if (spouse) values.push([String(Math.round(facts.spouseAge + (row.age - startAge))), ""]);
     values.push(
+      [formatDollars(row.retired ? 0 : tfsaWant), ""],
       [formatDollars(row.tfsaIn), !row.retired && row.tfsaIn + 0.5 < tfsaWant ? "room-short" : ""],
+      [formatDollars(row.retired ? 0 : rrspWant), ""],
       [formatDollars(row.rrspIn), !row.retired && row.rrspIn + 0.5 < rrspWant ? "room-short" : ""],
       [formatDollars(row.nonRegIn), ""],
       [formatDollars(row.tfsa), ""],
@@ -1341,7 +1451,7 @@ function renderProjectionTable(portfolio, earlyAge, facts) {
     body.append(tr);
   }
   table.append(head, body);
-  note.textContent = "Each deposit is the slider amount or the room still available, whichever is smaller. A gold figure is below the slider because the room ran out. Future TFSA room uses the published limits and Slider 11. At retirement the deposits stop. CPP and OAS are the amounts in Section 3, raised with that same inflation, and they cover part of the income. The accounts withdraw the rest. The red row is the early-death age. That tax is shown beside the balance. It is not taken off the path that continues.";
+  note.textContent = "TFSA entered and RRSP entered are the amounts on the sliders. Each deposit is that amount or the room still available, whichever is smaller. A gold figure is below what was entered because the room ran out. Scroll sideways for every year. Future TFSA room uses the published limits and Slider 11. At retirement the deposits stop. CPP and OAS are the amounts in Section 3, raised with that same inflation, and they cover part of the income. The accounts withdraw the rest. The red row is the early-death age. That tax is shown beside the balance. It is not taken off the path that continues.";
 }
 
 function labelMap(labels) {
@@ -1384,14 +1494,23 @@ function render() {
   const months = Math.max(0, Math.min(36, num("ci-months")));
   $("ci-amount").textContent = formatDollars(criticalIllnessLumpSum(facts.clientIncome, facts.replacement, months));
   $("spouse-ci-amount").textContent = formatDollars(criticalIllnessLumpSum(facts.spouseIncome, facts.spouseReplacement, months));
-  $("disability-hint").textContent = `Starts at ${Math.round(facts.replacement * 100)}% of ${clientName()}'s monthly income, ${formatDollars(disability)}. Slide it to recommend a different monthly benefit.`;
-  $("spouse-disability-hint").textContent = `Starts at ${Math.round(facts.spouseReplacement * 100)}% of ${spouseName()}'s monthly income, ${formatDollars(spouseDisability)}.`;
+  $("disability-hint").textContent = disabilityBreakdown(clientName(), facts.clientIncome, facts.replacement, disability);
+  $("spouse-disability-hint").textContent = hasSpouse()
+    ? disabilityBreakdown(spouseName(), facts.spouseIncome, facts.spouseReplacement, spouseDisability)
+    : "";
   const recommended = buildPath(facts, { tfsa: num("rec-tfsa"), rrsp: num("rec-rrsp"), nonreg: num("rec-nonreg") }, "recommended");
 
   $("life-figure").textContent = formatDollars(current.life.capitalNeed);
   $("sticky-life").textContent = formatDollars(current.life.capitalNeed);
   $("tax-probate-note").textContent = taxSentence(current, facts);
   $("life-caption").textContent = incomeCaption(clientName(), current.life, facts.inflation, facts.replacement, facts.existingCoverage);
+  showNeedFigures("", current.life);
+  showNeedFigures("spouse", current.spouseLife);
+  const todayPath = $("today-path");
+  if (todayPath) {
+    const atRetire = rowNearest(current.portfolio, facts.retirementAge);
+    todayPath.textContent = `If nothing changes, savings at retirement are ${formatDollars(atRetire?.total || 0)}.`;
+  }
   fillBars($("need-bars"), current.life);
   drawSeries($("need-chart"), seriesFromNeed(current.needPath, `${clientName()} insurance need over time`));
   if (current.spouseLife) {
@@ -1402,7 +1521,13 @@ function render() {
   }
 
   const earlyNow = placeRange("early-now", facts.age, endAge(facts.age), "earlyNow");
-  $("early-now-readout").textContent = deathLine(rowNearest(current.portfolio, earlyNow));
+  {
+    const nowRow = rowNearest(current.portfolio, earlyNow);
+    const nowText = deathLine(nowRow, needAt(current.needPath, earlyNow))
+      || "Enter an age in the facts. This slider then picks the age of death.";
+    $("early-now-readout").textContent = nowText;
+    $("early-now").title = nowText;
+  }
   drawSeries($("wealth-chart"), seriesFromWealth(current.portfolio, earlyNow, "Savings if monthly contributions stay where they are"));
 
   const monthly = num("rec-tfsa") + num("rec-rrsp") + num("rec-nonreg");
@@ -1412,13 +1537,18 @@ function render() {
   $("retire-today").textContent = formatDollars(rowNearest(current.portfolio, facts.retirementAge)?.total ?? 0);
   $("retire-rec").textContent = formatDollars(rowNearest(recommended.portfolio, facts.retirementAge)?.total ?? 0);
   const earlyAfter = placeRange("early-after", facts.age, endAge(facts.age), "earlyAfter");
-  $("early-after-readout").textContent = deathLine(rowNearest(recommended.portfolio, earlyAfter));
+  {
+    const afterRow = rowNearest(recommended.portfolio, earlyAfter);
+    const afterText = deathLine(afterRow, needAt(recommended.needPath, earlyAfter))
+      || "Enter an age in the facts. This slider then picks the age of death.";
+    $("early-after-readout").textContent = afterText;
+    $("early-after").title = afterText;
+  }
   drawSeries($("compare-chart"), compareSeries(current.portfolio, recommended.portfolio, earlyAfter));
   const tfsaRoom = accountRoomNote(recommended, "tfsa", "TFSA");
   const rrspRoom = accountRoomNote(recommended, "rrsp", "RRSP");
   showRoomNote("rec-tfsa-note", tfsaRoom);
   showRoomNote("rec-rrsp-note", rrspRoom);
-  renderContributionSchedule(recommended.portfolio);
   renderProjectionTable(recommended.portfolio, earlyAfter, facts);
   const roundedNeed = roundLife(current.life.capitalNeed);
   const still = Math.max(0, roundedNeed - roundLife(num("rec-life")));
@@ -1549,6 +1679,21 @@ function init() {
       if (id === "rec-spouse-life") dirty.spouseLife = true;
     }
     if (event.target.type === "radio" || event.target.type === "checkbox" || event.target.tagName === "SELECT" || id === "rec-life" || id === "rec-spouse-life") render();
+  });
+  $("retirement-age").addEventListener("blur", () => {
+    const entered = num("retirement-age");
+    const accepted = acceptedRetirementAge();
+    if (entered === accepted) return;
+    const floor = retirementFloor();
+    $("retirement-age").value = String(accepted);
+    render();
+    const note = $("retirement-age-note");
+    if (!note) return;
+    if (entered > 0 && entered < floor) {
+      note.textContent = `Retirement age has to be at least ${floor}. The plan uses ${accepted}.`;
+    } else if (entered > MAX_RETIREMENT_AGE) {
+      note.textContent = `The plan stops at age ${MAX_RETIREMENT_AGE}. It uses ${accepted}.`;
+    }
   });
   $("worksheet").addEventListener("submit", (event) => event.preventDefault());
   $("print-plan").addEventListener("click", () => window.print());

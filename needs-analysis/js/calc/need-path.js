@@ -92,6 +92,8 @@ export function lifeNeedAtYear({
     debts,
     deathTax: tax,
     floor,
+    insurableNeed: gross,
+    insuranceGap: Math.max(0, gross - offsets),
     capitalNeed: Math.max(floor, gross - offsets),
   };
 }

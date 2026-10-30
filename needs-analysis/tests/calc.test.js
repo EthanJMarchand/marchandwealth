@@ -14,7 +14,7 @@ import { deathTaxAtYear } from "../js/calc/death-tax.js";
 import { calculateLifeNeed, endOfLifeFloor, inflatedIncomeCapital } from "../js/calc/life-need.js";
 import { annuityPayment, presentValue, presentValueOfAnnuity, readMoney, savingsForFutureValue } from "../js/calc/money.js";
 import { incomeReplacementYears, incomeYearsAtAge, projectLifeNeed } from "../js/calc/need-path.js";
-import { CPP_FULL_CAREER_YEARS, cppContributionYears, estimateCpp, estimateOas, projectedCppYears, projectedOasYears } from "../js/calc/pensions.js";
+import { CPP_FULL_CAREER_YEARS, adjustCppForStart, adjustOasForStart, cppContributionYears, cppStartAge, estimateCpp, estimateOas, oasStartAge, projectedCppYears, projectedOasYears } from "../js/calc/pensions.js";
 import { calculateProbate } from "../js/calc/probate.js";
 import { criticalIllnessLumpSum, disabilityMonthlyBenefit } from "../js/calc/protection.js";
 import { calculateRetirement, taxableRetirementIncome } from "../js/calc/retirement.js";
@@ -780,6 +780,16 @@ test("CPP and OAS guesses look through to retirement, not only years already wor
   const already = estimateCpp(90000, 74600, 1507.65 * 12, cppContributionYears(42));
   assert.ok(full > already);
   assert.equal(estimateOas(projectedOasYears(42, 65), 762.5 * 12), 762.5 * 12);
+});
+
+test("delaying CPP and OAS to 70 raises the age-65 amount", () => {
+  assert.equal(adjustCppForStart(10000, 65), 10000);
+  assert.equal(adjustOasForStart(8000, 65), 8000);
+  assert.ok(adjustCppForStart(10000, 70) > 10000);
+  assert.ok(adjustOasForStart(8000, 70) > 8000);
+  assert.equal(cppStartAge(70), 70);
+  assert.equal(oasStartAge(70), 70);
+  assert.equal(cppStartAge(50), 60);
 });
 
 test("CPP and OAS guesses use earnings and years in Canada", () => {

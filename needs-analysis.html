@@ -138,7 +138,7 @@
     </details>
     <section id="section-1" class="rounded-sm border border-line bg-white p-5 md:p-6 shadow-sm" data-crumb="Financial plan · Section 1 · Facts">
       <h2 class="font-serif font-semibold text-2xl text-navydeep"><span class="ref-tag">Section 1</span>Facts</h2>
-      <p class="mt-2 text-sm leading-6 text-inksoft">One household. Each person's employment income stands on its own. Dividends stay out of that income. CPP and OAS start from it, and either figure can be replaced with the amount from CRA.</p>
+      <p class="mt-2 text-sm leading-6 text-inksoft">Who is in the plan, and the work income everything else uses. Each person's employment income stands on its own. Dividends stay out of that income. CPP and OAS start from it, and either figure can be replaced with the amount from CRA.</p>
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
         <label class="block text-sm font-medium">Plan date
           <input id="plan-date" type="date" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
@@ -197,7 +197,7 @@
       </div>
 
       <h3 id="section-2" class="mt-8 font-serif text-xl font-semibold text-navydeep" data-crumb="Financial plan · Section 2 · Life insurance"><span class="ref-tag">Section 2</span>Life insurance</h3>
-      <p class="mt-2 text-sm leading-6 text-inksoft">Each person is calculated alone. Shared debts are added to both.</p>
+      <p class="mt-2 text-sm leading-6 text-inksoft">How long the household keeps this person's income if they die. Each person is calculated alone. Shared debts are added to both.</p>
       <div class="mt-4 max-w-xl" data-crumb="Financial plan · Section 2 · Slider 11 · Inflation">
         <label class="block text-sm font-medium" for="inflation-slider"><span class="ref-tag">Slider 11</span>Inflation, percent a year</label>
         <div class="mt-2 flex items-center gap-4">
@@ -269,22 +269,23 @@
       </fieldset>
       <p id="tax-probate-note" class="mt-2 text-sm leading-6 text-inksoft"></p>
       <h3 id="section-3" class="mt-8 font-serif text-xl font-semibold text-navydeep" data-crumb="Financial plan · Section 3 · Retirement"><span class="ref-tag">Section 3</span>Retirement</h3>
-      <p class="mt-2 text-sm leading-6 text-inksoft">This is the income goal while they are living. It does not change the life insurance amount.</p>
+      <p class="mt-2 text-sm leading-6 text-inksoft">The income goal while they are living, and the age CPP and OAS start. It does not change the life insurance amount.</p>
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
         <label class="block text-sm font-medium">Retirement age
-          <input id="retirement-age" inputmode="numeric" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
+          <input id="retirement-age" inputmode="numeric" min="50" max="80" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
+          <p id="retirement-age-note" class="mt-2 text-sm font-normal leading-6 text-inksoft"></p>
         </label>
         <label class="block text-sm font-medium">Retirement income, percent of income
           <input id="retirement-replacement" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
         </label>
       </div>
       <h3 class="mt-6 font-serif text-xl font-semibold text-navydeep">CPP and OAS</h3>
-      <p class="mt-2 text-sm leading-6 text-inksoft">The slider starts from last year's employment income, continued to retirement. Do not include dividends in that income. Move the slider, or type the amount from the CRA account. The figures are a year, in today's dollars. Slider 11 raises them after retirement.</p>
+      <p class="mt-2 text-sm leading-6 text-inksoft">The slider starts from last year's employment income, continued to retirement, then adjusted for the age CPP or OAS actually starts. Do not include dividends in that income. Move the slider, or type the CRA amount at that start age. The figures are a year, in today's dollars. Slider 11 raises them after retirement.</p>
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
         <div>
           <label class="block text-sm font-medium" for="cpp-slider"><span class="ref-tag">Slider 12</span><span id="cpp-label">Client 1 CPP at 65, a year</span></label>
           <div class="mt-2 flex items-center gap-4">
-            <input id="cpp-slider" type="range" min="0" max="20000" step="100" value="0" class="w-full" />
+            <input id="cpp-slider" type="range" min="0" max="20000" step="1" value="0" class="w-full" />
             <input id="cpp-annual" inputmode="decimal" aria-label="Client 1 CPP at 65, a year" class="w-28 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
           </div>
           <p id="cpp-hint" class="mt-2 text-sm text-inksoft"></p>
@@ -292,7 +293,7 @@
         <div>
           <label class="block text-sm font-medium" for="oas-slider"><span class="ref-tag">Slider 13</span><span id="oas-label">Client 1 OAS at 65, a year</span></label>
           <div class="mt-2 flex items-center gap-4">
-            <input id="oas-slider" type="range" min="0" max="12000" step="100" value="0" class="w-full" />
+            <input id="oas-slider" type="range" min="0" max="12000" step="1" value="0" class="w-full" />
             <input id="oas-annual" inputmode="decimal" aria-label="Client 1 OAS at 65, a year" class="w-28 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
           </div>
           <p id="oas-hint" class="mt-2 text-sm text-inksoft"></p>
@@ -300,7 +301,7 @@
         <div id="spouse-cpp-wrap" class="hidden">
           <label class="block text-sm font-medium" for="spouse-cpp-slider"><span class="ref-tag">Slider 14</span><span id="spouse-cpp-label">Client 2 CPP at 65, a year</span></label>
           <div class="mt-2 flex items-center gap-4">
-            <input id="spouse-cpp-slider" type="range" min="0" max="20000" step="100" value="0" class="w-full" />
+            <input id="spouse-cpp-slider" type="range" min="0" max="20000" step="1" value="0" class="w-full" />
             <input id="spouse-cpp" inputmode="decimal" aria-label="Client 2 CPP at 65, a year" class="w-28 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
           </div>
           <p id="spouse-cpp-hint" class="mt-2 text-sm text-inksoft"></p>
@@ -308,7 +309,7 @@
         <div id="spouse-oas-wrap" class="hidden">
           <label class="block text-sm font-medium" for="spouse-oas-slider"><span class="ref-tag">Slider 15</span><span id="spouse-oas-label">Client 2 OAS at 65, a year</span></label>
           <div class="mt-2 flex items-center gap-4">
-            <input id="spouse-oas-slider" type="range" min="0" max="12000" step="100" value="0" class="w-full" />
+            <input id="spouse-oas-slider" type="range" min="0" max="12000" step="1" value="0" class="w-full" />
             <input id="spouse-oas" inputmode="decimal" aria-label="Client 2 OAS at 65, a year" class="w-28 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
           </div>
           <p id="spouse-oas-hint" class="mt-2 text-sm text-inksoft"></p>
@@ -324,7 +325,7 @@
       </label>
 
       <h3 id="section-4" class="mt-8 font-serif text-xl font-semibold text-navydeep" data-crumb="Financial plan · Section 4 · Accounts"><span class="ref-tag">Section 4</span>Accounts</h3>
-      <p class="mt-2 text-sm leading-6 text-inksoft">Each person has their own balance, monthly contribution, and room. The pictures add the two together. One person's room cannot be used by the other.</p>
+      <p class="mt-2 text-sm leading-6 text-inksoft">What is already saved, and the room each person still has. Each person has their own balance, monthly contribution, and room. The pictures add the two together. One person's room cannot be used by the other.</p>
       <p id="client-accounts-heading" class="mt-4 text-xs font-semibold uppercase tracking-[0.14em] text-inksoft">Client 1</p>
       <div class="mt-3 grid gap-4 lg:grid-cols-3">
         <fieldset class="rounded-sm border border-line p-4">
@@ -442,20 +443,45 @@
     </section>
 
     <section class="rounded-sm border border-line bg-white p-5 md:p-6 shadow-sm">
-      <h2 id="section-5" class="font-serif font-semibold text-2xl text-navydeep" data-crumb="Financial plan · Section 5 · The path today"><span class="ref-tag">Section 5</span>The path today</h2>
+      <h2 id="section-5" class="font-serif font-semibold text-2xl text-navydeep" data-crumb="Financial plan · Section 5 · If death comes early"><span class="ref-tag">Section 5</span>If death comes early</h2>
+      <p id="section-5-purpose" class="mt-2 text-sm leading-6 text-inksoft">What the household needs if death comes now, what insurance and savings already cover, and the path if nothing changes.</p>
       <p id="illustration-1-label" class="ref-tag mt-4" data-crumb="Financial plan · Section 5 · Illustration 1 · If Client 1 dies">Illustration 1 · If Client 1 dies</p>
       <p id="life-figure" class="figure nums font-serif text-5xl text-navydeep">$0</p>
       <p id="life-caption" class="mt-2 text-sm leading-6 text-inksoft">Years of income after death, plus the shared debts and final expenses.</p>
+      <div class="mt-4 grid gap-4 sm:grid-cols-2">
+        <div>
+          <p class="text-xs uppercase tracking-wide text-inksoft">Insurable need</p>
+          <p id="insurable-need" class="nums font-serif text-3xl text-navydeep">$0</p>
+          <p id="insurable-note" class="mt-1 text-sm leading-6 text-inksoft">Income to replace, debts, education, and final costs, before subtracting what is already in place.</p>
+        </div>
+        <div>
+          <p class="text-xs uppercase tracking-wide text-inksoft">Insurance gap</p>
+          <p id="insurance-gap" class="nums font-serif text-3xl text-navydeep">$0</p>
+          <p id="insurance-gap-note" class="mt-1 text-sm leading-6 text-inksoft"></p>
+        </div>
+      </div>
       <div id="need-bars" class="mt-6 space-y-3"></div>
       <p id="illustration-2-label" class="ref-tag mt-6" data-crumb="Financial plan · Section 5 · Illustration 2 · If Client 1 dies, over time">Illustration 2 · If Client 1 dies, over time</p>
       <div id="need-chart" class="need-chart mt-2"></div>
-      <p class="mt-2 text-xs text-inksoft">Solid line: capital need. Dashed line: mortgage.</p>
+      <p class="mt-2 text-xs text-inksoft">Solid line: insurable need at each age. Dashed line: insurance gap. Hover a point for both. Zero on the gap means coverage and assets already meet the need.</p>
       <div id="spouse-need-block" class="person-spouse mt-6 hidden rounded-sm p-4">
         <p id="illustration-3-label" class="ref-tag" data-crumb="Financial plan · Section 5 · Illustration 3 · If Client 2 dies">Illustration 3 · If Client 2 dies</p>
         <p id="spouse-life-figure" class="figure nums font-serif text-4xl text-navydeep">$0</p>
         <p id="spouse-life-caption" class="mt-2 text-sm leading-6 text-inksoft"></p>
+        <div class="mt-4 grid gap-4 sm:grid-cols-2">
+          <div>
+            <p class="text-xs uppercase tracking-wide text-inksoft">Insurable need</p>
+            <p id="spouse-insurable-need" class="nums font-serif text-2xl text-navydeep">$0</p>
+          </div>
+          <div>
+            <p class="text-xs uppercase tracking-wide text-inksoft">Insurance gap</p>
+            <p id="spouse-insurance-gap" class="nums font-serif text-2xl text-navydeep">$0</p>
+            <p id="spouse-insurance-gap-note" class="mt-1 text-sm leading-6 text-inksoft"></p>
+          </div>
+        </div>
         <div id="spouse-need-bars" class="mt-4 space-y-3"></div>
         <div id="spouse-need-chart" class="need-chart mt-4"></div>
+        <p class="mt-2 text-xs text-inksoft">Solid line: insurable need. Dashed line: insurance gap.</p>
       </div>
       <div class="mt-8">
         <label class="block text-sm font-medium" for="early-now" data-crumb="Financial plan · Section 5 · Slider 1 · Early death, today"><span class="ref-tag">Slider 1</span>If death comes early</label>
@@ -463,12 +489,14 @@
         <p id="early-now-readout" class="mt-2 text-sm text-inksoft"></p>
         <p class="ref-tag mt-4" data-crumb="Financial plan · Section 5 · Illustration 4 · Savings if nothing changes">Illustration 4 · Savings if nothing changes</p>
         <div id="wealth-chart" class="need-chart mt-2"></div>
+        <p id="today-path" class="mt-2 text-sm leading-6 text-inksoft"></p>
+        <p class="mt-1 text-xs text-inksoft">Hover a point for the savings, the tax if death comes at that age, and what is left after tax.</p>
       </div>
     </section>
 
     <section class="rounded-sm border border-line bg-white p-5 md:p-6 shadow-sm">
       <h2 id="section-6" class="font-serif font-semibold text-2xl text-navydeep" data-crumb="Financial plan · Section 6 · Recommendation"><span class="ref-tag">Section 6</span>Recommendation</h2>
-      <p class="mt-2 text-sm text-inksoft">Monthly savings, then the new life insurance, disability benefit, and critical illness amount.</p>
+      <p class="mt-2 text-sm leading-6 text-inksoft">The monthly savings to recommend, before the new coverage.</p>
       <div class="mt-6 space-y-5">
         <div>
           <label class="block text-sm font-medium" for="rec-tfsa-slider" data-crumb="Financial plan · Section 6 · Slider 2 · TFSA"><span class="ref-tag">Slider 2</span>TFSA, monthly</label>
@@ -495,7 +523,7 @@
         </div>
       </div>
       <h3 id="section-7" class="mt-8 font-serif text-xl font-semibold text-navydeep" data-crumb="Financial plan · Section 7 · New coverage"><span class="ref-tag">Section 7</span>New coverage</h3>
-      <p class="mt-2 text-sm leading-6 text-inksoft">Life insurance is the lump sum if they die. Disability replaces monthly income while they cannot work. Critical illness is one payment for a set number of months of income.</p>
+      <p class="mt-2 text-sm leading-6 text-inksoft">The new life, disability, and critical illness amounts. Sliders 7 and 8 show how each disability benefit is built, so it can be checked before it is changed. Life insurance is the lump sum if they die. Disability replaces monthly income while they cannot work. Critical illness is one payment for a set number of months of income.</p>
       <div class="mt-6 space-y-5">
         <div>
           <label class="block text-sm font-medium" for="rec-life-slider" data-crumb="Financial plan · Section 7 · Slider 5 · New life insurance"><span class="ref-tag">Slider 5</span><span id="rec-life-text">New life insurance, Client 1</span></label>
@@ -516,7 +544,7 @@
         <div>
           <label class="block text-sm font-medium" for="rec-disability-slider" data-crumb="Financial plan · Section 7 · Slider 7 · Disability"><span class="ref-tag">Slider 7</span>New disability benefit, monthly income to replace</label>
           <div class="mt-2 flex items-center gap-4">
-            <input id="rec-disability-slider" type="range" min="0" max="20000" step="50" value="0" class="w-full" />
+            <input id="rec-disability-slider" type="range" min="0" max="20000" step="1" value="0" class="w-full" />
             <input id="rec-disability" inputmode="decimal" value="0" aria-label="Monthly disability income to replace" class="w-28 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
           </div>
           <p id="disability-hint" class="mt-2 text-sm text-inksoft"></p>
@@ -524,7 +552,7 @@
         <div id="rec-spouse-disability-wrap" class="hidden">
           <label id="rec-spouse-disability-label" class="block text-sm font-medium" for="rec-spouse-disability-slider" data-crumb="Financial plan · Section 7 · Slider 8 · Client 2's disability"><span class="ref-tag">Slider 8</span><span id="rec-spouse-disability-text">Client 2's disability benefit, monthly income to replace</span></label>
           <div class="mt-2 flex items-center gap-4">
-            <input id="rec-spouse-disability-slider" type="range" min="0" max="20000" step="50" value="0" class="w-full" />
+            <input id="rec-spouse-disability-slider" type="range" min="0" max="20000" step="1" value="0" class="w-full" />
             <input id="rec-spouse-disability" inputmode="decimal" value="0" aria-label="Spouse monthly disability income to replace" class="w-28 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" />
           </div>
           <p id="spouse-disability-hint" class="mt-2 text-sm text-inksoft"></p>
@@ -544,6 +572,7 @@
 
     <section class="rounded-sm border border-line bg-white p-5 md:p-6 shadow-sm">
       <h2 id="section-8" class="font-serif font-semibold text-2xl text-navydeep" data-crumb="Financial plan · Section 8 · After the recommendation"><span class="ref-tag">Section 8</span>After the recommendation</h2>
+      <p class="mt-2 text-sm leading-6 text-inksoft">What changes if they take the recommendation, and what is still not covered.</p>
       <div class="mt-4 grid grid-cols-2 gap-4">
         <div>
           <p class="text-xs uppercase tracking-wide text-inksoft">Today, monthly</p>
@@ -564,7 +593,7 @@
           <p id="retire-rec" class="figure nums font-serif text-3xl text-navydeep">$0</p>
         </div>
       </div>
-      <p class="mt-4 text-xs text-inksoft">Dashed line: today. Solid line: after the recommendation. Red mark: early death.</p>
+      <p class="mt-4 text-xs text-inksoft">Dashed line: today's path. Solid line: after the recommendation. Red mark: early death. Hover a point for both amounts.</p>
       <p class="ref-tag mt-4" data-crumb="Financial plan · Section 8 · Illustration 5 · The two paths">Illustration 5 · The two paths</p>
       <div id="compare-chart" class="need-chart mt-2"></div>
       <label class="mt-6 block text-sm font-medium" for="early-after" data-crumb="Financial plan · Section 8 · Slider 10 · Early death, after"><span class="ref-tag">Slider 10</span>If death comes early</label>
@@ -582,15 +611,9 @@
           <p id="after-spouse-life-note" class="mt-1 text-sm text-inksoft">Illustrated need minus the spouse's new life insurance.</p>
         </div>
       </div>
-      <div id="contribution-schedule-wrap" class="mt-8 hidden">
-        <h3 id="section-9" class="font-serif text-xl font-semibold text-navydeep" data-crumb="Financial plan · Section 9 · Above the room"><span class="ref-tag">Section 9 · Illustration 7</span>The slider is above the room</h3>
-        <p class="mt-2 text-sm leading-6 text-inksoft">What was entered is kept only while unused room remains. After that, the deposit comes down to the new room each year.</p>
-        <div class="portfolio-scroll mt-4">
-          <table id="contribution-schedule" class="text-left text-xs"></table>
-        </div>
-      </div>
       <div class="mt-8">
-        <h3 id="section-10" class="font-serif text-xl font-semibold text-navydeep" data-crumb="Financial plan · Section 10 · Illustration 6 · Year by year"><span class="ref-tag">Section 10 · Illustration 6</span>Year by year</h3>
+        <h3 id="section-9" class="font-serif text-xl font-semibold text-navydeep" data-crumb="Financial plan · Section 9 · Illustration 6 · Year by year"><span class="ref-tag">Section 9 · Illustration 6</span>Year by year</h3>
+        <p class="mt-2 text-sm leading-6 text-inksoft">Each year of the recommended path, from this year to the end of the plan.</p>
         <p id="projection-note" class="mt-2 text-sm leading-6 text-inksoft"></p>
         <div class="portfolio-scroll mt-4">
           <table id="portfolio-table" class="text-left text-xs"></table>
