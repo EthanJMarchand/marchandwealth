@@ -13,7 +13,7 @@ The marketing site, contact form, meeting scheduler, and TFSA calculator for **M
 | [`index.html`](index.html) | Homepage — services, why-independent pitch, about, FAQ |
 | [`life-insurance-quote.html`](life-insurance-quote.html) | Free instant life insurance quote tool — Compulife quoter embedded in an iframe, plus SEO content and FAQ |
 | [`tfsa-calculator.html`](tfsa-calculator.html) | Free public tool: whether a planned monthly contribution catches up your TFSA room (and when), plus projected retirement balance and income |
-| [`needs-analysis.html`](needs-analysis.html) | Alberta life insurance and retirement needs worksheet. Entries stay in the browser tab |
+| [`needs-analysis.html`](needs-analysis.html) | Simplified financial plan — life insurance need, protection amounts, and retirement savings path. Entries stay in the browser tab |
 | [`insights.html`](insights.html) | Blog index — article cards rendered from [`insights-data.js`](insights-data.js) |
 | [`insight.html`](insight.html) | Blog post template — renders whichever post matches the URL, also from `insights-data.js` |
 | [`contact.html`](contact.html) | Contact page — advisor intro up top, detailed contact form below, submitted via Netlify Forms |
@@ -43,8 +43,8 @@ marchand-site/
 ├── contact.html              Contact page — advisor intro + contact form (Netlify Forms)
 ├── schedule.html             Meeting scheduler (Google Calendar embed)
 ├── tfsa-calculator.html        TFSA contribution & retirement calculator
-├── needs-analysis.html         Life insurance and retirement needs worksheet
-├── needs-analysis/             Worksheet JS, annual figures, and calculation tests
+├── needs-analysis.html         Simplified financial plan
+├── needs-analysis/             Plan UI, annual figures, and calculation tests
 │   ├── js/                     Worksheet UI and calculators (loaded by the page)
 │   ├── data/                   CPP, OAS, tax, TFSA, RRSP, inflation, probate figures
 │   └── tests/                  `node needs-analysis/tests/calc.test.js`
@@ -105,9 +105,9 @@ Nothing else in the codebase needs to be touched:
 
 ---
 
-## The needs analysis worksheet
+## The financial plan
 
-[`needs-analysis.html`](needs-analysis.html) is the Alberta life insurance and retirement needs worksheet. It is a normal page on this site, with the same header, footer, and colours as the rest of Marchand Wealth. The calculation code lives in [`needs-analysis/`](needs-analysis/) and is loaded by the page. Nothing in the worksheet is posted to a server, and nothing is written to the browser. Print the client letter and the advisor record, or copy the letter, when a copy needs to be kept.
+[`needs-analysis.html`](needs-analysis.html) is a simplified financial plan for life insurance need, disability and critical illness amounts, and the retirement savings path. It is a normal page on this site, with the same header, footer, and colours as the rest of Marchand Wealth. The calculation code lives in [`needs-analysis/`](needs-analysis/) and is loaded by the page. Nothing on the page is posted to a server, and nothing is written to the browser. Print the plan when a copy needs to be kept.
 
 The meeting starts by choosing life insurance, disability, and critical illness, financial planning, or both. Sections that do not belong to that choice stay off the page and out of the letter. The page does not choose a product.
 

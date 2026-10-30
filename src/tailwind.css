@@ -93,17 +93,60 @@ body.needs-worksheet input[type="date"] {
   min-inline-size: 0;
   text-align: left;
 }
-/* The year-by-year balances stay a table. Only this scroller moves sideways. */
+/* Table F3: scroll inside this box so Year + header stay in view until you leave the table. */
 body.needs-worksheet .portfolio-scroll {
   min-width: 0;
   max-width: 100%;
-  overflow-x: auto;
+  max-height: min(28rem, 70vh);
+  overflow: auto;
   -webkit-overflow-scrolling: touch;
+  border: 1px solid #ddd7ca;
+  border-radius: 0.125rem;
+  background: #ffffff;
 }
 body.needs-worksheet #portfolio-table {
   width: max-content;
   min-width: 100%;
   max-width: none;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+body.needs-worksheet #portfolio-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  max-width: 5.25rem;
+  padding-top: 0.4rem;
+  padding-bottom: 0.4rem;
+  background: #f7f4ee;
+  box-shadow: inset 0 -1px 0 #ddd7ca;
+  white-space: normal;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  line-height: 1.2;
+  vertical-align: bottom;
+  text-align: left;
+  font-size: 0.7rem;
+}
+body.needs-worksheet #portfolio-table .portfolio-sticky-year {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #ffffff;
+  box-shadow: inset -1px 0 0 #ddd7ca;
+}
+body.needs-worksheet #portfolio-table thead th.portfolio-sticky-year {
+  z-index: 3;
+  max-width: 3.25rem;
+  background: #f7f4ee;
+  white-space: nowrap;
+}
+body.needs-worksheet #portfolio-table tr.portfolio-early-row .portfolio-sticky-year,
+body.needs-worksheet #portfolio-table tr.portfolio-early-row td {
+  background: #fef2f2;
+}
+body.needs-worksheet #portfolio-table tr.portfolio-early-row .portfolio-sticky-year {
+  background: #fef2f2;
 }
 body.needs-worksheet .need-chart,
 body.needs-worksheet .need-chart svg {
@@ -114,18 +157,42 @@ body.needs-worksheet .need-tip {
   overflow-wrap: anywhere;
   box-sizing: border-box;
 }
-body.needs-worksheet #client-letter,
-body.needs-worksheet #advisor-record,
-body.needs-worksheet #file-copy {
-  min-width: 0;
-  max-width: 100%;
+body.needs-worksheet #meeting-pane.plan-summary {
+  border-color: #c1a57b;
+  background:
+    linear-gradient(180deg, rgba(193, 165, 123, 0.10), transparent 7rem),
+    #ffffff;
 }
-body.needs-worksheet #file-copy dl {
-  grid-template-columns: minmax(0, 1fr) auto;
+
+/* Stable plan references for screen and print (A, Fig. D1, S.1, …). */
+body.needs-worksheet .plan-ref {
+  display: inline-block;
+  margin-right: 0.45rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.72em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #a68a61;
+  vertical-align: 0.12em;
+  white-space: nowrap;
 }
-body.needs-worksheet #file-copy dt,
-body.needs-worksheet #file-copy li > span:first-child {
-  min-width: 0;
+body.needs-worksheet .plan-ref-fig {
+  display: block;
+  margin: 0 0 0.35rem;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #a68a61;
+  vertical-align: baseline;
+}
+body.needs-worksheet .plan-ref-control {
+  margin-right: 0.4rem;
+  font-size: 0.78em;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: #8a929c;
+  vertical-align: 0.05em;
 }
 
 @media (max-width: 1023px) {
@@ -242,33 +309,260 @@ body.needs-worksheet #file-copy li > span:first-child {
   }
 }
 
+/* Print-only pieces stay out of the interactive page. */
+body.needs-worksheet .print-only {
+  display: none !important;
+}
+
 @media print {
+  @page {
+    size: letter;
+    margin: 0.55in 0.6in;
+  }
+
+  body.needs-worksheet .plan-ref,
+  body.needs-worksheet .plan-ref-fig,
+  body.needs-worksheet .plan-ref-control {
+    color: #8a734f !important;
+  }
+
   body.needs-worksheet .no-print,
-  body.needs-worksheet header,
-  body.needs-worksheet form,
-  body.needs-worksheet aside,
-  body.needs-worksheet footer {
+  body.needs-worksheet > header.sticky,
+  body.needs-worksheet footer,
+  body.needs-worksheet .worksheet-sticky-summary {
     display: none !important;
   }
-  body.needs-worksheet { background: white !important; }
-  body.needs-worksheet #client-letter,
-  body.needs-worksheet #advisor-record {
-    border: none !important;
-    box-shadow: none !important;
-    margin-top: 0 !important;
+
+  body.needs-worksheet .print-only {
+    display: block !important;
+  }
+
+  body.needs-worksheet {
+    background: white !important;
+    color: #232a35 !important;
+    font-size: 10.5pt;
+    line-height: 1.45;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body.needs-worksheet .print-masthead {
+    display: flex !important;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 0 0 0.75rem;
+    padding: 0 0 0.55rem;
+    border-bottom: 2px solid #c1a57b;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  body.needs-worksheet .print-masthead-logo {
+    display: block;
+    height: 1.5rem !important;
+    width: auto !important;
+    max-width: 9rem !important;
+  }
+  body.needs-worksheet .print-masthead-kicker {
+    margin: 0;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #a68a61;
+  }
+  body.needs-worksheet .print-masthead-title {
+    margin: 0.15rem 0 0;
+    font-family: Fraunces, Georgia, serif;
+    font-size: 16pt;
+    font-weight: 600;
+    color: #232a35;
+    line-height: 1.15;
+  }
+  body.needs-worksheet .print-masthead-meta {
+    margin: 0.15rem 0 0;
+    font-size: 9pt;
+    color: #565f6c;
+  }
+
+  body.needs-worksheet main {
+    max-width: none !important;
+    margin: 0 !important;
     padding: 0 !important;
   }
-  body.needs-worksheet .report-break {
-    break-before: page;
-    page-break-before: always;
+  /* Grid areas — not flex order — so print engines do not leave a blank first page. */
+  body.needs-worksheet main > .grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-areas:
+      "summary"
+      "form" !important;
+    gap: 0 !important;
   }
-  body.needs-worksheet[data-print="advisor"] #advisor-record {
-    break-before: auto !important;
-    page-break-before: auto !important;
+  body.needs-worksheet #meeting-pane {
+    grid-area: summary;
   }
-  body.needs-worksheet[data-print="client"] #advisor-record,
-  body.needs-worksheet[data-print="advisor"] #client-letter {
+  body.needs-worksheet #worksheet {
+    grid-area: form;
+    display: block !important;
+  }
+
+  body.needs-worksheet #meeting-pane {
+    position: static !important;
+    max-height: none !important;
+    overflow: visible !important;
+    width: 100% !important;
+    margin: 0 0 0.85rem !important;
+    padding: 0 0 0.75rem !important;
+    border: 0 !important;
+    border-bottom: 1px solid #ddd7ca !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+  body.needs-worksheet #meeting-pane .figure {
+    font-size: 16pt !important;
+    line-height: 1.1;
+  }
+  body.needs-worksheet #meeting-pane .text-4xl,
+  body.needs-worksheet #meeting-pane .text-3xl {
+    font-size: 15pt !important;
+  }
+
+  body.needs-worksheet #worksheet > section,
+  body.needs-worksheet #worksheet > details {
+    break-inside: auto;
+    page-break-inside: auto;
+    margin: 0 0 0.65rem !important;
+    padding: 0.5rem 0 0.65rem !important;
+    border: 0 !important;
+    border-top: 1px solid #eeeae3 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+  body.needs-worksheet #worksheet > section:first-of-type {
+    border-top: 0 !important;
+    padding-top: 0 !important;
+  }
+  body.needs-worksheet #worksheet h2,
+  body.needs-worksheet #worksheet h3 {
+    font-size: 14pt !important;
+    margin: 0 0 0.35rem !important;
+  }
+  body.needs-worksheet #worksheet .text-sm {
+    font-size: 9.5pt !important;
+  }
+  body.needs-worksheet #worksheet .mt-8,
+  body.needs-worksheet #worksheet .mt-6,
+  body.needs-worksheet #worksheet .mt-4 {
+    margin-top: 0.55rem !important;
+  }
+
+  /* Form controls read as document values, not widgets. */
+  body.needs-worksheet input[type="range"],
+  body.needs-worksheet button,
+  body.needs-worksheet .sr-only {
     display: none !important;
   }
-  body.needs-worksheet main > .grid { display: none !important; }
+  body.needs-worksheet input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  body.needs-worksheet select,
+  body.needs-worksheet textarea {
+    display: block !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    margin-top: 0.15rem !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #232a35 !important;
+    font-size: 10.5pt !important;
+    font-weight: 600;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+  }
+  body.needs-worksheet textarea {
+    resize: none !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+  body.needs-worksheet input[type="checkbox"],
+  body.needs-worksheet input[type="radio"] {
+    width: 0.85rem !important;
+    height: 0.85rem !important;
+    margin: 0.1rem 0.35rem 0 0 !important;
+    accent-color: #232a35;
+  }
+  body.needs-worksheet .flex.items-center.gap-4 {
+    display: block !important;
+  }
+  body.needs-worksheet .flex.items-center.gap-4 > input:not([type="range"]) {
+    width: auto !important;
+    max-width: none !important;
+  }
+
+  body.needs-worksheet .need-chart {
+    break-inside: auto;
+    page-break-inside: auto;
+    margin-top: 0.35rem !important;
+    max-height: 2.6in;
+    overflow: hidden;
+  }
+  body.needs-worksheet .need-chart svg {
+    display: block !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: 2.4in;
+  }
+  body.needs-worksheet .need-tip {
+    display: none !important;
+  }
+  body.needs-worksheet .portfolio-scroll {
+    overflow: visible !important;
+  }
+  body.needs-worksheet #portfolio-table {
+    width: 100% !important;
+    max-width: 100% !important;
+    font-size: 7.5pt;
+  }
+  body.needs-worksheet #portfolio-table th,
+  body.needs-worksheet #portfolio-table td {
+    padding: 0.12rem 0.22rem !important;
+  }
+  body.needs-worksheet #portfolio-table thead th {
+    max-width: 4.4rem !important;
+    font-size: 6.5pt !important;
+    line-height: 1.15 !important;
+    white-space: normal !important;
+    overflow-wrap: break-word !important;
+  }
+  body.needs-worksheet #portfolio-table thead th.portfolio-sticky-year {
+    max-width: 2.6rem !important;
+    white-space: nowrap !important;
+  }
+  body.needs-worksheet details > summary {
+    list-style: none;
+  }
+  body.needs-worksheet details > summary::-webkit-details-marker {
+    display: none;
+  }
+  body.needs-worksheet .person-spouse {
+    background: #f7f4ee !important;
+    border-color: #c1a57b !important;
+  }
+
+  body.needs-worksheet::after {
+    content: "Illustration for a conversation. Not a policy, tax opinion, or securities recommendation.";
+    display: block;
+    margin-top: 1rem;
+    padding-top: 0.65rem;
+    border-top: 1px solid #ddd7ca;
+    font-size: 8.5pt;
+    color: #565f6c;
+  }
 }

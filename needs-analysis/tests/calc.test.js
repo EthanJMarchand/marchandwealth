@@ -18,7 +18,7 @@ import { CPP_FULL_CAREER_YEARS, cppContributionYears, estimateCpp, estimateOas }
 import { calculateProbate } from "../js/calc/probate.js";
 import { criticalIllnessLumpSum, disabilityMonthlyBenefit } from "../js/calc/protection.js";
 import { calculateRetirement, taxableRetirementIncome } from "../js/calc/retirement.js";
-import { depositsOverYears, describeDeposits, projectPortfolio } from "../js/calc/portfolio-path.js";
+import { depositsOverYears, describeDeposits, projectPortfolio, withdrawProRataTaxable } from "../js/calc/portfolio-path.js";
 import { balanceAfterWithdrawals, balanceAtAge, wealthPath } from "../js/calc/wealth-path.js";
 import { taxOnIncome, taxOnInclusion } from "../js/calc/tax.js";
 
@@ -226,6 +226,47 @@ test("tax on a non-registered account, the estate, and an RRSP stays in the life
   assert.equal(path[0].capitalNeed, today.total);
   assert.ok(path[10].deathTax > path[0].deathTax);
   assert.equal(path[10].capitalNeed, path[10].deathTax);
+});
+
+test("education stays on the need path until each child reaches the independence age, then comes off", () => {
+  const path = projectLifeNeed({
+    currentAge: 42,
+    retirementAge: 65,
+    incomeYearsAtStart: 0,
+    personalIncome: 0,
+    replacementRatio: 0,
+    dependantAges: [8, 11],
+    plannedChildren: 0,
+    independenceAge: 22,
+    educationPerDependant: 25000,
+    mortgage: 0,
+    mortgageYears: 0,
+    otherDebts: 0,
+    futureMortgage: 0,
+    yearsUntilPurchase: 0,
+    amortizationYears: 0,
+    finalExpenses: 0,
+    probateFee: 0,
+    inflationPercent: 0,
+    existingLifeInsurance: 0,
+    assetsAtDeath: 0,
+  }, 60);
+  assert.equal(path[0].age, 42);
+  assert.equal(path[0].educationCount, 2);
+  assert.equal(path[0].educationCapital, 50000);
+  // Child aged 11 reaches 22 when the parent is 53.
+  assert.equal(path[10].age, 52);
+  assert.equal(path[10].educationCount, 2);
+  assert.equal(path[10].educationCapital, 50000);
+  assert.equal(path[11].age, 53);
+  assert.equal(path[11].educationCount, 1);
+  assert.equal(path[11].educationCapital, 25000);
+  // Child aged 8 reaches 22 when the parent is 56.
+  assert.equal(path[13].age, 55);
+  assert.equal(path[13].educationCount, 1);
+  assert.equal(path[14].age, 56);
+  assert.equal(path[14].educationCount, 0);
+  assert.equal(path[14].educationCapital, 0);
 });
 
 test("retirement savings fund only the gap after pensions, in today's dollars", () => {
@@ -980,24 +1021,64 @@ test("TFSA and RRSP deposits stay at the slider until room runs out", () => {
   assert.ok(bank[1] === 12000);
 });
 
-test("withdrawals come from the RRSP, then non-registered, then the TFSA, then other assets", () => {
+test("withdrawals take Other, non-registered, and RRSP together, and leave the TFSA until that pool is gone", () => {
   const path = projectPortfolio({
     currentAge: 65,
     retirementAge: 65,
     years: 0,
-    desiredIncomeToday: 10000,
+    desiredIncomeToday: 100000,
+    inflationRate: 0,
+    retirementReturn: 0,
+    savingsReturn: 0,
+    otherReturn: 0,
     rrspOpening: 200000,
-    nonRegOpening: 80000,
+    nonRegOpening: 300000,
     tfsaOpening: 50000,
-    otherOpening: 40000,
+    otherOpening: 500000,
     province: "AB",
   });
   const row = path.rows[0];
+  assert.ok(row.other < 500000);
+  assert.ok(row.nonReg < 300000);
   assert.ok(row.rrsp < 200000);
-  assert.equal(row.nonReg, 80000);
   assert.equal(row.tfsa, 50000);
-  assert.equal(row.other, 40000);
-  assert.ok(row.withdrawal >= 9999);
+  assert.ok(row.withdrawal >= 99999);
+
+  // A $100k shortfall from $500k / $300k / $200k targets 50 / 30 / 20 of net.
+  // Other and non-registered with full cost base have no gain tax; the RRSP is taxed, so its gross draw is larger.
+  const proportional = withdrawProRataTaxable({
+    other: 500000,
+    otherAcb: 500000,
+    nonReg: 300000,
+    nonRegAcb: 300000,
+    rrsp: 200000,
+    need: 100000,
+    base: 0,
+    factor: 1,
+    province: "AB",
+  });
+  assert.ok(Math.abs((500000 - proportional.other) - 50000) < 1);
+  assert.ok(Math.abs((300000 - proportional.nonReg) - 30000) < 1);
+  assert.ok((200000 - proportional.rrsp) >= 20000);
+  assert.ok(proportional.need < 1);
+
+  const tfsaLast = projectPortfolio({
+    currentAge: 65,
+    retirementAge: 65,
+    years: 0,
+    desiredIncomeToday: 10000,
+    inflationRate: 0,
+    retirementReturn: 0,
+    savingsReturn: 0,
+    otherReturn: 0,
+    rrspOpening: 0,
+    nonRegOpening: 0,
+    tfsaOpening: 50000,
+    otherOpening: 0,
+    province: "AB",
+  });
+  assert.ok(tfsaLast.rows[0].tfsa < 50000);
+  assert.ok(tfsaLast.rows[0].withdrawal >= 9999);
 });
 
 test("a surplus stays invested and a shortfall reaches zero", () => {
@@ -1098,6 +1179,49 @@ test("OAS starts at 65 and CPP counts from retirement", () => {
   assert.equal(later.rows[0].pension, 18000);
 });
 
+test("retirement income requested rises with inflation, and accounts only top up a shortfall after CPP and OAS", () => {
+  const covered = projectPortfolio({
+    currentAge: 70,
+    retirementAge: 65,
+    years: 2,
+    desiredIncomeToday: 10000,
+    clientCppToday: 20000,
+    clientOasToday: 8000,
+    inflationRate: 0,
+    retirementReturn: 0,
+    savingsReturn: 0,
+    rrspOpening: 100000,
+    province: "AB",
+  });
+  const row = covered.rows[0];
+  assert.equal(row.incomeRequested, 10000);
+  assert.ok(row.pensionNet > 10000);
+  assert.equal(row.withdrawal, 0);
+  assert.equal(row.incomeTaken, row.pensionNet);
+  assert.equal(row.rrsp, 100000);
+
+  const shortfall = projectPortfolio({
+    currentAge: 65,
+    retirementAge: 65,
+    years: 2,
+    desiredIncomeToday: 50000,
+    clientCppToday: 10000,
+    clientOasToday: 8000,
+    inflationRate: 0.03,
+    retirementReturn: 0,
+    savingsReturn: 0,
+    otherReturn: 0,
+    otherOpening: 500000,
+    province: "AB",
+  });
+  assert.equal(shortfall.rows[0].incomeRequested, 50000);
+  assert.ok(shortfall.rows[0].withdrawal > 0);
+  assert.ok(Math.abs(shortfall.rows[0].incomeTaken - (shortfall.rows[0].pensionNet + shortfall.rows[0].withdrawal)) < 0.01);
+  assert.ok(Math.abs(shortfall.rows[0].incomeTaken - 50000) < 1);
+  assert.ok(Math.abs(shortfall.rows[1].incomeRequested - 50000 * 1.03) < 0.01);
+  assert.ok(shortfall.rows[1].incomeRequested > shortfall.rows[0].incomeRequested);
+});
+
 test("only the growth on other assets is taxed, and a rollover drops the RRSP death tax", () => {
   const flat = projectPortfolio({
     currentAge: 70,
@@ -1109,16 +1233,23 @@ test("only the growth on other assets is taxed, and a rollover drops the RRSP de
   });
   assert.equal(flat.rows[0].tax, 0);
 
+  // Year 0 is today's opening balance (no invented return). Growth shows on the next row.
   const grown = projectPortfolio({
     currentAge: 70,
     retirementAge: 70,
-    years: 0,
+    years: 1,
     otherReturn: 0.1,
-    desiredIncomeToday: 200000,
+    retirementReturn: 0,
+    savingsReturn: 0,
+    inflationRate: 0,
+    desiredIncomeToday: 5000,
     otherOpening: 100000,
     province: "AB",
   });
-  assert.ok(grown.rows[0].tax > 0);
+  assert.equal(grown.rows[0].tax, 0);
+  assert.ok(Math.abs(grown.rows[0].other - 95000) < 0.01);
+  assert.ok(grown.rows[1].other > 95000);
+  assert.ok(grown.rows[1].tax > 0);
 
   const shared = {
     currentAge: 50,
@@ -1132,6 +1263,54 @@ test("only the growth on other assets is taxed, and a rollover drops the RRSP de
   const rolled = projectPortfolio({ ...shared, rollover: true });
   assert.ok(taxed.rows[0].deathTax > rolled.rows[0].deathTax);
   assert.equal(rolled.rows[0].deathTax, 0);
+});
+
+test("tax if death includes the full RRSP without a rollover, and leaves it out with a spousal rollover", () => {
+  const shared = {
+    currentAge: 65,
+    retirementAge: 65,
+    years: 0,
+    desiredIncomeToday: 40000,
+    inflationRate: 0,
+    retirementReturn: 0,
+    savingsReturn: 0,
+    otherReturn: 0,
+    rrspOpening: 200000,
+    tfsaOpening: 50000,
+    nonRegOpening: 0,
+    otherOpening: 0,
+    province: "AB",
+  };
+  const alone = projectPortfolio({ ...shared, rollover: false });
+  const withSpouse = projectPortfolio({ ...shared, rollover: true });
+  assert.ok(alone.rows[0].deathTax > 40000);
+  assert.equal(withSpouse.rows[0].deathTax, 0);
+  assert.ok(alone.rows[0].rrsp < 200000);
+  // Death tax uses the RRSP before that year's withdrawal.
+  assert.ok(alone.rows[0].deathTax > alone.rows[0].tax);
+});
+
+test("Table F3 year 0 keeps today's opening balances before any return is applied", () => {
+  const path = projectPortfolio({
+    currentAge: 42,
+    retirementAge: 65,
+    years: 1,
+    savingsReturn: 0.05,
+    otherReturn: 0.03,
+    inflationRate: 0,
+    desiredIncomeToday: 0,
+    tfsaOpening: 40000,
+    rrspOpening: 80000,
+    nonRegOpening: 25000,
+    otherOpening: 80000,
+    province: "AB",
+  });
+  assert.equal(path.rows[0].tfsa, 40000);
+  assert.equal(path.rows[0].rrsp, 80000);
+  assert.equal(path.rows[0].nonReg, 25000);
+  assert.equal(path.rows[0].other, 80000);
+  assert.ok(Math.abs(path.rows[1].tfsa - 40000 * 1.05) < 0.01);
+  assert.ok(Math.abs(path.rows[1].other - 80000 * 1.03) < 0.01);
 });
 
 if (failed > 0) {

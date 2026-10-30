@@ -43,20 +43,12 @@ const dirty = {
   earlyDeath: false,
   disabilityMonths: false,
   allocation: false,
-  recommendedLife: false,
-  recommendedDisability: false,
-  recommendedCritical: false,
-  recommendedPartnerLife: false,
-  recommendedPartnerDisability: false,
-  recommendedPartnerCritical: false,
-  rationale: false,
 };
 
 const inflationHistory = trailingAverage(canadaInflation.annualPercent, 100);
 const defaultInflation = roundPercent(inflationHistory.average);
 
 let incomeMode = "today";
-let lastModel = null;
 
 function todayISO() {
   const date = new Date();
@@ -191,24 +183,6 @@ function applyNames() {
   $("partner-heading-retirement").textContent = partner;
   $("person-heading-accounts").textContent = `${person} accounts`;
   $("partner-heading-accounts").textContent = `${partner} accounts`;
-  $("recommended-person-heading").textContent = person;
-  $("recommended-partner-heading").textContent = partner;
-  $("recommended-life-label").textContent = `Life amount you will recommend for ${person}`;
-  $("recommended-disability-label").textContent = `Disability benefit you will recommend for ${person}, monthly`;
-  $("recommended-critical-label").textContent = `Critical illness amount you will recommend for ${person}`;
-  $("recommended-partner-life-label").textContent = `Life amount you will recommend for ${partner}`;
-  $("recommended-partner-disability-label").textContent = `Disability benefit you will recommend for ${partner}, monthly`;
-  $("recommended-partner-critical-label").textContent = `Critical illness amount you will recommend for ${partner}`;
-  $("chosen-person-heading").textContent = person;
-  $("chosen-partner-heading").textContent = partner;
-  $("chosen-life-label").textContent = `Life insurance ${person} chose`;
-  $("chosen-disability-label").textContent = `Disability benefit ${person} chose, monthly`;
-  $("chosen-critical-label").textContent = `Critical illness ${person} chose`;
-  $("chosen-reason-label").textContent = `Why ${person}'s choice matches or differs from the recommendation`;
-  $("chosen-partner-life-label").textContent = `Life insurance ${partner} chose`;
-  $("chosen-partner-disability-label").textContent = `Disability benefit ${partner} chose, monthly`;
-  $("chosen-partner-critical-label").textContent = `Critical illness ${partner} chose`;
-  $("chosen-partner-reason-label").textContent = `Why ${partner}'s choice matches or differs from the recommendation`;
   $("mobile-life-label").textContent = `${person} life capital`;
   $("meeting-person-life-label").textContent = `${person}, life capital`;
   $("meeting-person-di-label").textContent = `${person}, disability, monthly`;
@@ -619,8 +593,60 @@ function contributionHeadline(model) {
   return { label, monthly: annual / 12 };
 }
 
+// Spousal RRSP/RRIF rollover follows the household: with a spouse or partner on
+// the plan, Tax if death leaves the RRSP out; without one, the RRSP is taxed.
 function rolloverChosen() {
-  return $("rrsp-rollover").checked;
+  return hasPartner();
+}
+
+function syncRolloverNote() {
+  const note = $("rrsp-rollover-note");
+  if (!note) return;
+  note.textContent = hasPartner()
+    ? `A spouse or partner is on this plan, so Tax if death (Table F3) and Fig. D1 / D2 treat the RRSP or RRIF as rolling to ${partnerName()}. That balance is not taxed at death.`
+    : "No spouse or partner is on this plan, so Tax if death includes the full RRSP or RRIF on the final return.";
+}
+
+// Fig. D1 / D2 tax at death is per person: that person's share of the plan
+// balances before that year's withdrawal (same moment as Table F3), plus estate
+// tax. A spousal rollover drops the RRSP. Without a portfolio path, grow today's
+// entries alone.
+function deathTaxForNeedChart({
+  portfolio,
+  elapsed,
+  deathTaxInput,
+  income,
+  rrsp,
+  nonReg,
+  other,
+  household,
+}) {
+  const rows = portfolio?.rows;
+  if (rows?.length && household) {
+    const index = Math.max(0, Math.min(rows.length - 1, Math.round(elapsed)));
+    const row = rows[index];
+    const rrspShare = household.rrsp > 0 ? Math.max(0, rrsp) / household.rrsp : 0;
+    const nonRegShare = household.nonReg > 0 ? Math.max(0, nonReg) / household.nonReg : 0;
+    const otherShare = household.other > 0 ? Math.max(0, other) / household.other : 0;
+    const personNonRegGain = (row.nonRegGainAtDeath || 0) * nonRegShare;
+    return deathTaxAtYear({
+      ...deathTaxInput,
+      income,
+      rrsp: (row.rrspAtDeath || 0) * rrspShare,
+      // deathTaxAtYear treats non-reg as fully gain; pass twice the gain so inclusion matches.
+      nonReg: personNonRegGain / 0.5,
+      otherGain: (row.otherGainAtDeath || 0) * otherShare,
+      savingsReturn: 0,
+      years: elapsed,
+    }).total;
+  }
+  return deathTaxAtYear({
+    ...deathTaxInput,
+    income,
+    rrsp,
+    nonReg,
+    years: elapsed,
+  }).total;
 }
 
 function buildModel() {
@@ -746,7 +772,7 @@ function buildModel() {
     savingsReturn: rateFrom("real-return"),
     retirementReturn: rateFrom("retirement-return"),
     otherReturn: rateFrom("other-return"),
-    desiredIncomeToday: readMoney($("desired-income").value),
+    desiredIncomeToday: target.today,
     tfsaAnnual: readMoney($("tfsa-contribution").value) * 12,
     rrspAnnual: readMoney($("rrsp-contribution").value) * 12,
     nonRegAnnual: readMoney($("nonreg-contribution").value) * 12,
@@ -801,13 +827,20 @@ function buildModel() {
     finalExpenses: readMoney($("final-expenses").value),
     probateFee: probate.fee,
     inflationPercent: inflation,
-    taxAtYear: (elapsed) => deathTaxAtYear({
-      ...deathTaxInput,
+    taxAtYear: (elapsed) => deathTaxForNeedChart({
+      portfolio,
+      elapsed,
+      deathTaxInput,
       income: personalIncome,
       rrsp: clientRrsp,
       nonReg: clientNonReg,
-      years: elapsed,
-    }).total,
+      other: readMoney($("other-assets").value),
+      household: {
+        rrsp: accounts.rrspBalance,
+        nonReg: accounts.nonReg,
+        other: accounts.other,
+      },
+    }),
     existingLifeInsurance: personalCoverage + (countCorporate ? corporateCoverage : 0),
     assetsAtDeath: readMoney($("assets-at-death").value),
   };
@@ -819,13 +852,20 @@ function buildModel() {
         currentAge: partnerAge ?? 0,
         retirementAge: partnerAge == null ? null : retirementAgeValue(),
         personalIncome: partnerIncome,
-        taxAtYear: (elapsed) => deathTaxAtYear({
-          ...deathTaxInput,
+        taxAtYear: (elapsed) => deathTaxForNeedChart({
+          portfolio,
+          elapsed,
+          deathTaxInput,
           income: partnerIncome,
           rrsp: partnerRrsp,
           nonReg: partnerNonReg,
-          years: elapsed,
-        }).total,
+          other: readMoney($("partner-other-assets").value),
+          household: {
+            rrsp: accounts.rrspBalance,
+            nonReg: accounts.nonReg,
+            other: accounts.other,
+          },
+        }),
         existingLifeInsurance: readMoney($("partner-existing-coverage").value) + (partnerCountCorporate ? partnerCorporateCoverage : 0),
       }, chartUntil(partnerAge, "partner-death-age"))
     : null;
@@ -908,58 +948,16 @@ function fillList(id, rows) {
   list.replaceChildren();
   for (const [label, value] of rows) {
     const item = document.createElement("li");
-    item.className = "flex justify-between gap-4";
+    item.className = "flex items-baseline justify-between gap-3";
     const term = document.createElement("span");
-    term.className = "min-w-0";
+    term.className = "shrink-0 whitespace-nowrap text-inksoft";
     term.textContent = label;
     const amount = document.createElement("span");
-    amount.className = "nums shrink-0";
+    amount.className = "nums min-w-0 flex-1 text-right";
     amount.textContent = value;
     item.append(term, amount);
     list.append(item);
   }
-}
-
-function paragraph(className, text) {
-  const node = document.createElement("p");
-  if (className) node.className = className;
-  node.textContent = text;
-  return node;
-}
-
-function heading(text) {
-  const node = document.createElement("h3");
-  node.className = "mt-6 font-serif font-semibold text-xl text-navydeep";
-  node.textContent = text;
-  return node;
-}
-
-function definitionList(pairs) {
-  const list = document.createElement("dl");
-  list.className = "mt-2 grid grid-cols-[minmax(0,1fr)_auto] gap-x-6 gap-y-1 text-sm";
-  for (const [termText, valueText] of pairs) {
-    const term = document.createElement("dt");
-    term.className = "text-inksoft";
-    term.textContent = termText;
-    const value = document.createElement("dd");
-    value.className = "nums text-right";
-    value.textContent = valueText;
-    list.append(term, value);
-  }
-  return list;
-}
-
-function checkedNeeds() {
-  const items = [
-    ["obj-income", "Replace income"],
-    ["obj-debt", "Clear debts"],
-    ["obj-education", "Education"],
-    ["obj-final", "Final expenses"],
-    ["obj-retirement", "Retirement income"],
-    ["obj-disability", "Disability income"],
-    ["obj-critical", "Critical illness"],
-  ];
-  return items.filter(([id]) => $(id).checked).map(([, label]) => label);
 }
 
 function renderTfsaBreakdown(tfsa) {
@@ -1013,7 +1011,7 @@ function describeTfsa(person, label) {
   const opening = person.turned18 < tfsaContributionLimit.introducedYear
     ? `Room on the schedule runs from ${tfsaContributionLimit.introducedYear}, when the TFSA was introduced, through ${person.taxYear}.`
     : `Room on the schedule runs from ${person.firstYear}, the year they turn ${tfsaContributionLimit.eligibilityAge}, through ${person.taxYear}.`;
-  return `${label} is ${person.age}. ${opening} Lifetime room on that schedule is ${formatDollars(person.total)}. Room available now is the amount entered on the worksheet. Annual limits in those years: ${spans}.`;
+  return `${label} is ${person.age}. ${opening} Lifetime room on that schedule is ${formatDollars(person.total)}. Room available now is the amount entered on this plan. Annual limits in those years: ${spans}.`;
 }
 
 function incomeReplacementLines(model) {
@@ -1044,49 +1042,10 @@ function guaranteedInsurabilitySentence() {
   return `A home purchase is in the plan.${mortgage} A guaranteed insurability rider is recommended for ${lives} so the coverage can be increased when the mortgage begins.`;
 }
 
-function draftAmount(id, amount, flag) {
-  if (dirty[flag]) return;
-  $(id).value = String(Math.max(0, Math.round(amount || 0)));
-}
-
-function rationaleDraft(model) {
-  const life = model.life;
-  const protection = model.protection;
-  const ratio = formatPercent(rateFrom("replacement-ratio"));
-  const months = Math.round(protection.disabilityMonths);
-  const ciMonths = Math.round(protection.ciMonths);
-  const ciRatio = formatPercent(protection.ciRatio);
-  const sentences = [
-    `${personName()}'s life insurance recommendation of ${formatDollars(life.capitalNeed)} replaces ${ratio} of income for ${life.years} years (${formatDollars(life.incomeCapital)}), and includes debts of ${formatDollars(life.debts)} and education of ${formatDollars(life.educationCapital)}. Final expenses, probate, and tax at death stay in the need. Existing coverage of ${formatDollars(life.existingLifeInsurance)} and assets of ${formatDollars(life.assetsAtDeath)} are already subtracted.`,
-    `The disability recommendation is ${formatDollars(protection.clientDisability)} a month for ${months} months, which is ${ratio} of earned income.`,
-    `The critical illness recommendation is ${formatDollars(protection.clientCritical)}, ${ciRatio} of earned income for ${ciMonths} months, as one lump sum. Income from investments is not included.`,
-  ];
-  if (model.spouseLife) {
-    const spouse = model.spouseLife;
-    sentences.push(`${partnerName()}'s life insurance recommendation of ${formatDollars(spouse.capitalNeed)} uses the same debts and education, with ${ratio} of ${partnerName()}'s income for ${spouse.years} years. Existing coverage of ${formatDollars(spouse.existingLifeInsurance)} is subtracted from ${partnerName()}'s need only. ${partnerName()}'s disability recommendation is ${formatDollars(protection.spouseDisability)} a month for the same ${months} months, and the critical illness recommendation is ${formatDollars(protection.spouseCritical)} for the same ${ciMonths} months of earned income.`);
-  }
-  const rider = guaranteedInsurabilitySentence();
-  if (rider) sentences.push(rider);
-  return sentences.join(" ");
-}
-
-function draftRecommendations(model) {
-  const protection = model.protection;
-  draftAmount("recommended-life", model.life.capitalNeed, "recommendedLife");
-  draftAmount("recommended-disability", protection.clientDisability, "recommendedDisability");
-  draftAmount("recommended-critical", protection.clientCritical, "recommendedCritical");
-  if (model.spouseLife) {
-    draftAmount("recommended-partner-life", model.spouseLife.capitalNeed, "recommendedPartnerLife");
-    draftAmount("recommended-partner-disability", protection.spouseDisability, "recommendedPartnerDisability");
-    draftAmount("recommended-partner-critical", protection.spouseCritical, "recommendedPartnerCritical");
-  }
-  if (!dirty.rationale) $("rationale").value = rationaleDraft(model);
-}
-
 function lifeNarrative(model) {
   const life = model.life;
   const ratio = formatPercent(rateFrom("replacement-ratio"));
-  const shared = `The mortgage and other debts are ${formatDollars(life.debts)}, and education is ${formatDollars(life.educationCapital)} for ${life.educationCount} children. Those amounts are included if either person dies. Final expenses, probate, and tax at death stay in the need even after other coverage. On the chart, final expenses and probate rise with inflation, and the tax rises as the non-registered account, the estate, and an RRSP that does not roll over grow.`;
+  const shared = `The mortgage and other debts are ${formatDollars(life.debts)}, and education is ${formatDollars(life.educationCapital)} for ${life.educationCount} children. Those amounts are included if either person dies. Final expenses, probate, and tax at death stay in the need even after other coverage. On the chart, final expenses and probate rise with inflation. Tax at death on Fig. D1 and Fig. D2 follows Table F3: the tax on the balances that remain in that year of the retirement plan.`;
   const person = `${personName()}: ${ratio} of income is ${formatDollars(life.annualIncomeNeed)} a year. ${formatDollars(life.annualIncomeNeed)} × ${life.years} years = ${formatDollars(life.incomeCapital)}. Existing coverage of ${formatDollars(life.existingLifeInsurance)} and assets of ${formatDollars(life.assetsAtDeath)} leave a capital need of ${formatDollars(life.capitalNeed)}.`;
   if (!model.spouseLife) return `${shared} ${person}`;
   const spouse = model.spouseLife;
@@ -1133,7 +1092,7 @@ function retirementNarrative(model) {
     ? ` At retirement, CPP and OAS provide ${formatDollars(retireRow.pension)} and the accounts withdraw ${formatDollars(retireRow.withdrawal)} after tax.`
     : "";
   const schedule = contributionSentence(model);
-  return `${incomeTranslation(model.target)}${schedule ? ` ${schedule}` : ""} CPP and OAS cover part of the after-tax income. The accounts withdraw what remains, raised with inflation, from the RRSP, then non-registered, then the TFSA, then other assets.${pensionLine} ${ranOut}${legacy}`;
+  return `${incomeTranslation(model.target)}${schedule ? ` ${schedule}` : ""} CPP and OAS cover part of the after-tax income. The accounts make up what remains, raised with inflation, from Other, non-registered, and the RRSP in proportion to those balances, so they run down together. The TFSA is used only after that pool is gone.${pensionLine} ${ranOut}${legacy}`;
 }
 
 function incomeTranslation(target) {
@@ -1170,7 +1129,7 @@ function deathTaxSentence(model) {
     deathTaxPiece(personName(), model.deathTaxBill),
   ];
   if (model.partnerDeathTaxBill) parts.push(deathTaxPiece(partnerName(), model.partnerDeathTaxBill));
-  parts.push(`The cost base of the non-registered account and of the estate property is counted as zero, and half of each amount is included as a capital gain. Leave the non-registered balance out of the estate value. An RRSP that does not roll over is included in full. These taxes stay in the life insurance need. On the chart, the accounts grow at the estimated rate of return while saving and the estate value rises with inflation, so the tax and the insurance need rise with them. Brackets are the ${latestTaxYear()} combined federal and provincial rates. Basic personal credits are not subtracted.`);
+  parts.push(`The cost base of the non-registered account and of the estate property is counted as zero, and half of each amount is included as a capital gain. Leave the non-registered balance out of the estate value. An RRSP that does not roll over is included in full. Today's tax figure stays in the life insurance need. On Fig. D1 and Fig. D2, tax at death follows Table F3 for that year of the retirement plan — remaining account balances after withdrawals, with a rolled RRSP left out. Brackets are the ${latestTaxYear()} combined federal and provincial rates. Basic personal credits are not subtracted.`);
   if (model.portfolio && !$("early-death-age").disabled) {
     const row = portfolioRow(model, model.earlyAge);
     if (row) {
@@ -1202,176 +1161,6 @@ function deathTaxSentence(model) {
   }
   parts.push("A TFSA is generally not taxable at death.");
   return parts.join(" ");
-}
-
-function recordedOrNull(id) {
-  return blank(id) ? null : readMoney($(id).value);
-}
-
-function recordedDollars(id, suffix = "") {
-  const amount = recordedOrNull(id);
-  if (amount == null) return "Not recorded yet";
-  return `${formatDollars(amount)}${suffix}`;
-}
-
-function coverageAdvice(name, kind, recordedId, calculated, advisedSuffix = "") {
-  const recorded = recordedOrNull(recordedId);
-  const advised = recorded == null
-    ? "A different amount has not been recorded."
-    : `I advised ${formatDollars(recorded)}${advisedSuffix}.`;
-  return `${name}, ${kind}. ${advised} ${calculated}`;
-}
-
-function protectionLines(model) {
-  const protection = model.protection;
-  const months = Math.round(protection.disabilityMonths);
-  const ciMonths = Math.round(protection.ciMonths);
-  const lines = [
-    `${personName()}, life insurance. The calculated need is ${formatDollars(model.life.capitalNeed)}.`,
-    `${personName()}, disability. The calculated benefit is ${formatDollars(protection.clientDisability)} a month for ${months} months.`,
-    `${personName()}, critical illness. The calculated lump sum is ${formatDollars(protection.clientCritical)}, ${formatPercent(protection.ciRatio)} of earned income for ${ciMonths} months.`,
-  ];
-  if (model.spouseLife) {
-    lines.push(
-      `${partnerName()}, life insurance. The calculated need is ${formatDollars(model.spouseLife.capitalNeed)}.`,
-      `${partnerName()}, disability. The calculated benefit is ${formatDollars(protection.spouseDisability)} a month for ${months} months.`,
-      `${partnerName()}, critical illness. The calculated lump sum is ${formatDollars(protection.spouseCritical)}, ${formatPercent(protection.ciRatio)} of earned income for ${ciMonths} months.`,
-    );
-  }
-  for (const child of childLabels()) {
-    lines.push(`${child}, life insurance. ${formatDollars(protection.childLifeEach)}.`);
-    lines.push(`${child}, critical illness. ${formatDollars(protection.childCiEach)}.`);
-  }
-  lines.push("These are separate amounts. Choosing a policy, including term or permanent coverage, is separate from this letter. Income from investments is not included in the critical illness amount.");
-  return lines;
-}
-
-function adviceLines(model) {
-  const protection = model.protection;
-  const months = Math.round(protection.disabilityMonths);
-  const lines = [
-    coverageAdvice(personName(), "life insurance", "recommended-life", `The calculated need is ${formatDollars(model.life.capitalNeed)}.`),
-    coverageAdvice(personName(), "disability", "recommended-disability", `The calculated benefit is ${formatDollars(protection.clientDisability)} a month for ${months} months.`, " a month"),
-    coverageAdvice(personName(), "critical illness", "recommended-critical", `The calculated lump sum is ${formatDollars(protection.clientCritical)}.`),
-  ];
-  if (model.spouseLife) {
-    lines.push(
-      coverageAdvice(partnerName(), "life insurance", "recommended-partner-life", `The calculated need is ${formatDollars(model.spouseLife.capitalNeed)}.`),
-      coverageAdvice(partnerName(), "disability", "recommended-partner-disability", `The calculated benefit is ${formatDollars(protection.spouseDisability)} a month for ${months} months.`, " a month"),
-      coverageAdvice(partnerName(), "critical illness", "recommended-partner-critical", `The calculated lump sum is ${formatDollars(protection.spouseCritical)}.`),
-    );
-  }
-  for (const child of childLabels()) {
-    lines.push(`${child}, life insurance. ${formatDollars(protection.childLifeEach)}.`);
-    lines.push(`${child}, critical illness. ${formatDollars(protection.childCiEach)}.`);
-  }
-  return lines;
-}
-
-function choiceGap(chosenId, recommendedId, suffix = "") {
-  const chosen = recordedOrNull(chosenId);
-  const recommended = recordedOrNull(recommendedId);
-  if (chosen == null) return { text: "The client's choice has not been recorded.", value: "Not recorded yet" };
-  const amount = `${formatDollars(chosen)}${suffix}`;
-  if (recommended == null) {
-    return { text: `The client chose ${amount}. A recommendation has not been recorded.`, value: amount };
-  }
-  const gap = Math.round(chosen) - Math.round(recommended);
-  if (gap === 0) {
-    return { text: `The client chose ${amount}. This matches the recommendation.`, value: `${amount}. Matches the recommendation.` };
-  }
-  const direction = gap < 0 ? "less" : "more";
-  const difference = `${formatDollars(Math.abs(gap))}${suffix} ${direction} than the recommendation of ${formatDollars(recommended)}${suffix}`;
-  return {
-    text: `The client chose ${amount}. This is ${difference}.`,
-    value: `${amount}. ${formatDollars(Math.abs(gap))}${suffix} ${direction}.`,
-  };
-}
-
-function clientChoiceLines() {
-  const rows = [
-    [personName(), "life insurance", "chosen-life", "recommended-life", ""],
-    [personName(), "disability", "chosen-disability", "recommended-disability", " a month"],
-    [personName(), "critical illness", "chosen-critical", "recommended-critical", ""],
-  ];
-  if (hasPartner()) {
-    rows.push(
-      [partnerName(), "life insurance", "chosen-partner-life", "recommended-partner-life", ""],
-      [partnerName(), "disability", "chosen-partner-disability", "recommended-partner-disability", " a month"],
-      [partnerName(), "critical illness", "chosen-partner-critical", "recommended-partner-critical", ""],
-    );
-  }
-  const lines = rows.map(([name, kind, chosenId, recommendedId, suffix]) => {
-    return `${name}, ${kind}. ${choiceGap(chosenId, recommendedId, suffix).text}`;
-  });
-  const reason = $("chosen-reason").value.trim();
-  lines.push(reason
-    ? `${personName()}. ${reason}`
-    : `${personName()}. The reason this choice matches or differs from the recommendation has not been written yet.`);
-  if (hasPartner()) {
-    const partnerReason = $("chosen-partner-reason").value.trim();
-    lines.push(partnerReason
-      ? `${partnerName()}. ${partnerReason}`
-      : `${partnerName()}. The reason this choice matches or differs from the recommendation has not been written yet.`);
-  }
-  return lines;
-}
-
-function clientChoicePairs() {
-  const pairs = [
-    [`${personName()} life insurance chosen`, choiceGap("chosen-life", "recommended-life").value],
-    [`${personName()} disability chosen`, choiceGap("chosen-disability", "recommended-disability", " a month").value],
-    [`${personName()} critical illness chosen`, choiceGap("chosen-critical", "recommended-critical").value],
-  ];
-  if (hasPartner()) {
-    pairs.push(
-      [`${partnerName()} life insurance chosen`, choiceGap("chosen-partner-life", "recommended-partner-life").value],
-      [`${partnerName()} disability chosen`, choiceGap("chosen-partner-disability", "recommended-partner-disability", " a month").value],
-      [`${partnerName()} critical illness chosen`, choiceGap("chosen-partner-critical", "recommended-partner-critical").value],
-    );
-  }
-  return pairs;
-}
-
-function scenarioSentence() {
-  return "";
-}
-
-function balancesAtReturn(model, savingsReturn) {
-  const marginal = Number.isFinite(model.marginalNow) ? model.marginalNow : 0;
-  const outcome = allocationOutcome({
-    ...model.mix.allocationInput,
-    annualSavings: model.mix.annualSavings,
-    rrspShare: model.mix.share,
-    savingsReturn,
-    nonRegReturn: savingsReturn * (1 - 0.5 * marginal),
-  });
-  const other = futureValue(model.accounts.other, savingsReturn, model.horizon.years || 0);
-  return { outcome, wealth: outcome.tfsa + outcome.rrsp + outcome.nonReg + other };
-}
-
-function depositSentence(year) {
-  const who = hasPartner()
-    ? `${personName()} puts ${formatDollars(year.clientTfsa)} in the TFSA and ${formatDollars(year.clientRrsp)} in the RRSP. ${partnerName()} puts ${formatDollars(year.partnerTfsa)} in the TFSA and ${formatDollars(year.partnerRrsp)} in the RRSP.`
-    : `${formatDollars(year.tfsa)} goes into the TFSA and ${formatDollars(year.rrsp)} goes into the RRSP.`;
-  const refund = year.refund > 0
-    ? ` The RRSP deposit includes about ${formatDollars(year.refund)} from the tax refund.`
-    : "";
-  const overflow = year.unsheltered > 0
-    ? ` ${formatDollars(year.unsheltered)} goes to non-registered once the TFSA and RRSP room are full.`
-    : "";
-  return `${who}${refund}${overflow}`;
-}
-
-function allocationSentence(model) {
-  const path = model.portfolio;
-  if (!path) return "Enter an age and a likely age at death to list the yearly deposits.";
-  const retire = path.rows.find((row) => row.retired);
-  let text = retire
-    ? `At retirement the balances are TFSA ${formatDollars(retire.tfsa)}, RRSP ${formatDollars(retire.rrsp)}, non-registered ${formatDollars(retire.nonReg)}, and other assets ${formatDollars(retire.other)}. `
-    : "";
-  text += "Withdrawals start at retirement. CPP and OAS cover part of the after-tax income, and the accounts withdraw the rest. RRSP withdrawals are taxed in full. Non-registered withdrawals are taxed on the gain, with the cost of the balance already owned counted as zero. Only the growth on other assets is taxed. A TFSA withdrawal is not taxed.";
-  return text;
 }
 
 function pathSentence(points, chosenYears, usesAge, name, deathAgeId = "death-age") {
@@ -1409,343 +1198,15 @@ function futureRoomSentence(model) {
   return `New room from next year through retirement, on top of the room available now, in each future year's dollars: TFSA ${formatDollars(model.room.householdTfsa)}, RRSP ${formatDollars(model.room.householdRrsp)}. The projection ignores a pension adjustment. TFSA limits after ${tfsaContributionLimit.taxYear} follow the inflation assumption and round to the nearest $500. Later RRSP dollar limits grow at ${formatPercent(model.room.rrspGrowth)} a year. TFSA room continues after retirement; this projection stops at the retirement age.`;
 }
 
-function reportLogo() {
-  const wrap = document.createElement("div");
-  wrap.className = "flex items-center gap-3";
-  const image = document.createElement("img");
-  image.src = "assets/icon.png";
-  image.alt = "";
-  image.className = "h-12 w-auto";
-  const text = document.createElement("div");
-  const firm = document.createElement("p");
-  firm.className = "text-lg text-ink";
-  firm.textContent = $("advisor-firm").value.trim() || DEFAULT_ADVISOR.firm;
-  const person = document.createElement("p");
-  person.className = "text-sm text-inksoft";
-  person.textContent = $("advisor-name").value.trim() || DEFAULT_ADVISOR.name;
-  text.append(firm, person);
-  wrap.append(image, text);
-  return wrap;
-}
-
-function clientLetterLines(model) {
-  const name = personName();
-  const advisor = $("advisor-name").value.trim() || DEFAULT_ADVISOR.name;
-  const needs = checkedNeeds();
-  const monthly = "";
-  const children = childLabels();
-  const advice = adviceLines(model);
-  return [
-    "Reason Why Letter",
-    $("meeting-date").value || "Date not set",
-    "",
-    `Dear ${name},`,
-    "",
-    "This letter records what we discussed and what I advised. It is the needs analysis for your file.",
-    "",
-    "What we discussed",
-    `${name} is ${blank("client-age") ? "of an age not yet entered" : `${$("client-age").value} years old`}, in ${model.probate.name}. Personal income is ${formatDollars(readMoney($("personal-income").value))} and household income is ${formatDollars(householdIncome())}.`,
-    hasPartner() ? `${partnerName()} is ${blank("partner-age") ? "an age not entered" : `${$("partner-age").value} years old`} with income of ${formatDollars(readMoney($("partner-income").value))}.` : "No spouse was included.",
-    children.length ? `Children already born: ${children.join(", ")}.` : "No children already born were included.",
-    ...(readMoney($("planned-children").value) > 0
-      ? ["A child who is not born yet is not given a life or critical illness amount. Planned children still add an education amount on the life insurance chart."]
-      : []),
-    `The mortgage balance is ${formatDollars(readMoney($("debts").value))}, with ${$("mortgage-years").value || "0"} years left. Other debts are ${formatDollars(readMoney($("other-debts").value))}.`,
-    guaranteedInsurabilitySentence(),
-    ...(showsInsurance() ? [
-      "",
-      `If ${name}${hasPartner() ? ` or ${partnerName()}` : ""} dies`,
-      lifeNarrative(model),
-      longevitySentence(model),
-      deathTaxSentence(model),
-      ...protectionLines(model),
-    ] : []),
-    ...(showsPlanning() ? [
-      "",
-      "Retirement",
-      retirementNarrative(model),
-      monthly,
-      $("savings-destination").textContent,
-      scenarioSentence(model),
-      "",
-      "TFSA and RRSP",
-      allocationSentence(model),
-    ] : []),
-    "",
-    "What I advised",
-    needs.length ? `Needs we assessed: ${needs.join(", ")}.` : "No needs were checked.",
-    ...advice,
-    $("rationale").value.trim() || "The reason for that advice has not been written yet.",
-    "",
-    "What the client chose",
-    ...clientChoiceLines(),
-    $("not-disclosed").value.trim() ? `Information you did not provide: ${$("not-disclosed").value.trim()}` : "",
-    $("unmet-needs").value.trim() ? `Left for later: ${$("unmet-needs").value.trim()}` : "Nothing was left for later.",
-    "",
-    "This is not a product illustration and not a tax filing. Choosing a policy or an investment is separate from this letter.",
-    "",
-    advisor,
-    $("advisor-firm").value.trim() || DEFAULT_ADVISOR.firm,
-    "Alberta Life and A&S",
-  ].filter((line) => line !== "");
-}
-
-const LETTER_HEADINGS = new Set(["What we discussed", "Retirement", "TFSA and RRSP", "What I advised", "What the client chose"]);
-
-function isLetterHeading(line) {
-  if (LETTER_HEADINGS.has(line)) return true;
-  return line.startsWith("If ") && !line.includes(".");
-}
-
-function emailParagraphs(line) {
-  if (isLetterHeading(line) || line.startsWith("Dear ") || line.length < 280) return [line];
-  const sentences = line.split(/(?<=\.)\s+(?=[A-Z])/).map((part) => part.trim()).filter(Boolean);
-  return sentences.length ? sentences : [line];
-}
-
-function emailLetterParts(model) {
-  const lines = clientLetterLines(model);
-  const body = lines.slice(2, -3).flatMap(emailParagraphs);
-  return {
-    date: lines[1],
-    body,
-    signature: lines.slice(-3),
-  };
-}
-
-function escapeEmailHtml(value) {
-  return value.replace(/[&<>"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[character]));
-}
-
-function emailLetterText(model) {
-  const { date, body, signature } = emailLetterParts(model);
-  const blocks = ["Reason Why Letter", date, ""];
-  for (const line of body) {
-    blocks.push(isLetterHeading(line) ? `\n${line}\n` : line, "");
-  }
-  blocks.push(signature.join("\n"));
-  return `${blocks.join("\n").replace(/\n{3,}/g, "\n\n").trim()}\n`;
-}
-
-function emailLetterHtml(model) {
-  const { date, body, signature } = emailLetterParts(model);
-  const parts = [
-    `<p style="margin:0 0 4px;font-size:20px"><strong>Reason Why Letter</strong></p>`,
-    `<p style="margin:0 0 16px;color:#444">${escapeEmailHtml(date)}</p>`,
-  ];
-  for (const line of body) {
-    parts.push(isLetterHeading(line)
-      ? `<p style="margin:18px 0 8px"><strong>${escapeEmailHtml(line)}</strong></p>`
-      : `<p style="margin:0 0 12px">${escapeEmailHtml(line)}</p>`);
-  }
-  parts.push(`<p style="margin:18px 0 0">${signature.map(escapeEmailHtml).join("<br>")}</p>`);
-  return `<div style="font-family:Georgia,'Times New Roman',serif;font-size:16px;line-height:1.5;color:#111">${parts.join("")}</div>`;
-}
-
-function renderFileCopy(model) {
-  const root = $("file-copy");
-  const engagement = document.querySelector('input[name="engagement"]:checked')?.value;
-  const needs = checkedNeeds();
-  const recommendedBlank = blank("recommended-life");
-  const recommended = readMoney($("recommended-life").value);
-  const ages = [...document.querySelectorAll("[data-dep-age]")].map((input) => input.value.trim() || "not provided");
-  const client = document.createElement("section");
-  client.id = "client-letter";
-  client.className = "rounded-sm border border-line bg-white p-6 shadow-sm";
-  const advisor = document.createElement("section");
-  advisor.id = "advisor-record";
-  advisor.className = "report-break rounded-sm border border-line bg-white p-6 shadow-sm";
-  const letter = clientLetterLines(model);
-
-  client.append(
-    reportLogo(),
-    paragraph("mt-4 font-serif font-semibold text-3xl text-navydeep", "Reason Why Letter"),
-    paragraph("mt-1 text-sm text-inksoft", letter[1]),
-  );
-  for (const line of letter.slice(2)) {
-    client.append(paragraph(isLetterHeading(line) ? "mt-4 font-medium" : "mt-2 text-sm leading-6", line));
-  }
-
-  advisor.append(
-    reportLogo(),
-    paragraph("mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-golddim", "Advisor record"),
-    paragraph("font-serif font-semibold text-3xl text-navydeep", "Needs worksheet"),
-    paragraph(
-      "mt-1 text-sm text-inksoft",
-      `${$("meeting-date").value || "Date not set"} · ${personName()}`,
-    ),
-    heading("Engagement"),
-    paragraph(
-      "mt-2 text-sm leading-6",
-      engagement === "stated"
-        ? "The client already identified the need. The figures below are the worksheet's check, not a claim that the need was discovered in this meeting."
-        : "The client asked for advice. The need below was assessed from the facts in this worksheet.",
-    ),
-  );
-
-  if (engagement === "stated") {
-    advisor.append(paragraph("mt-2 text-sm leading-6", $("stated-need").value.trim() || "The client's stated need was not written down."));
-  }
-
-  advisor.append(
-    heading("Facts"),
-    definitionList([
-      ["Advisor", $("advisor-name").value.trim() || "Not entered"],
-      ["Firm", $("advisor-firm").value.trim() || "Not entered"],
-      ["Province", model.probate.name],
-      [`${personName()} age`, blank("client-age") ? "Not provided" : $("client-age").value],
-      [`${personName()} income`, formatDollars(readMoney($("personal-income").value))],
-      ["Household income", formatDollars(householdIncome())],
-      [partnerName(), hasPartner() ? "Included" : "Not included"],
-      [`${partnerName()} age`, hasPartner() ? (blank("partner-age") ? "Not provided" : $("partner-age").value) : "Not applicable"],
-      [`${partnerName()} income`, hasPartner() ? formatDollars(readMoney($("partner-income").value)) : "Not applicable"],
-      ["Children already born", childLabels().join(", ") || "None"],
-      ["Dependant ages", ages.length ? ages.join(", ") : "None entered"],
-      [`${personName()} owns a corporation`, $("client-owns-corp").checked ? "Yes" : "No"],
-      [`${partnerName()} owns a corporation`, hasPartner() && $("partner-owns-corp").checked ? "Yes" : "No"],
-      ["Personal coverage on this life", formatDollars(model.personalCoverage)],
-      ["Corporate coverage on this life", formatDollars(model.corporateCoverage)],
-      ["Corporate coverage counted in the need", model.countCorporate ? "Yes" : "No"],
-      ["Estate value for probate", formatDollars(readMoney($("estate-value").value))],
-      ["Probate fee", formatDollars(model.probate.fee)],
-      ["TFSA balance", formatDollars(model.accounts.tfsaBalance)],
-      ["TFSA room available now", formatDollars(model.accounts.tfsaRoom)],
-      ["RRSP balance", formatDollars(model.accounts.rrspBalance)],
-      ["RRSP room available now", formatDollars(model.accounts.rrspRoom)],
-      ["Non-registered balance", formatDollars(model.accounts.nonReg)],
-      ["Other retirement assets", formatDollars(model.accounts.other)],
-      ["Inflation assumption", formatPercent(model.target.inflation / 100)],
-      ["Retirement income basis", model.target.mode === "future" ? "Future dollars" : "Today's dollars"],
-      ["Legacy goal", model.retirement && model.retirement.legacyAtDeath > 0 ? formatDollars(model.retirement.legacyAtDeath) : "None entered."],
-    ]),
-    heading("Life insurance need"),
-    paragraph("mt-2 text-sm leading-6", lifeNarrative(model)),
-    ...(guaranteedInsurabilitySentence() ? [paragraph("mt-2 text-sm leading-6", guaranteedInsurabilitySentence())] : []),
-    definitionList([
-      [`${personName()} capital need`, formatDollars(model.life.capitalNeed)],
-      [`${personName()} life amount recorded`, recordedDollars("recommended-life")],
-      [`${personName()} disability, monthly`, formatDollars(model.protection.clientDisability)],
-      [`${personName()} disability amount recorded`, recordedDollars("recommended-disability", " a month")],
-      [`${personName()} critical illness`, formatDollars(model.protection.clientCritical)],
-      [`${personName()} critical illness amount recorded`, recordedDollars("recommended-critical")],
-      [`${personName()} surplus over the gross need`, formatDollars(model.life.surplus)],
-      ...(model.spouseLife ? [
-        [`${partnerName()} capital need`, formatDollars(model.spouseLife.capitalNeed)],
-        [`${partnerName()} life amount recorded`, recordedDollars("recommended-partner-life")],
-        [`${partnerName()} disability, monthly`, formatDollars(model.protection.spouseDisability)],
-        [`${partnerName()} disability amount recorded`, recordedDollars("recommended-partner-disability", " a month")],
-        [`${partnerName()} critical illness`, formatDollars(model.protection.spouseCritical)],
-        [`${partnerName()} critical illness amount recorded`, recordedDollars("recommended-partner-critical")],
-      ] : []),
-      ...childLabels().flatMap((child) => [
-        [`${child} life insurance`, formatDollars(model.protection.childLifeEach)],
-        [`${child} critical illness`, formatDollars(model.protection.childCiEach)],
-      ]),
-    ]),
-  );
-
-  if (!recommendedBlank && Math.round(recommended) !== Math.round(model.life.capitalNeed)) {
-    advisor.append(
-      paragraph(
-        "mt-2 text-sm leading-6",
-        `The recommended amount differs from the calculated need by ${formatDollars(Math.abs(recommended - model.life.capitalNeed))}.`,
-      ),
-    );
-  }
-
-  advisor.append(
-    heading("Tax at death"),
-    paragraph("mt-2 text-sm leading-6", deathTaxSentence(model)),
-    paragraph("mt-2 text-sm leading-6", `Probate schedule as of ${model.probate.asOf}. ${model.probate.source}`),
-    heading("Registered room"),
-    paragraph("mt-2 text-sm leading-6", describeTfsa(model.tfsa.client, personName())),
-    paragraph(
-      "mt-2 text-sm leading-6",
-      hasPartner() ? describeTfsa(model.tfsa.partner, partnerName()) : `${partnerName()} is not included, so only ${personName()}'s TFSA schedule is added up.`,
-    ),
-    paragraph("mt-2 text-sm leading-6", futureRoomSentence(model)),
-    heading("Retirement gap"),
-    paragraph("mt-2 text-sm leading-6", retirementNarrative(model)),
-    paragraph("mt-2 text-sm leading-6", allocationSentence(model)),
-  );
-
-  if (model.retirement) {
-    advisor.append(
-      definitionList([
-        ...contributionSchedule(model),
-        ["Legacy goal", model.retirement.legacyAtDeath > 0 ? formatDollars(model.retirement.legacyAtDeath) : "None"],
-        ["Balance at the end of the plan", wealthTotals(model) ? formatDollars(wealthTotals(model).atDeath) : "—"],
-        ["Income in today's dollars", formatDollars(model.target.today)],
-        ["Income in the year of retirement", formatDollars(model.target.nominal)],
-        ["TFSA room available now", formatDollars(model.accounts.tfsaRoom)],
-        ["RRSP room available now", formatDollars(model.accounts.rrspRoom)],
-        ["Projected new TFSA room to retirement", formatDollars(model.room.householdTfsa)],
-        ["Projected new RRSP room to retirement", formatDollars(model.room.householdRrsp)],
-      ]),
-    );
-  }
-
-  advisor.append(
-    heading("What the client chose"),
-    definitionList(clientChoicePairs()),
-    paragraph("mt-2 text-sm leading-6", $("chosen-reason").value.trim() || `${personName()}: the reason this choice matches or differs from the recommendation has not been written yet.`),
-    ...(hasPartner() ? [paragraph("mt-2 text-sm leading-6", $("chosen-partner-reason").value.trim() || `${partnerName()}: the reason this choice matches or differs from the recommendation has not been written yet.`)] : []),
-    heading("Needs assessed"),
-    paragraph("mt-2 text-sm", needs.length ? needs.join(", ") : "None checked."),
-    heading("Not provided"),
-    paragraph("mt-2 text-sm leading-6", $("not-disclosed").value.trim() || "Nothing noted."),
-    heading("Reason why"),
-    paragraph("mt-2 text-sm leading-6", $("rationale").value.trim() || "Advisor rationale not written yet."),
-    heading("Left for later"),
-    paragraph("mt-2 text-sm leading-6", $("unmet-needs").value.trim() || "Nothing noted."),
-    heading("Figures used"),
-    paragraph(
-      "mt-2 text-sm leading-6",
-      `Inflation history ${inflationHistory.from}–${inflationHistory.to}, ${inflationHistory.count}-year average ${defaultInflation}%. Tax brackets through ${latestTaxYear()}. Life expectancy year ${lifeExpectancy.year}. TFSA annual limit ${tfsaContributionLimit.taxYear}: ${formatDollars(tfsaContributionLimit.annualDollarLimit)}. RRSP dollar limit ${rrspLimits.contributionYear}: ${formatDollars(rrspLimits.dollarLimit)}. Next year's RRSP dollar limit: ${formatDollars(rrspLimits.nextYearDollarLimit)}. CPP maximum at 65, ${cppAmounts.year}: ${formatMoney(maxAnnualCpp())} a year. OAS maximum, ${oasAmounts.period}: ${formatDollars(oasAmounts.maxMonthlyAge65to74 * 12)} (65–74) and ${formatDollars(oasAmounts.maxMonthlyAge75andOver * 12)} (75 and over). Probate fees as of ${probateFees.asOf}.`,
-    ),
-    paragraph(
-      "mt-4 text-sm leading-6 text-inksoft",
-      "Worksheet only. Not a policy illustration, not a CRA determination of contribution room, and not a recommendation of an insurance or investment product. The savings gap is in today's dollars. Exporting this report is the copy for the file. The worksheet does not store the entries.",
-    ),
-  );
-
-  root.replaceChildren(client, advisor);
-}
-
-function renderSavingsMix(model) {
-  const marker = $("rrsp-best");
-  const note = $("rrsp-best-note");
-  const detail = $("allocation-note");
-  if (!model.mix) {
-    marker.classList.add("hidden");
-    note.textContent = "Enter age and retirement age to see how the mix changes the savings.";
-    detail.textContent = "";
-    return;
-  }
-  const pct = Math.round(model.mix.bestShare * 100);
-  marker.classList.remove("hidden");
-  marker.style.left = `${pct}%`;
-  marker.style.transform = pct < 8 ? "none" : pct > 92 ? "translateX(-100%)" : "translateX(-50%)";
-  marker.textContent = "Lowest";
-  if (!dirty.allocation) $("rrsp-share").value = String(pct);
-  const chosen = Math.round(model.mix.share * 100);
-  $("rrsp-share-readout").textContent = ` · ${100 - chosen}% TFSA, ${chosen}% RRSP`;
-  const amount = (annual) => model.horizon.alreadyRetired ? formatDollars(annual) : `${formatDollars(annual / 12)} a month`;
-  const placed = chosen === pct ? "The slider is on that mix." : `The slider is at ${chosen}% RRSP. Choose Lowest to put it back.`;
-  note.textContent = `All TFSA needs ${amount(model.mix.allTfsa)}. All RRSP needs ${amount(model.mix.allRrsp)}. The lowest is ${amount(model.mix.bestSavings)} at ${pct}% RRSP. ${placed}`;
-  detail.textContent = allocationSentence(model);
-}
-
 function render() {
   document.body.dataset.scope = planningMode();
   ensureDependantInputs();
   applySuggestions();
   applyNames();
+  syncRolloverNote();
   document.querySelectorAll(".partner-only").forEach((node) => {
     node.classList.toggle("hidden", !hasPartner());
   });
-  const stated = document.querySelector('input[name="engagement"]:checked')?.value === "stated";
-  $("stated-need-wrap").classList.toggle("hidden", !stated);
   $("qc-verification-wrap").classList.toggle("hidden", $("province").value !== "QC");
   $("legacy-amount-wrap").classList.toggle("hidden", !$("leave-legacy").checked);
   $("legacy-note").textContent = $("leave-legacy").checked
@@ -1768,7 +1229,20 @@ function render() {
   $("partner-corp-fields").classList.toggle("hidden", !hasPartner() || !$("partner-owns-corp").checked);
   $("inflation-average-note").textContent = `Starts at the ${inflationHistory.count}-year Canadian average, ${defaultInflation}% (${inflationHistory.from}–${inflationHistory.to}). Slide it, or type a rate. Life insurance capital stays in today's dollars.`;
   const model = buildModel();
-  draftRecommendations(model);
+  const advisor = $("advisor-name").value.trim() || DEFAULT_ADVISOR.name;
+  const firm = $("advisor-firm").value.trim() || DEFAULT_ADVISOR.firm;
+  const date = $("meeting-date").value || "Date not set";
+  const preparedLine = `${date} · Prepared by ${advisor}, ${firm}`;
+  const prepared = $("plan-prepared");
+  if (prepared) prepared.textContent = preparedLine;
+  const printClient = $("print-client-line");
+  if (printClient) {
+    printClient.textContent = hasPartner()
+      ? `${personName()} and ${partnerName()}`
+      : personName();
+  }
+  const printPrepared = $("print-prepared-line");
+  if (printPrepared) printPrepared.textContent = preparedLine;
   const hint = $("years-hint");
   hint.replaceChildren();
   for (const line of incomeReplacementLines(model)) {
@@ -1784,7 +1258,6 @@ function render() {
   } else {
     $("meeting-years").textContent = `${incomePercent} of income for ${model.life.years} years.`;
   }
-  lastModel = model;
   $("income-translation").textContent = incomeTranslation(model.target);
   renderIncomeErosion(model);
   $("probate-result").textContent = `${model.probate.name}: ${formatDollars(model.probate.fee)}. ${model.probate.note}`;
@@ -1802,7 +1275,7 @@ function render() {
     notes.push(`The life insurance need stays at ${formatDollars(model.life.floor)}, which covers final expenses, probate, and tax at death.`);
   }
   if (model.corporateCoverage > 0 && !model.countCorporate) {
-    notes.push("Corporate coverage is on the report and is not subtracted from the capital need.");
+    notes.push("Corporate coverage is shown and is not subtracted from the capital need.");
   }
   if (rider) notes.push(rider);
 
@@ -1858,7 +1331,6 @@ function render() {
   renderWealthChart(model);
   renderPortfolioTable(model);
   renderEarlyDeath(model);
-  renderFileCopy(model);
 }
 
 function compactDollars(value) {
@@ -1915,13 +1387,34 @@ function svgText(x, y, text, anchor) {
   return node;
 }
 
+function appendNeedSeries(svg, points, xFor, yFor, key, { stroke, width = 2, dash = null }) {
+  const line = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+  line.setAttribute("fill", "none");
+  line.setAttribute("stroke", stroke);
+  line.setAttribute("stroke-width", String(width));
+  line.setAttribute("stroke-linejoin", "round");
+  line.setAttribute("stroke-linecap", "round");
+  if (dash) line.setAttribute("stroke-dasharray", dash);
+  line.setAttribute("points", points.map((point, index) => `${xFor(index)},${yFor(point[key] || 0)}`).join(" "));
+  svg.append(line);
+  return line;
+}
+
 function drawNeedChart({ root, points, usesAge, sentence, empty }) {
   if (points.length < 2) {
     root.textContent = empty;
     return;
   }
   const { width, height, padLeft, padRight, padTop, padBottom } = chartFrame(root);
-  const maxNeed = Math.max(...points.map((point) => Math.max(point.capitalNeed, point.mortgageLeft)), 1);
+  const maxNeed = Math.max(
+    ...points.map((point) => Math.max(
+      point.capitalNeed || 0,
+      point.mortgageLeft || 0,
+      point.educationCapital || 0,
+      point.deathTax || 0,
+    )),
+    1,
+  );
   const xFor = (index) => padLeft + (index / (points.length - 1)) * (width - padLeft - padRight);
   const yFor = (need) => padTop + (1 - need / maxNeed) * (height - padTop - padBottom);
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -1948,22 +1441,34 @@ function drawNeedChart({ root, points, usesAge, sentence, empty }) {
     const label = usesAge ? String(point.age) : (point.elapsed === 0 ? "Now" : `+${Math.round(point.elapsed)}`);
     svg.append(svgText(xFor(index), height - 10, label, "middle"));
   });
-  const line = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
-  line.setAttribute("fill", "none");
-  line.setAttribute("stroke", "#2f3744");
-  line.setAttribute("stroke-width", "3");
-  line.setAttribute("points", points.map((point, index) => `${xFor(index)},${yFor(point.capitalNeed)}`).join(" "));
-  svg.append(line);
   const hasMortgage = points.some((point) => point.mortgageLeft > 0);
-  if (hasMortgage) {
-    const mortgageLine = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
-    mortgageLine.setAttribute("fill", "none");
-    mortgageLine.setAttribute("stroke", "#a68a61");
-    mortgageLine.setAttribute("stroke-width", "2");
-    mortgageLine.setAttribute("stroke-dasharray", "5 4");
-    mortgageLine.setAttribute("points", points.map((point, index) => `${xFor(index)},${yFor(point.mortgageLeft)}`).join(" "));
-    svg.append(mortgageLine);
+  const hasEducation = points.some((point) => point.educationCapital > 0);
+  const hasTax = points.some((point) => point.deathTax > 0);
+  if (hasTax) {
+    appendNeedSeries(svg, points, xFor, yFor, "deathTax", {
+      stroke: "#7a3b2e",
+      width: 2,
+      dash: "2 3",
+    });
   }
+  if (hasEducation) {
+    appendNeedSeries(svg, points, xFor, yFor, "educationCapital", {
+      stroke: "#6b7c5c",
+      width: 2,
+      dash: "7 5",
+    });
+  }
+  if (hasMortgage) {
+    appendNeedSeries(svg, points, xFor, yFor, "mortgageLeft", {
+      stroke: "#a68a61",
+      width: 2,
+      dash: "5 4",
+    });
+  }
+  appendNeedSeries(svg, points, xFor, yFor, "capitalNeed", {
+    stroke: "#2f3744",
+    width: 3,
+  });
   const hit = document.createElementNS("http://www.w3.org/2000/svg", "rect");
   hit.setAttribute("x", "0");
   hit.setAttribute("y", "0");
@@ -1992,7 +1497,7 @@ function drawNeedChart({ root, points, usesAge, sentence, empty }) {
     guideX.style.top = `${y * scaleY}px`;
     guideX.style.left = `${padLeft * scaleX}px`;
     guideX.style.width = `${(x - padLeft) * scaleX}px`;
-    placeChartTip(tip, box, x * scaleX, Math.max(0, y * scaleY - 48), 156);
+    placeChartTip(tip, box, x * scaleX, Math.max(0, y * scaleY - 48), 176);
     tip.replaceChildren();
     const age = document.createElement("p");
     age.textContent = usesAge
@@ -2005,18 +1510,28 @@ function drawNeedChart({ root, points, usesAge, sentence, empty }) {
     amount.className = "text-base font-bold text-white";
     amount.textContent = formatDollars(point.capitalNeed);
     tip.append(age, yearsOfIncome, amount);
-    const mortgageDue = point.mortgageLeft;
+    const mortgageDue = point.mortgageLeft || 0;
     if (mortgageDue > 0) {
       const mortgage = document.createElement("p");
       mortgage.textContent = `Mortgage ${formatDollars(mortgageDue)}`;
       tip.append(mortgage);
     }
+    const educationDue = point.educationCapital || 0;
+    if (educationDue > 0 || hasEducation) {
+      const education = document.createElement("p");
+      const kids = Math.round(point.educationCount || 0);
+      education.textContent = kids > 0
+        ? `Education ${formatDollars(educationDue)} (${kids === 1 ? "1 child" : `${kids} children`})`
+        : `Education ${formatDollars(0)}`;
+      tip.append(education);
+    }
+    const finalAndProbate = Math.max(0, (point.floor || 0) - (point.deathTax || 0));
     const expenses = document.createElement("p");
-    expenses.textContent = `Final expenses ${formatDollars(point.floor - (point.deathTax || 0))}`;
+    expenses.textContent = `Final expenses and probate ${formatDollars(finalAndProbate)}`;
     tip.append(expenses);
-    if (point.deathTax > 0) {
+    if ((point.deathTax || 0) > 0 || hasTax) {
       const tax = document.createElement("p");
-      tax.textContent = `Tax at death ${formatDollars(point.deathTax)}`;
+      tax.textContent = `Tax at death ${formatDollars(point.deathTax || 0)}`;
       tip.append(tax);
     }
   };
@@ -2025,11 +1540,13 @@ function drawNeedChart({ root, points, usesAge, sentence, empty }) {
     guideX.style.opacity = "0";
     tip.style.opacity = "0";
   });
+  const legendParts = ["Solid line: capital need"];
+  if (hasMortgage) legendParts.push("gold dashed: mortgage");
+  if (hasEducation) legendParts.push("olive dashed: education until independence age");
+  if (hasTax) legendParts.push("dotted: tax at death");
   const legend = document.createElement("p");
   legend.className = "mt-2 text-xs text-inksoft";
-  legend.textContent = hasMortgage
-    ? "Solid line: capital need. Dashed line: mortgage, paid down in a straight line."
-    : "Solid line: capital need.";
+  legend.textContent = `${legendParts.join(". ")}.`;
   root.replaceChildren(svg, guideY, guideX, tip, legend);
 }
 
@@ -2237,61 +1754,6 @@ function renderProtection(model) {
   $("ci-hint").textContent = `${formatPercent(protection.ciRatio)} of earned income for ${Math.round(protection.ciMonths)} months is ${formatDollars(protection.clientCritical)} as one lump sum for ${personName()}. This replaces earned income only. Income from investments is not included.${spouseLine}`;
 }
 
-function renderScenarios(model) {
-  const root = $("return-scenarios");
-  root.replaceChildren();
-  if (!showsPlanning() || !model.retirement || model.horizon.missing || !model.mix) return;
-  const statedSave = rateFrom("real-return");
-  const statedRetire = rateFrom("retirement-return");
-  const legacy = model.retirement.legacyAtDeath;
-  const cards = [
-    {
-      name: "2 points lower",
-      shift: -0.02,
-      sentence: (ending) => `Same deposits, at a return 2 percentage points below the rate you entered. Withdrawing the income gap each year, the balance at death is about ${formatDollars(ending)}`,
-    },
-    {
-      name: "Average",
-      shift: 0,
-      sentence: (ending) => `The rate you entered. Withdrawing the income gap each year, the balance at death is about ${formatDollars(ending)}`,
-    },
-    {
-      name: "2 points higher",
-      shift: 0.02,
-      sentence: (ending) => `Same deposits, at a return 2 percentage points above the rate you entered. Withdrawing the income gap each year, the balance at death is about ${formatDollars(ending)}`,
-    },
-  ];
-  cards.forEach((card, index) => {
-    const savingsReturn = statedSave + card.shift;
-    const retirementReturn = statedRetire + card.shift;
-    const wealth = balancesAtReturn(model, savingsReturn).wealth;
-    const ending = balanceAfterWithdrawals(
-      wealth,
-      model.plannedWithdrawal?.total || model.retirement.annualGap,
-      retirementReturn,
-      model.retirement.retirementYears,
-    );
-    const box = document.createElement("div");
-    box.className = index === 1 ? "rounded-sm border border-gold bg-white p-3" : "rounded-sm border border-line bg-paperdim p-3";
-    const title = document.createElement("p");
-    title.className = "text-xs font-semibold uppercase tracking-[0.14em] text-olive";
-    title.textContent = card.name;
-    const rate = document.createElement("p");
-    rate.className = "mt-1 text-sm";
-    rate.textContent = `${formatPercent(savingsReturn)} while saving, ${formatPercent(retirementReturn)} in retirement`;
-    const worth = document.createElement("p");
-    worth.className = "figure nums mt-2 text-xl";
-    worth.textContent = formatDollars(wealth);
-    const detail = document.createElement("p");
-    detail.className = "mt-1 text-sm leading-5 text-inksoft";
-    detail.textContent = legacy > 0
-      ? `${card.sentence(ending)}. The legacy minimum is ${formatDollars(legacy)}.`
-      : `${card.sentence(ending)}.`;
-    box.append(title, rate, worth, detail);
-    root.append(box);
-  });
-}
-
 function savingsDestination(model) {
   const path = model.portfolio;
   const el = $("savings-destination");
@@ -2435,11 +1897,12 @@ function drawPortfolioChart(root, rows, model) {
   const early = portfolioRow(model, model.earlyAge);
   const deathIndex = early ? rows.indexOf(early) : -1;
   if (deathIndex >= 0) {
-    const afterTax = Math.max(0, rows[deathIndex].total - rows[deathIndex].deathTax);
+    const atDeath = rows[deathIndex].totalAtDeath ?? rows[deathIndex].total;
+    const afterTax = Math.max(0, atDeath - rows[deathIndex].deathTax);
     const drop = document.createElementNS("http://www.w3.org/2000/svg", "line");
     drop.setAttribute("x1", String(xFor(deathIndex)));
     drop.setAttribute("x2", String(xFor(deathIndex)));
-    drop.setAttribute("y1", String(yFor(rows[deathIndex].total)));
+    drop.setAttribute("y1", String(yFor(atDeath)));
     drop.setAttribute("y2", String(yFor(afterTax)));
     drop.setAttribute("stroke", "#b42318");
     drop.setAttribute("stroke-width", "3");
@@ -2522,15 +1985,31 @@ function renderPortfolioTable(model) {
   const clientStart = rows[0].age;
   const labels = ["Year", "Age"];
   if (partnerStart != null) labels.push(`${partnerName()} age`);
-  labels.push("TFSA in", "RRSP in", "Non-reg in", "TFSA", "RRSP", "Non-reg", "Other", "Total", "CPP and OAS", "From the accounts", "Tax on withdrawal", "Tax if death");
+  labels.push(
+    "TFSA in",
+    "RRSP in",
+    "Non-reg in",
+    "TFSA",
+    "RRSP",
+    "Non-reg",
+    "Other",
+    "Total",
+    "Retirement income requested",
+    "CPP and OAS",
+    "From the accounts",
+    "Retirement income taken",
+    "Tax on withdrawal",
+    "Tax if death",
+  );
   const head = document.createElement("thead");
   const headRow = document.createElement("tr");
-  for (const label of labels) {
+  labels.forEach((label, index) => {
     const cell = document.createElement("th");
-    cell.className = "whitespace-nowrap border-b border-line px-2 py-2 font-medium";
+    cell.className = "border-b border-line px-2 py-2 font-medium";
+    if (index === 0) cell.classList.add("portfolio-sticky-year");
     cell.textContent = label;
     headRow.append(cell);
-  }
+  });
   head.append(headRow);
   const body = document.createElement("tbody");
   for (const row of rows) {
@@ -2546,16 +2025,19 @@ function renderPortfolioTable(model) {
       formatDollars(row.nonReg),
       formatDollars(row.other),
       formatDollars(row.total),
-      formatDollars(row.pension),
+      formatDollars(row.incomeRequested),
+      formatDollars(row.pensionNet),
       formatDollars(row.withdrawal),
+      formatDollars(row.incomeTaken),
       formatDollars(row.tax),
       formatDollars(row.deathTax),
     );
     const tr = document.createElement("tr");
-    if (hit) tr.className = "bg-red-50";
+    if (hit) tr.className = "portfolio-early-row";
     values.forEach((value, index) => {
       const cell = document.createElement("td");
       cell.className = "whitespace-nowrap border-b border-line px-2 py-1 nums";
+      if (index === 0) cell.classList.add("portfolio-sticky-year");
       if (hit && index === values.length - 1) cell.className += " font-semibold text-red-700";
       cell.textContent = value;
       tr.append(cell);
@@ -2564,7 +2046,9 @@ function renderPortfolioTable(model) {
   }
   table.append(head, body);
   if (note) {
-    note.textContent = "Each year shows the deposit the room allows, up to the monthly slider. At retirement the deposits stop. CPP and OAS, raised with inflation, cover part of the after-tax income, and the accounts withdraw the rest. RRSP withdrawals are taxed in full. Non-registered withdrawals are taxed on the gain. Only the growth on other assets is taxed. The red row is the age on the early-death slider, and the red tax is not taken off the continuing balance.";
+    note.textContent = hasPartner()
+      ? "Each year shows the deposit the room allows, up to the monthly slider. At retirement the deposits stop. Retirement income requested is the after-tax amount chosen at the start of retirement, raised with inflation each year. CPP and OAS (after tax on those benefits) are kept in full even when they exceed that request, and nothing is taken from the accounts in those years. When they fall short, the shortfall is taken from Other, non-registered, and the RRSP in proportion to those balances so they run down together. The TFSA is used only after that pool is gone. Retirement income taken is CPP and OAS plus from the accounts. Tax if death is the tax on that year's balances before the retirement withdrawal: with a spouse on the plan the RRSP rolls over and is not taxed, non-registered and other assets tax only the gain, and the TFSA is not taxed. The red row is the age on the early-death slider."
+      : "Each year shows the deposit the room allows, up to the monthly slider. At retirement the deposits stop. Retirement income requested is the after-tax amount chosen at the start of retirement, raised with inflation each year. CPP and OAS (after tax on those benefits) are kept in full even when they exceed that request, and nothing is taken from the accounts in those years. When they fall short, the shortfall is taken from Other, non-registered, and the RRSP in proportion to those balances so they run down together. The TFSA is used only after that pool is gone. Retirement income taken is CPP and OAS plus from the accounts. Tax if death is the tax on that year's balances before the retirement withdrawal: with no spouse on the plan the full RRSP is taxed on the final return, non-registered and other assets tax only the gain, and the TFSA is not taxed. The red row is the age on the early-death slider.";
   }
 }
 
@@ -2579,10 +2063,10 @@ function renderEarlyDeath(model) {
   const age = Math.round(row?.age ?? model.earlyAge);
   $("early-death-readout").textContent = ` · age ${age}`;
   const rollover = model.rollover
-    ? " The RRSP rolls to an eligible beneficiary, so it is not in this tax."
-    : " The RRSP is included in full.";
+    ? ` The RRSP rolls to ${partnerName()}, so it is not in this tax.`
+    : " There is no spouse on this plan, so the RRSP is included in full.";
   $("early-death-note").textContent = row
-    ? `If death is at age ${age}, tax on these accounts is ${formatDollars(row.deathTax)}. That year is the red row in the table. The solid line keeps going. The red mark is the balance after that tax.${rollover}`
+    ? `If death is at age ${age}, tax on these accounts before that year's retirement withdrawal is ${formatDollars(row.deathTax)}. That year is the red row in the table. The solid line keeps going. The red mark is the balance after that tax.${rollover}`
     : "";
 }
 
@@ -2605,13 +2089,6 @@ function resetSession() {
     earlyDeath: false,
     disabilityMonths: false,
     allocation: false,
-    recommendedLife: false,
-    recommendedDisability: false,
-    recommendedCritical: false,
-    recommendedPartnerLife: false,
-    recommendedPartnerDisability: false,
-    recommendedPartnerCritical: false,
-    rationale: false,
   });
   fillDefaults();
   $("advisor-name").value = advisorName.trim() || DEFAULT_ADVISOR.name;
@@ -2629,6 +2106,7 @@ function fillDefaults() {
   $("final-expenses").value = String(assumptions.finalExpenses);
   $("education-amount").value = String(assumptions.educationFundPerDependant);
   $("independence-age").value = String(assumptions.dependantIndependenceAge);
+  $("client-sex").value = "both";
   $("retirement-replacement").value = String(assumptions.retirementIncomeReplacement * 100);
   $("planned-children").value = "0";
   $("future-amortization").value = "25";
@@ -2657,37 +2135,137 @@ function fillDefaults() {
   if ($("province").options.length) $("province").value = "AB";
 }
 
+function planHasEntries() {
+  const name = $("client-name").value.trim();
+  if (name && name !== "Person 1") return true;
+  if ($("has-partner").checked) return true;
+  const filled = [
+    "client-age",
+    "personal-income",
+    "partner-age",
+    "partner-income",
+    "debts",
+    "other-debts",
+    "existing-coverage",
+    "tfsa-balance",
+    "rrsp-balance",
+    "nonreg-balance",
+    "estate-value",
+    "desired-income",
+  ];
+  return filled.some((id) => !blank(id) && readMoney($(id).value) > 0)
+    || dependantCount() > 0
+    || readMoney($("planned-children").value) > 0;
+}
+
 function loadSample() {
-  const named = $("client-name").value.trim() || $("personal-income").value.trim();
-  if (named && !confirm("Replace the current worksheet with the sample household?")) return;
+  if (planHasEntries() && !confirm("Replace this plan with the sample household?")) return;
   resetSession();
   document.querySelector('input[name="planning-mode"][value="both"]').checked = true;
-  $("client-name").value = "Person 1";
+  $("province").value = "AB";
+  $("client-sex").value = "both";
+  $("meeting-date").value = todayISO();
+  $("advisor-name").value = DEFAULT_ADVISOR.name;
+  $("advisor-firm").value = DEFAULT_ADVISOR.firm;
+
+  $("client-name").value = "Alex Morgan";
   $("client-age").value = "42";
-  $("has-partner").checked = true;
-  $("partner-name").value = "Person 2";
-  $("partner-age").value = "25";
+  $("retirement-age").value = "65";
   $("personal-income").value = "95000";
+  $("income-history").value = "90000";
+  $("has-partner").checked = true;
+  $("partner-name").value = "Jordan Morgan";
+  $("partner-age").value = "40";
   $("partner-income").value = "45000";
+  $("partner-income-history").value = "42000";
+
   $("dependant-count").value = "2";
-  const inputs = ensureDependantInputs();
-  inputs[0].value = "8";
-  inputs[1].value = "11";
+  $("planned-children").value = "0";
+  const ages = ensureDependantInputs();
+  ages[0].value = "8";
+  ages[1].value = "11";
+
+  $("replacement-ratio").value = "70";
+  $("income-years").value = "10";
+  $("income-years-slider").value = "10";
   $("debts").value = "320000";
   $("mortgage-years").value = "20";
+  $("other-debts").value = "15000";
+  $("final-expenses").value = String(assumptions.finalExpenses);
+  $("education-amount").value = String(assumptions.educationFundPerDependant);
+  $("independence-age").value = String(assumptions.dependantIndependenceAge);
   $("existing-coverage").value = "100000";
+  $("partner-existing-coverage").value = "50000";
   $("assets-at-death").value = "40000";
-  $("retirement-age").value = "65";
+  $("client-owns-corp").checked = false;
+  $("partner-owns-corp").checked = false;
+  $("plan-house").checked = false;
+
+  $("disability-months").value = "120";
+  dirty.disabilityMonths = true;
+  $("ci-ratio").value = "70";
+  $("ci-ratio-slider").value = "70";
+  $("ci-months").value = "12";
+  $("ci-months-slider").value = "12";
+  $("child-life").value = String(assumptions.childLifeInsuranceNeed);
+  $("child-ci").value = String(assumptions.childCriticalIllnessNeed);
+
+  $("death-age").value = "85";
+  dirty.deathAge = true;
+  $("partner-death-age").value = "88";
+  dirty.partnerDeathAge = true;
+  $("canada-years").value = "24";
+  dirty.canadaYears = true;
+  $("partner-canada-years").value = "22";
+  dirty.partnerCanadaYears = true;
+
+  $("retirement-replacement").value = "70";
+  $("desired-income").value = "98000";
+  $("desired-income-slider").value = "98000";
+  dirty.desired = true;
+  $("client-retirement-income").value = "0";
+  dirty.clientShare = true;
+  $("leave-legacy").checked = true;
+  $("legacy-amount").value = "100000";
+  $("inflation-rate").value = String(defaultInflation);
+  $("inflation-slider").value = String(defaultInflation);
+
   $("tfsa-balance").value = "40000";
-  $("rrsp-balance").value = "80000";
   $("tfsa-room").value = "20000";
+  $("rrsp-balance").value = "80000";
   $("rrsp-room").value = "15000";
-  $("other-assets").value = "0";
-  $("partner-other-assets").value = "0";
-  $("obj-income").checked = true;
-  $("obj-debt").checked = true;
-  $("obj-education").checked = true;
-  $("obj-retirement").checked = true;
+  $("nonreg-balance").value = "25000";
+  $("other-assets").value = "80000";
+  $("partner-tfsa-balance").value = "15000";
+  $("partner-tfsa-room").value = "8000";
+  $("partner-rrsp-balance").value = "35000";
+  $("partner-rrsp-room").value = "9000";
+  $("partner-nonreg-balance").value = "10000";
+  $("partner-other-assets").value = "40000";
+  $("estate-value").value = "250000";
+  $("qc-verification").checked = false;
+
+  $("real-return").value = "5";
+  $("real-return-slider").value = "5";
+  $("other-return").value = "3";
+  $("other-return-slider").value = "3";
+  $("retirement-return").value = "4";
+  $("retirement-return-slider").value = "4";
+  $("tfsa-contribution").value = "500";
+  $("tfsa-contribution-slider").value = "500";
+  $("rrsp-contribution").value = "600";
+  $("rrsp-contribution-slider").value = "600";
+  $("nonreg-contribution").value = "200";
+  $("nonreg-contribution-slider").value = "200";
+
+  dirty.cpp = false;
+  dirty.oas = false;
+  dirty.partnerCpp = false;
+  dirty.partnerOas = false;
+  dirty.earlyDeath = false;
+  render();
+  dirty.earlyDeath = true;
+  $("early-death-age").value = "57";
   render();
 }
 
@@ -2705,13 +2283,6 @@ function markDirty(target) {
   if (target.id === "early-death-age") dirty.earlyDeath = true;
   if (target.id === "disability-months") dirty.disabilityMonths = true;
   if (target.id === "rrsp-share") dirty.allocation = true;
-  if (target.id === "recommended-life") dirty.recommendedLife = true;
-  if (target.id === "recommended-disability") dirty.recommendedDisability = true;
-  if (target.id === "recommended-critical") dirty.recommendedCritical = true;
-  if (target.id === "recommended-partner-life") dirty.recommendedPartnerLife = true;
-  if (target.id === "recommended-partner-disability") dirty.recommendedPartnerDisability = true;
-  if (target.id === "recommended-partner-critical") dirty.recommendedPartnerCritical = true;
-  if (target.id === "rationale") dirty.rationale = true;
 }
 
 function syncInflation(target) {
@@ -2793,45 +2364,6 @@ function clearLegacyStorage() {
   }
 }
 
-function printReport(which) {
-  document.body.dataset.print = which;
-  const clear = () => {
-    delete document.body.dataset.print;
-    window.removeEventListener("afterprint", clear);
-  };
-  window.addEventListener("afterprint", clear);
-  window.print();
-}
-
-async function copyLetter() {
-  const button = $("copy-letter");
-  const text = emailLetterText(lastModel);
-  const html = emailLetterHtml(lastModel);
-  try {
-    if (navigator.clipboard?.write && typeof ClipboardItem !== "undefined") {
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          "text/plain": new Blob([text], { type: "text/plain" }),
-          "text/html": new Blob([html], { type: "text/html" }),
-        }),
-      ]);
-    } else {
-      await navigator.clipboard.writeText(text);
-    }
-    button.textContent = "Copied";
-  } catch {
-    try {
-      await navigator.clipboard.writeText(text);
-      button.textContent = "Copied";
-    } catch {
-      button.textContent = "Select the letter and copy it";
-    }
-  }
-  setTimeout(() => {
-    button.textContent = "Copy letter for email";
-  }, 1600);
-}
-
 function init() {
   clearLegacyStorage();
   initProvinces();
@@ -2874,15 +2406,20 @@ function init() {
     render();
   });
   $("sample-case").addEventListener("click", loadSample);
-  $("export-client").addEventListener("click", () => printReport("client"));
-  $("export-advisor").addEventListener("click", () => printReport("advisor"));
-  $("copy-letter").addEventListener("click", copyLetter);
-  window.addEventListener("afterprint", () => {
-    delete document.body.dataset.print;
+  $("print-plan").addEventListener("click", () => {
+    const panels = [...document.querySelectorAll("#worksheet details")];
+    const wasOpen = panels.map((panel) => panel.open);
+    panels.forEach((panel) => { panel.open = true; });
+    const restore = () => {
+      panels.forEach((panel, index) => { panel.open = wasOpen[index]; });
+      window.removeEventListener("afterprint", restore);
+    };
+    window.addEventListener("afterprint", restore);
+    window.print();
   });
   $("new-case").addEventListener("click", () => {
     const named = $("client-name").value.trim() || $("personal-income").value.trim();
-    if (named && !confirm("Clear every entry on this worksheet? Closing the tab discards them too, and clearing cannot be undone.")) return;
+    if (named && !confirm("Clear every entry on this plan? Closing the tab discards them too, and clearing cannot be undone.")) return;
     resetSession();
     render();
   });

@@ -64,6 +64,92 @@ function takeTaxable({ balance, acb, kind, need, base, factor, province }) {
   };
 }
 
+// After CPP and OAS, the after-tax shortfall is taken from Other, non-registered,
+// and RRSP in proportion to those balances so they run down together. The TFSA
+// is not touched until that pool is gone.
+export function withdrawProRataTaxable({
+  other,
+  otherAcb,
+  nonReg,
+  nonRegAcb,
+  rrsp,
+  need,
+  base,
+  factor,
+  province,
+}) {
+  let tax = 0;
+  let remaining = Math.max(0, need);
+  let nextBase = base;
+  let otherBal = Math.max(0, other);
+  let otherBasis = Math.max(0, otherAcb);
+  let nonRegBal = Math.max(0, nonReg);
+  let nonRegBasis = Math.max(0, nonRegAcb);
+  let rrspBal = Math.max(0, rrsp);
+
+  for (let pass = 0; pass < 4 && remaining > 0.5; pass += 1) {
+    const pool = otherBal + nonRegBal + rrspBal;
+    if (pool <= 0) break;
+    const otherNeed = remaining * (otherBal / pool);
+    const nonRegNeed = remaining * (nonRegBal / pool);
+    const rrspNeed = remaining * (rrspBal / pool);
+
+    const otherTake = takeTaxable({
+      balance: otherBal,
+      acb: otherBasis,
+      kind: "other",
+      need: otherNeed,
+      base: nextBase,
+      factor,
+      province,
+    });
+    otherBal = otherTake.balance;
+    otherBasis = otherTake.acb;
+    tax += otherTake.tax;
+    nextBase = otherTake.base;
+
+    const nonRegTake = takeTaxable({
+      balance: nonRegBal,
+      acb: nonRegBasis,
+      kind: "nonReg",
+      need: nonRegNeed,
+      base: nextBase,
+      factor,
+      province,
+    });
+    nonRegBal = nonRegTake.balance;
+    nonRegBasis = nonRegTake.acb;
+    tax += nonRegTake.tax;
+    nextBase = nonRegTake.base;
+
+    const rrspTake = takeTaxable({
+      balance: rrspBal,
+      acb: 0,
+      kind: "rrsp",
+      need: rrspNeed,
+      base: nextBase,
+      factor,
+      province,
+    });
+    rrspBal = rrspTake.balance;
+    tax += rrspTake.tax;
+    nextBase = rrspTake.base;
+
+    remaining = Math.max(0, remaining - otherTake.net - nonRegTake.net - rrspTake.net);
+  }
+
+  return {
+    other: otherBal,
+    otherAcb: otherBasis,
+    nonReg: nonRegBal,
+    nonRegAcb: nonRegBasis,
+    rrsp: rrspBal,
+    need: remaining,
+    tax,
+    base: nextBase,
+  };
+}
+
 // Each person's CPP counts from the later of retirement and age 60.
 // OAS counts from that person's age 65. Amounts are today's dollars;
 // the caller raises them with inflation.
@@ -94,7 +180,8 @@ function pensionCash({
 
 // Year-by-year balances. Contributions are capped by room. At retirement,
 // contributions stop. CPP and OAS cover part of the after-tax income, and the
-// accounts withdraw the rest, from the RRSP, then non-registered, then the TFSA, then other assets.
+// accounts make up the shortfall from Other, non-registered, and RRSP in
+// proportion to those balances. The TFSA is used only after that pool is gone.
 export function projectPortfolio({
   currentAge,
   retirementAge,
@@ -148,11 +235,9 @@ export function projectPortfolio({
     const age = ageNow + year;
     const retired = Number.isFinite(retire) && age >= retire;
     const factor = (1 + inflation) ** year;
-    const portfolioRate = retired ? retirementReturn : savingsReturn;
-    tfsa = grow(tfsa, portfolioRate);
-    rrsp = grow(rrsp, portfolioRate);
-    nonReg = grow(nonReg, portfolioRate);
-    other = grow(other, otherReturn);
+    // Start-of-year balances: year 0 is today's opening amounts. Growth is
+    // applied after this row so the table does not invent a year of return
+    // before the plan begins.
     let tfsaIn = 0;
     let rrspIn = 0;
     let nonRegIn = 0;
@@ -182,35 +267,54 @@ export function projectPortfolio({
     const otherNominal = Math.max(0, otherIncomeToday) * factor;
     const pensionTax = taxNominal(otherNominal, pensionNominal, factor, province);
     const afterTaxPension = Math.max(0, pensionNominal - pensionTax);
-    const target = retired ? Math.max(0, desiredIncomeToday) * factor : 0;
-    let need = Math.max(0, target - afterTaxPension);
+    // Requested after-tax income, raised with inflation from today's dollars.
+    // CPP and OAS are kept in full even when they exceed that request; accounts
+    // only top up a shortfall.
+    const incomeRequested = retired ? Math.max(0, desiredIncomeToday) * factor : 0;
+
+    // Tax if death this year is on the balances before retirement withdrawals.
+    // With a spousal rollover the RRSP is left out; without one it is taxed in full.
+    // TFSA is never in this tax. Non-registered and other assets tax only the gain.
+    const rrspAtDeath = rrsp;
+    const nonRegAtDeath = nonReg;
+    const otherAtDeath = other;
+    const nonRegGainAtDeath = Math.max(0, nonReg - nonRegAcb);
+    const otherGainAtDeath = Math.max(0, other - otherAcb);
+    const totalAtDeath = tfsa + rrsp + nonReg + other;
+    const deathBase = retired ? otherNominal + pensionNominal : Math.max(0, workingIncomeToday) * factor;
+    const deathInclusion = (rollover ? 0 : rrspAtDeath)
+      + nonRegGainAtDeath * CAPITAL_GAINS_INCLUSION
+      + otherGainAtDeath * CAPITAL_GAINS_INCLUSION;
+    const deathTax = taxNominal(deathBase, deathInclusion, factor, province);
+
+    let need = Math.max(0, incomeRequested - afterTaxPension);
     let tax = 0;
     let base = otherNominal + pensionNominal;
-    const rrspTake = takeTaxable({ balance: rrsp, acb: 0, kind: "rrsp", need, base, factor, province });
-    rrsp = rrspTake.balance;
-    need = Math.max(0, need - rrspTake.net);
-    tax += rrspTake.tax;
-    base = rrspTake.base;
-    const nonRegTake = takeTaxable({ balance: nonReg, acb: nonRegAcb, kind: "nonReg", need, base, factor, province });
-    nonReg = nonRegTake.balance;
-    nonRegAcb = nonRegTake.acb;
-    need = Math.max(0, need - nonRegTake.net);
-    tax += nonRegTake.tax;
-    base = nonRegTake.base;
+    const taxable = withdrawProRataTaxable({
+      other,
+      otherAcb,
+      nonReg,
+      nonRegAcb,
+      rrsp,
+      need,
+      base,
+      factor,
+      province,
+    });
+    other = taxable.other;
+    otherAcb = taxable.otherAcb;
+    nonReg = taxable.nonReg;
+    nonRegAcb = taxable.nonRegAcb;
+    rrsp = taxable.rrsp;
+    need = taxable.need;
+    tax += taxable.tax;
+    base = taxable.base;
     const tfsaTake = Math.min(tfsa, need);
     tfsa -= tfsaTake;
     need -= tfsaTake;
-    const otherTake = takeTaxable({ balance: other, acb: otherAcb, kind: "other", need, base, factor, province });
-    other = otherTake.balance;
-    otherAcb = otherTake.acb;
-    need = Math.max(0, need - otherTake.net);
-    tax += otherTake.tax;
 
-    const deathBase = retired ? otherNominal + pensionNominal : Math.max(0, workingIncomeToday) * factor;
-    const deathInclusion = (rollover ? 0 : rrsp)
-      + Math.max(0, nonReg - nonRegAcb) * CAPITAL_GAINS_INCLUSION
-      + Math.max(0, other - otherAcb) * CAPITAL_GAINS_INCLUSION;
-    const deathTax = taxNominal(deathBase, deathInclusion, factor, province);
+    const withdrawal = Math.max(0, incomeRequested - afterTaxPension - need);
+    const incomeTaken = afterTaxPension + withdrawal;
     const total = tfsa + rrsp + nonReg + other;
     const short = retired && need > 1;
     if (short && depletedAge == null) depletedAge = age;
@@ -222,10 +326,19 @@ export function projectPortfolio({
       tfsaIn,
       rrspIn,
       nonRegIn,
+      incomeRequested,
       pension: pensionNominal,
-      withdrawal: Math.max(0, target - afterTaxPension - need),
+      pensionNet: afterTaxPension,
+      withdrawal,
+      incomeTaken,
       tax,
       deathTax,
+      rrspAtDeath,
+      nonRegAtDeath,
+      otherAtDeath,
+      nonRegGainAtDeath,
+      otherGainAtDeath,
+      totalAtDeath,
       tfsa,
       rrsp,
       nonReg,
@@ -233,6 +346,13 @@ export function projectPortfolio({
       total,
       short,
     });
+
+    if (year === span) continue;
+    const portfolioRate = retired ? retirementReturn : savingsReturn;
+    tfsa = grow(tfsa, portfolioRate);
+    rrsp = grow(rrsp, portfolioRate);
+    nonReg = grow(nonReg, portfolioRate);
+    other = grow(other, otherReturn);
   }
 
   const savingRows = rows.filter((row) => !row.retired);

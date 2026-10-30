@@ -14,10 +14,12 @@ function sliceTax(baseIncome, inclusion, province) {
 
 // Tax if death is `years` from now. Non-registered and RRSP balances grow at the
 // savings return. The estate value rises with inflation. A rollover drops the RRSP.
+// otherGain is the taxable capital gain already measured on other assets (ACB known).
 export function deathTaxAtYear({
   income,
   rrsp = 0,
   nonReg = 0,
+  otherGain = 0,
   estate = 0,
   rollover = false,
   province,
@@ -31,22 +33,30 @@ export function deathTaxAtYear({
   const nonRegBalance = futureValue(Math.max(0, nonReg), savingsReturn, elapsed);
   const estateValue = inflate(Math.max(0, estate), inflationPercent, elapsed);
   const nonRegInclusion = nonRegBalance * CAPITAL_GAINS_INCLUSION;
+  const otherInclusion = Math.max(0, otherGain) * CAPITAL_GAINS_INCLUSION;
   const estateInclusion = estateValue * CAPITAL_GAINS_INCLUSION;
   const nonRegSlice = sliceTax(baseIncome, nonRegInclusion, province);
-  const estateSlice = sliceTax(baseIncome + nonRegInclusion, estateInclusion, province);
-  const rrspSlice = sliceTax(baseIncome + nonRegInclusion + estateInclusion, rrspBalance, province);
+  const otherSlice = sliceTax(baseIncome + nonRegInclusion, otherInclusion, province);
+  const estateSlice = sliceTax(baseIncome + nonRegInclusion + otherInclusion, estateInclusion, province);
+  const rrspSlice = sliceTax(
+    baseIncome + nonRegInclusion + otherInclusion + estateInclusion,
+    rrspBalance,
+    province,
+  );
   return {
     rolledOver: Boolean(rollover),
     rrspBalance,
     nonRegBalance,
     estateValue,
     nonRegInclusion,
+    otherInclusion,
     estateInclusion,
     rrspInclusion: rrspBalance,
     nonRegTax: nonRegSlice.tax,
+    otherTax: otherSlice.tax,
     estateTax: estateSlice.tax,
     rrspTax: rrspSlice.tax,
     rrspRate: rrspSlice.rate,
-    total: nonRegSlice.tax + estateSlice.tax + rrspSlice.tax,
+    total: nonRegSlice.tax + otherSlice.tax + estateSlice.tax + rrspSlice.tax,
   };
 }
