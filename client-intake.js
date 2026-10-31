@@ -324,7 +324,67 @@
     advanceFrom(stepName);
   });
 
+  const Profiles = window.MarchandInvestorProfiles;
+  const profileSelect = form.elements["investor-profile"];
+  const profileNote = document.getElementById("intake-profile-note");
+  const defaultProfileNote = profileNote.innerHTML;
+  let questionnaireProfile = null;
+
+  function syncProfileNote() {
+    const chosen = Profiles.profileByKey(profileSelect.value);
+    if (!chosen) {
+      profileNote.innerHTML = defaultProfileNote;
+      return;
+    }
+    const parts = [
+      `${Profiles.describe(chosen)}.`,
+      `Suggested return: ${chosen.saving}% while saving, ${chosen.retirement}% in retirement.`,
+    ];
+    if (questionnaireProfile && questionnaireProfile !== chosen) {
+      const riskier = chosen.level > questionnaireProfile.level;
+      parts.push(`Your investor questionnaire result was ${questionnaireProfile.name}${riskier ? ", so this assumes more risk than you said you are comfortable with" : ""}.`);
+    }
+    profileNote.textContent = parts.join(" ");
+  }
+
+  profileSelect.addEventListener("change", () => {
+    const chosen = Profiles.profileByKey(profileSelect.value);
+    if (chosen) {
+      form.elements["real-return"].value = String(chosen.saving);
+      form.elements["retirement-return"].value = String(chosen.retirement);
+    }
+    syncProfileNote();
+  });
+
+  form.elements["real-return"].addEventListener("input", (event) => {
+    if (!filled(event.target.value)) return;
+    const matched = Profiles.profileForReturn(money(event.target.value));
+    if (matched) profileSelect.value = matched.key;
+    syncProfileNote();
+  });
+
+  const incoming = new URLSearchParams(window.location.search);
+  if (filled(incoming.get("client-name"))) form.elements["client-name"].value = incoming.get("client-name").trim();
+  questionnaireProfile = Profiles.profileByKey(incoming.get("investor-profile"));
+  if (questionnaireProfile) {
+    profileSelect.value = questionnaireProfile.key;
+    form.elements["real-return"].value = String(questionnaireProfile.saving);
+    form.elements["retirement-return"].value = String(questionnaireProfile.retirement);
+    syncProfileNote();
+  }
+  try {
+    const iqLink = new URL(incoming.get("iq-link") || "");
+    if (iqLink.pathname === "/investor-questionnaire.html") {
+      document.getElementById("iq-link-field").value = iqLink.href;
+      document.getElementById("intake-iq-card")?.classList.add("hidden");
+    }
+  } catch {
+    // No questionnaire link to carry forward.
+  }
+  if (stepComplete("name")) cursor = 1;
+
   updateVisibility();
+  if (stepComplete("name")) form.elements["client-age"].focus();
 
   const statusEl = document.getElementById("intake-status");
   const successEl = document.getElementById("intake-success");
@@ -381,6 +441,8 @@
       mapIfFilled("partner-rrsp-room");
       mapIfFilled("partner-nonreg-balance");
     }
+    mapIfFilled("investor-profile");
+    if (questionnaireProfile) params.set("iq-profile", questionnaireProfile.key);
     mapIfFilled("real-return");
     mapIfFilled("retirement-return");
     mapIfFilled("province");

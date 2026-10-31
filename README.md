@@ -1,6 +1,6 @@
 # Marchand Wealth
 
-The marketing site, contact form, meeting scheduler, and TFSA calculator for **Marchand Wealth** (legal name: Marchand Financial Solutions Inc.), an independent insurance and wealth planning practice serving incorporated business owners in Sherwood Park and the greater Edmonton region.
+The marketing site, client tools (quote, TFSA calculator, financial plan, client intake, investor questionnaire), contact form, and meeting scheduler for **Marchand Wealth** (legal name: Marchand Financial Solutions Inc.), an independent insurance and wealth planning practice serving incorporated business owners in Sherwood Park and the greater Edmonton region.
 
 **Live site:** [marchandwealth.ca](https://marchandwealth.ca)
 
@@ -14,12 +14,14 @@ The marketing site, contact form, meeting scheduler, and TFSA calculator for **M
 | [`life-insurance-quote.html`](life-insurance-quote.html) | Free instant life insurance quote tool — Compulife quoter embedded in an iframe, plus SEO content and FAQ |
 | [`tfsa-calculator.html`](tfsa-calculator.html) | Free public tool: whether a planned monthly contribution catches up your TFSA room (and when), plus projected retirement balance and income |
 | [`needs-analysis.html`](needs-analysis.html) | Simplified financial plan — life insurance need, protection amounts, and retirement savings path. Entries stay in the browser tab |
+| [`client-intake.html`](client-intake.html) | Client intake form — one question at a time, submitted via Netlify Forms with a link that opens the financial plan pre-filled |
+| [`investor-questionnaire.html`](investor-questionnaire.html) | Investor profile questionnaire — 13 questions, six risk profiles, Netlify submission with a re-open link, and a PDF download. See [The investor questionnaire](#the-investor-questionnaire) |
 | [`insights.html`](insights.html) | Blog index — article cards rendered from [`insights-data.js`](insights-data.js) |
 | [`insight.html`](insight.html) | Blog post template — renders whichever post matches the URL, also from `insights-data.js` |
 | [`contact.html`](contact.html) | Contact page — advisor intro up top, detailed contact form below, submitted via Netlify Forms |
 | [`schedule.html`](schedule.html) | Meeting booking, embedded Google Calendar appointment scheduler |
 
-No framework, no JS bundler. Every page is a standalone HTML file. The only build step is compiling Tailwind's CSS — see [Local development](#local-development) below.
+No framework, no JS bundler. Every page is a standalone HTML file. `npm run build` compiles Tailwind's CSS and pre-renders the Insights articles — see [Editing styles](#editing-styles) and [The blog](#the-blog-insights).
 
 ---
 
@@ -27,7 +29,7 @@ No framework, no JS bundler. Every page is a standalone HTML file. The only buil
 
 - **HTML** — plain, semantic, one file per page
 - **[Tailwind CSS](https://tailwindcss.com) v3** — compiled locally to a static production stylesheet, **not** the CDN script. See [Editing styles](#editing-styles) — this is the one workflow change from how this project used to work.
-- **Vanilla JavaScript** — one shared [`script.js`](script.js), no dependencies, no bundler
+- **Vanilla JavaScript** — a shared [`script.js`](script.js) plus one script per tool, no bundler. The only third-party library is jsPDF, vendored for the questionnaire PDF
 - **Fonts** — [Fraunces](https://fonts.google.com/specimen/Fraunces) (serif headings) + [Inter](https://fonts.google.com/specimen/Inter) (body), loaded from Google Fonts
 - **Hosting** — [Netlify](https://netlify.com)
 - **Forms** — [Netlify Forms](https://docs.netlify.com/forms/setup/) (no external form backend)
@@ -39,35 +41,40 @@ No framework, no JS bundler. Every page is a standalone HTML file. The only buil
 
 ```
 marchand-site/
-├── index.html              Homepage
-├── contact.html              Contact page — advisor intro + contact form (Netlify Forms)
-├── schedule.html             Meeting scheduler (Google Calendar embed)
+├── index.html                  Homepage
+├── contact.html                Contact page — advisor intro + contact form (Netlify Forms)
+├── schedule.html               Meeting scheduler (Google Calendar embed)
+├── life-insurance-quote.html   Instant life insurance quote tool (Compulife iframe)
 ├── tfsa-calculator.html        TFSA contribution & retirement calculator
-├── needs-analysis.html         Simplified financial plan
+├── needs-analysis.html         Financial plan
 ├── needs-analysis/             Plan UI, annual figures, and calculation tests
-│   ├── js/                     Worksheet UI and calculators (loaded by the page)
+│   ├── js/                     Worksheet UI and calculators (ES modules)
 │   ├── data/                   CPP, OAS, tax, TFSA, RRSP, inflation, probate figures
-│   └── tests/                  `node needs-analysis/tests/calc.test.js`
-├── life-insurance-quote.html    Instant life insurance quote tool (Compulife iframe)
-├── insights.html              Blog index (article cards)
-├── insight.html               Blog post template (renders one post by URL)
-├── insights-data.js           Blog post content — see below
-├── script.js                Shared JS — nav, FAQ accordions, contact form submission,
-│                            schedule fallback, entire TFSA calculator engine, blog rendering
-├── tfsa-limits.js             TFSA annual contribution limits — see below
-├── tailwind.config.js          Brand colors, fonts, and content-scan paths
-├── src/
-│   └── tailwind.css           Source CSS — Tailwind directives + custom rules
-│                             (FAQ accordion, sliders, form focus states)
+│   └── tests/                  `npm run test:needs-analysis`
+├── client-intake.html/.js      Client intake form (Netlify Forms)
+├── investor-questionnaire.html/.js  Investor questionnaire and its PDF
+├── investor-profiles.js        Six investor profiles and return rates, shared by
+│                               the questionnaire, intake, and plan
+├── insights.html               Blog index (article cards)
+├── insight.html                Blog post template
+├── insights/                   Pre-rendered posts (generated — don't hand-edit)
+├── insights-data.js            Blog post content — see below
+├── scripts/build-insights.js   Builds insights/ and the insights.html grid
+├── script.js                   Shared JS — nav, FAQ accordions, contact form,
+│                               TFSA calculator engine, blog rendering
+├── tfsa-limits.js              TFSA annual contribution limits — see below
+├── tailwind.config.js          Brand colours, fonts, and content-scan paths
+├── src/tailwind.css            Source CSS — Tailwind directives + custom rules
 ├── assets/
-│   ├── css/site.css           Compiled, production Tailwind CSS (generated —
-│   │                          don't hand-edit, see Editing styles below)
-│   ├── logo.png              Full "Marchand Wealth" wordmark logo
-│   └── icon.png              Icon-only shield mark (favicon + hero illustration)
-├── package.json               `npm run build:css` / `npm run watch:css`
-├── netlify.toml               Tells Netlify to rebuild the CSS on every deploy
-├── sitemap.xml
-└── robots.txt
+│   ├── css/site.css            Compiled Tailwind CSS (generated — don't hand-edit)
+│   ├── vendor/                 jsPDF and its licence
+│   ├── logo.png                Full "Marchand Wealth" wordmark logo
+│   ├── logo-social.png         Social sharing image
+│   ├── ethan-headshot.jpg      Footer and about photo
+│   └── icon.png                Icon-only shield mark (favicon + hero illustration)
+├── package.json                `npm run build`, `npm run watch:css`, tests
+├── netlify.toml                Build command and redirects
+├── sitemap.xml, robots.txt, llms.txt
 ```
 
 ---
@@ -107,11 +114,11 @@ Nothing else in the codebase needs to be touched:
 
 ## The financial plan
 
-[`needs-analysis.html`](needs-analysis.html) is a simplified financial plan for life insurance need, disability and critical illness amounts, and the retirement savings path. It is a normal page on this site, with the same header, footer, and colours as the rest of Marchand Wealth. The calculation code lives in [`needs-analysis/`](needs-analysis/) and is loaded by the page. Nothing on the page is posted to a server, and nothing is written to the browser. Print the plan when a copy needs to be kept.
+[`needs-analysis.html`](needs-analysis.html) is a simplified financial plan for life insurance need, disability and critical illness amounts, and the retirement savings path. It is a normal page on this site, with the same header, footer, and colours as the rest of Marchand Wealth. The calculation code lives in [`needs-analysis/`](needs-analysis/) and is loaded by the page. Nothing on the page is posted to a server, and nothing is written to the browser. Print the plan when a copy needs to be kept. The print sets the file name to `Financial-Plan-<names>-<date>`, and each page carries the same footer line as the questionnaire PDF, with page numbers.
 
 The meeting starts by choosing life insurance, disability, and critical illness, financial planning, or both. Sections that do not belong to that choice stay off the page and out of the letter. The page does not choose a product.
 
-Preview it through a local server (`python3 -m http.server` or `npx serve .`). Opening the file directly will not load the worksheet, because the browser blocks its JavaScript modules from a `file://` address.
+Preview it through a local server (VS Code Live Server, `python3 -m http.server`, or `npx serve .`). Opening the file directly will not load the worksheet, because the browser blocks its JavaScript modules from a `file://` address.
 
 Calculation tests do not need a browser:
 
@@ -137,6 +144,19 @@ Add a year by copying the newest block in the file. Do not change older years.
 
 ---
 
+## The investor questionnaire
+
+[`investor-questionnaire.html`](investor-questionnaire.html) combines the Equitable Investor Profile Questionnaire (IW2272) and the Manulife Asset Allocation Portfolios questionnaire (MK3484E) into one 13-question form. Manulife's unscored mutual fund versus segregated fund question is left out. Questions both carriers ask (time horizon, goal, attitude to risk, reaction to a drop, range of returns) are asked once and scored for both. All question wording, points, and profiles live at the top of [`investor-questionnaire.js`](investor-questionnaire.js).
+
+- **Result shown to the client:** the Equitable score (0–50) and its six profiles, Minimal Risk to Aggressive Growth, each with an equity and fixed income mix. Insurers are never named to the client, on the page or in the PDF. The Netlify submission alone carries each answer's Equitable and Manulife points and the Manulife score (8–64) with its four profiles.
+- **Submission:** the questions are built by JavaScript, so a hidden static form at the bottom of the page registers the field names with Netlify Forms. A new field must be added there too, or Netlify drops it.
+- **Re-open link:** the submission includes `iq-link`, the page URL with every answer in the query string. Opening it restores all answers, shows the results, and offers the PDF download without submitting again.
+- **Profiles and return rates:** [`investor-profiles.js`](investor-profiles.js) is shared by the questionnaire, the client intake, and the financial plan. Each profile has a default return while saving and in retirement (Minimal Risk 3% / 3% up to Aggressive Growth 8% / 7%). Change them there and all three pages follow.
+- **Hand-off:** "Start the client intake" opens the intake with the client's name, profile, and questionnaire link filled in. The intake's Investor profile dropdown sets its return rates, and its Netlify submission includes the profile and the questionnaire link. The plan link carries the profile, and on the plan, moving the return-while-saving rate switches the profile to match (12% shows Aggressive Growth) and notes when that is riskier than the questionnaire result.
+- **PDF:** drawn with [jsPDF](https://github.com/parallax/jsPDF), vendored at `assets/vendor/jspdf.umd.min.js` and loaded only when Download PDF is clicked.
+
+---
+
 ## The life insurance quote tool
 
 [`life-insurance-quote.html`](life-insurance-quote.html) embeds a third-party quoter — [Compulife](https://www.compulife.org) — in an iframe (`https://www.compulife.org/website/833/quoter.html`, Ethan's account). Compulife doesn't provide a resize/postMessage bridge and the site is cross-origin, so the parent page can't read the iframe's content height to auto-resize it. Instead, the iframe height is set with `clamp(640px, 85vh, 1000px)` — comfortably tall on both mobile and desktop without wasting space on the bare form, while relying on the iframe's own native scrollbar for the (long, 30-50+ row) results list. A "prefer to open in a new tab" link sits under the iframe as a fallback for anyone who has trouble with the embed.
@@ -155,9 +175,9 @@ No CMS, no backend — blog posts are just entries in an array in [`insights-dat
 - [`insights.html`](insights.html) lists every post as a card, newest first, and injects a `Blog` JSON-LD schema built from the same data.
 - [`insight.html`](insight.html) is a single template shared by every post. It reads the slug out of the URL, finds the matching post in `insights-data.js`, and fills in the title, meta description, canonical tag, Open Graph tags, and `BlogPosting` JSON-LD schema client-side — then renders the post's HTML content into the page.
 
-**Clean URLs without a backend:** posts are linked as `/insights/<slug>` rather than `insight.html?post=<slug>`. That's a Netlify rewrite (see [`netlify.toml`](netlify.toml): `/insights/*` → `/insight.html`, status 200) — the URL in the address bar stays clean, but it's still the same static `insight.html` file underneath, with JS reading the slug from `window.location.pathname`. Because the browser treats `/insights/<slug>` as a nested path, every asset reference inside `insight.html` (CSS, logo, `script.js`, nav links) is root-absolute (`/assets/...`) rather than relative — a relative path would resolve against the fake `/insights/` directory and 404.
+**Clean URLs without a backend:** posts are linked as `/insights/<slug>`. [`scripts/build-insights.js`](scripts/build-insights.js) writes each post to `insights/<slug>.html` (with its title, canonical tag, and content baked in for search engines) and fills the `insights.html` grid, so run `npm run build:insights` after editing `insights-data.js`. The `/insights/*` → `/insight.html` rewrite in [`netlify.toml`](netlify.toml) is only a fallback for a slug that hasn't been built. Because the browser treats `/insights/<slug>` as a nested path, every asset reference inside `insight.html` (CSS, logo, `script.js`, nav links) is root-absolute (`/assets/...`) rather than relative — a relative path would resolve against the fake `/insights/` directory and 404.
 
-**Local preview:** [`.claude/static-server.js`](.claude/static-server.js) mirrors the same `/insights/*` → `/insight.html` rewrite so clean post URLs work when previewing locally, not just after a Netlify deploy.
+**Local preview:** open `/insights/<slug>.html`. The extension-less URL only resolves on Netlify, or under [`.claude/static-server.js`](.claude/static-server.js), which mirrors the rewrite.
 
 **Remember to add new posts to [`sitemap.xml`](sitemap.xml)** — they're plain static entries, not generated automatically.
 
@@ -167,15 +187,17 @@ No CMS, no backend — blog posts are just entries in an array in [`insights-dat
 
 | Name | Hex | Used for |
 |---|---|---|
-| `navy` | `#2f3744` | Primary brand color, buttons |
+| `navy` | `#2f3744` | Primary brand colour, buttons |
 | `navydeep` | `#232a35` | Headings, footer/CTA backgrounds |
-| `steel` | `#30475e` | Secondary blue accent |
 | `gold` | `#c1a57b` | Primary accent, CTAs, highlights |
 | `olive` | `#6c6753` | Supporting accent (bands, secondary eyebrows) |
 | `paper` | `#ffffff` | Base background |
 | `paperdim` | `#f2f2f2` | Alternating section background |
+| `golddim` | `#a68a61` | Eyebrows, links on light backgrounds |
+| `inksoft` | `#565f6c` | Body copy and secondary text |
+| `line` | `#ddd7ca` | Borders and dividers |
 
-Colors and fonts are defined once, in [`tailwind.config.js`](tailwind.config.js) — update the hex values there and rebuild the CSS (see below) rather than hunting for one-off classes across pages.
+Colours and fonts are defined once, in [`tailwind.config.js`](tailwind.config.js) — update the hex values there and rebuild the CSS (see below) rather than hunting for one-off classes across pages.
 
 Logos:
 - `assets/logo.png` — full wordmark, used in every header/footer site-wide
@@ -226,10 +248,7 @@ If you only ever edit *content* (text, adding a year to `tfsa-limits.js`, swappi
 
 ## Local development
 
-No JS bundler and no dev server required — either:
-
-- Open any `.html` file directly in a browser, or
-- Serve the folder locally for the more accurate experience (matches how relative paths behave once deployed):
+Serve the folder locally (VS Code Live Server works). Pages use root-absolute paths (`/assets/...`) and the financial plan uses JavaScript modules, so opening files directly from disk does not work. From a terminal:
 
 ```bash
 npx serve .
@@ -239,13 +258,11 @@ python3 -m http.server
 
 Just remember to rebuild the CSS first if you've added new classes — see [Editing styles](#editing-styles) above.
 
-Note: `npx serve .` and `python3 -m http.server` don't know about the `/insights/*` → `/insight.html` rewrite (see [The blog](#the-blog-insights) below), so clean blog post URLs will 404 under them. Use the [`.claude/static-server.js`](.claude/static-server.js) dev server (which mirrors that rewrite) or `netlify dev` if you need to preview blog posts locally.
-
 ---
 
 ## Deployment
 
-Hosted on **Netlify**, deployed straight from this repo. [`netlify.toml`](netlify.toml) tells Netlify to run `npm install && npm run build:css` on every deploy, so the live CSS always reflects whatever's in the HTML at deploy time — you don't need to remember to rebuild before pushing, only for local preview.
+Hosted on **Netlify**, deployed straight from this repo. [`netlify.toml`](netlify.toml) tells Netlify to run `npm install && npm run build` on every deploy, so the live CSS and the pre-rendered Insights posts always reflect the source at deploy time — you don't need to remember to rebuild before pushing, only for local preview.
 
 Checklist after the first deploy:
 - [ ] Confirm the custom domain is connected and HTTPS is active

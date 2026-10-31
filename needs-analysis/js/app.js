@@ -6,20 +6,18 @@ import { planningAssumptions as assumptions } from "../data/planning-assumptions
 import { probateFees, provinceOrder } from "../data/probate-fees.js";
 import { rrspLimits } from "../data/rrsp-limits.js";
 import { tfsaContributionLimit } from "../data/tfsa-contribution-limit.js";
-import { allocationOutcome, requiredOutOfPocket } from "./calc/allocation.js";
 import { deathTaxAtYear } from "./calc/death-tax.js";
 import { projectFutureRoom } from "./calc/contribution-room.js";
 import { deflate, inflate, purchasingPowerPath, roundPercent, trailingAverage } from "./calc/inflation.js";
 import { calculateLifeNeed } from "./calc/life-need.js";
-import { formatDollars, formatMoney, futureValue, readMoney } from "./calc/money.js";
+import { formatDollars, formatMoney, readMoney } from "./calc/money.js";
 import { incomeYearsAtAge, projectLifeNeed } from "./calc/need-path.js";
 import { cppContributionYears, estimateCpp, estimateOas, residenceYearsFromAge } from "./calc/pensions.js";
 import { calculateProbate } from "./calc/probate.js";
 import { criticalIllnessLumpSum, disabilityMonthlyBenefit } from "./calc/protection.js";
-import { calculateRetirement, taxableRetirementIncome } from "./calc/retirement.js";
+import { calculateRetirement } from "./calc/retirement.js";
 import { describeDeposits, projectPortfolio } from "./calc/portfolio-path.js";
-import { balanceAfterWithdrawals, balanceAtAge, wealthPath } from "./calc/wealth-path.js";
-import { latestTaxYear, marginalRate, taxOnInclusion } from "./calc/tax.js";
+import { latestTaxYear, marginalRate } from "./calc/tax.js";
 import { formatYearSpan, groupLimitYears, tfsaRoomEarned } from "./calc/tfsa-room.js";
 
 const DEFAULT_ADVISOR = {
@@ -42,13 +40,16 @@ const dirty = {
   partnerCanadaYears: false,
   earlyDeath: false,
   disabilityMonths: false,
-  allocation: false,
 };
 
 const inflationHistory = trailingAverage(canadaInflation.annualPercent, 100);
 const defaultInflation = roundPercent(inflationHistory.average);
 
 let incomeMode = "today";
+
+const investorProfiles = window.MarchandInvestorProfiles;
+let questionnaireProfile = null;
+let defaultProfileNote = "";
 
 function todayISO() {
   const date = new Date();
@@ -82,6 +83,12 @@ function maxAnnualCpp() {
 function maxAnnualOas(age) {
   const monthly = age >= 75 ? oasAmounts.maxMonthlyAge75andOver : oasAmounts.maxMonthlyAge65to74;
   return monthly * 12;
+}
+
+function longDate(iso) {
+  const [y, m, d] = String(iso || "").split("-").map(Number);
+  if (!y || !m || !d) return "";
+  return new Date(y, m - 1, d).toLocaleDateString("en-CA", { year: "numeric", month: "long", day: "numeric" });
 }
 
 function dependantCount() {
@@ -133,11 +140,6 @@ function agesFromDom() {
 
 function planningMode() {
   return document.querySelector('input[name="planning-mode"]:checked')?.value || "";
-}
-
-function showsInsurance() {
-  const mode = planningMode();
-  return mode === "insurance" || mode === "both";
 }
 
 function showsPlanning() {
@@ -210,7 +212,7 @@ function applyNames() {
   $("partner-rrsp-room-label").textContent = `${partner}'s RRSP room available now`;
   $("partner-nonreg-label").textContent = `${partner}'s non-registered balance`;
   $("partner-other-label").textContent = `${partner}'s other assets`;
-  $("partner-canada-label").textContent = `Years ${partner} has lived in Canada after age 18`;
+  $("partner-canada-label").textContent = `Years ${partner} will have lived in Canada from 18 to 65`;
   $("partner-cpp-label").textContent = `${partner} CPP, yearly`;
   $("partner-oas-label").textContent = `${partner} OAS, yearly`;
   $("client-retirement-income-label").textContent = `Other taxable income ${person} will have in retirement, besides CPP, OAS, and these savings`;
@@ -332,32 +334,36 @@ function applySuggestions() {
   if (hasPartner() && !dirty.partnerDeathAge) $("partner-death-age").value = String(expectancyAge());
   const currentAge = ageOrNull("client-age");
   const retirementAge = blank("retirement-age") ? null : readMoney($("retirement-age").value);
+  // CPP builds until the person stops working, at most 70. OAS residence counts to 65.
+  const clientStopAge = Math.min(70, retirementAge ?? 65);
   if (!dirty.canadaYears && currentAge != null) {
-    $("canada-years").value = String(residenceYearsFromAge(currentAge));
+    $("canada-years").value = String(residenceYearsFromAge(65));
   }
   if (!dirty.cpp) {
     $("cpp-annual").value = moneyInput(estimateCpp(
       earningsForCpp("income-history", "personal-income"),
       cppAmounts.ympe,
       maxAnnualCpp(),
-      cppContributionYears(currentAge),
+      cppContributionYears(clientStopAge),
     ));
   }
   if (!dirty.oas) {
-    const retireAt = retirementAge ?? 65;
-    $("oas-annual").value = moneyInput(estimateOas(readMoney($("canada-years").value), maxAnnualOas(retireAt)));
+    $("oas-annual").value = moneyInput(estimateOas(readMoney($("canada-years").value), maxAnnualOas(65)));
   }
   if (hasPartner()) {
     const partnerAge = ageOrNull("partner-age");
+    const partnerStopAge = partnerAge != null && currentAge != null && retirementAge != null
+      ? Math.min(70, partnerAge + retirementAge - currentAge)
+      : 65;
     if (!dirty.partnerCanadaYears && partnerAge != null) {
-      $("partner-canada-years").value = String(residenceYearsFromAge(partnerAge));
+      $("partner-canada-years").value = String(residenceYearsFromAge(65));
     }
     if (!dirty.partnerCpp) {
       $("partner-cpp").value = moneyInput(estimateCpp(
         earningsForCpp("partner-income-history", "partner-income"),
         cppAmounts.ympe,
         maxAnnualCpp(),
-        cppContributionYears(partnerAge),
+        cppContributionYears(partnerStopAge),
       ));
     }
     if (!dirty.partnerOas) {
@@ -405,120 +411,6 @@ function householdTfsa() {
   const partner = hasPartner() ? personTfsa("partner-age") : null;
   const lifetime = (client?.total || 0) + (partner?.total || 0);
   return { client, partner, lifetime };
-}
-
-function accountTotal(point) {
-  if (!point) return 0;
-  return point.tfsa + point.rrsp + point.nonReg;
-}
-
-function plannedDraw(outcome, gap, rate = 0) {
-  const tfsa = Math.max(0, outcome?.tfsa || 0);
-  const rrsp = Math.max(0, outcome?.rrsp || 0);
-  const nonReg = Math.max(0, outcome?.nonReg || 0);
-  const total = tfsa + rrsp + nonReg;
-  const annual = Math.max(0, gap || 0);
-  if (total <= 0 || annual <= 0) return { total: 0, tfsa: 0, rrsp: 0, nonReg: 0 };
-  const drag = Math.min(0.95, Math.max(0, rate) * (rrsp / total));
-  const gross = annual / (1 - drag);
-  return {
-    total: gross,
-    tfsa: gross * (tfsa / total),
-    rrsp: gross * (rrsp / total),
-    nonReg: gross * (nonReg / total),
-  };
-}
-
-function savingsGoal(plan) {
-  return {
-    incomeCapital: Math.max(0, plan.capitalNeeded - plan.legacyAtRetirement),
-    legacyCapital: Math.max(0, plan.legacyAtRetirement),
-  };
-}
-
-function solveSavingsMix({
-  retirement,
-  horizonYears,
-  accounts,
-  room,
-  marginalNow,
-  province,
-  savingsReturn,
-  inflationRate,
-  currentAge,
-}) {
-  const marginal = Number.isFinite(marginalNow) ? marginalNow : 0;
-  const common = {
-    years: horizonYears,
-    savingsReturn,
-    inflationRate,
-    currentTfsaBalance: accounts.tfsaBalance,
-    currentRrspBalance: accounts.rrspBalance,
-    currentNonRegBalance: accounts.nonReg,
-    nonRegReturn: savingsReturn * (1 - 0.5 * marginal),
-    currentClientTfsaRoom: accounts.clientTfsaRoom,
-    currentPartnerTfsaRoom: accounts.partnerTfsaRoom,
-    currentClientRrspRoom: accounts.clientRrspRoom,
-    currentPartnerRrspRoom: accounts.partnerRrspRoom,
-    currentOtherBalance: accounts.other,
-    futureYears: room.years,
-    taxNow: marginalNow,
-    currentAge,
-  };
-  const otherTaxable = Math.max(0, readMoney($("client-retirement-income").value));
-  const price = (share) => {
-    let plan = retirement;
-    let rate = marginalRate(otherTaxable + plan.cpp + plan.oasNet, province) ?? 0;
-    let savings = 0;
-    let outcome = null;
-    for (let pass = 0; pass < 6; pass += 1) {
-      savings = requiredOutOfPocket({ ...common, rrspShare: share, futureTaxRate: rate }, savingsGoal(plan));
-      outcome = allocationOutcome({ ...common, annualSavings: savings, rrspShare: share });
-      const draw = plannedDraw(outcome, plan.annualGap, rate);
-      const counted = taxableRetirementIncome({
-        otherTaxable,
-        rrspWithdrawal: draw.rrsp,
-        nonRegisteredWithdrawal: draw.nonReg,
-      });
-      const nextPlan = retirementQuote(counted) || plan;
-      const base = otherTaxable + nextPlan.cpp + nextPlan.oasNet;
-      const tax = draw.rrsp > 0 ? taxOnInclusion(base, draw.rrsp, province) : null;
-      const nextRate = tax ? tax.tax / draw.rrsp : 0;
-      const settled = Math.abs(nextRate - rate) < 0.002
-        && Math.abs(nextPlan.capitalNeeded - plan.capitalNeeded) < 2
-        && Math.abs((nextPlan.oasRepayment || 0) - (plan.oasRepayment || 0)) < 2;
-      rate = nextRate;
-      plan = nextPlan;
-      if (settled) break;
-    }
-    savings = requiredOutOfPocket({ ...common, rrspShare: share, futureTaxRate: rate }, savingsGoal(plan));
-    outcome = allocationOutcome({ ...common, annualSavings: savings, rrspShare: share });
-    return { share, annualSavings: savings, futureTaxRate: rate, outcome, plan };
-  };
-  const results = [];
-  for (let pct = 0; pct <= 100; pct += 1) results.push(price(pct / 100));
-  const monthly = (annual) => Math.round(annual / 12);
-  let best = results[0];
-  for (const found of results) {
-    if (monthly(found.annualSavings) < monthly(best.annualSavings)) best = found;
-  }
-  const sliderPct = Math.min(100, Math.max(0, Math.round(readMoney($("rrsp-share").value))));
-  const selected = dirty.allocation ? results[sliderPct] : best;
-  const atShare = (share) => allocationOutcome({ ...common, annualSavings: selected.annualSavings, rrspShare: share });
-  return {
-    annualSavings: selected.annualSavings,
-    share: selected.share,
-    futureTaxRate: selected.futureTaxRate,
-    outcome: selected.outcome,
-    bestShare: best.share,
-    bestSavings: best.annualSavings,
-    allTfsa: results[0].annualSavings,
-    allRrsp: results[100].annualSavings,
-    allTfsaOutcome: atShare(0),
-    allRrspOutcome: atShare(1),
-    allocationInput: common,
-    plan: selected.plan,
-  };
 }
 
 function retirementQuote(clientRetirementIncome) {
@@ -580,12 +472,6 @@ function contributionSchedule(model) {
     const phrase = contributionPhrase(timing);
     return phrase ? [[label, phrase]] : [];
   });
-}
-
-function contributionSentence(model) {
-  const lines = contributionSchedule(model);
-  if (!lines.length) return "";
-  return `${lines.map(([label, phrase]) => `${label} ${phrase}`).join(". ")}.`;
 }
 
 function contributionHeadline(model) {
@@ -817,13 +703,10 @@ function buildModel() {
     otherIncomeToday: readMoney($("client-retirement-income").value),
     oasRecoveryThreshold: oasAmounts.recoveryThreshold,
     oasRecoveryRate: oasAmounts.recoveryTaxRate,
-    workingIncomeToday: personalIncome + partnerIncome,
+    workingIncomeToday: personalIncome,
     rollover,
     startYear: tfsaContributionLimit.taxYear,
   });
-  const mix = null;
-  const allocation = null;
-
   const corporateAcb = ownsCorporation ? readMoney($("corporate-acb").value) : 0;
   const capitalDividend = Math.max(0, corporateCoverage - corporateAcb);
   const partnerCorporateAcb = partnerOwnsCorporation ? readMoney($("partner-corporate-acb").value) : 0;
@@ -910,8 +793,6 @@ function buildModel() {
     target,
     accounts,
     room,
-    mix,
-    allocation,
     portfolio,
     probate,
     personalCoverage,
@@ -1066,57 +947,16 @@ function guaranteedInsurabilitySentence() {
   return `A home purchase is in the plan.${mortgage} A guaranteed insurability rider is recommended for ${lives} so the coverage can be increased when the mortgage begins.`;
 }
 
-function lifeNarrative(model) {
-  const life = model.life;
-  const ratio = formatPercent(rateFrom("replacement-ratio"));
-  const shared = `The mortgage and other debts are ${formatDollars(life.debts)}, and education is ${formatDollars(life.educationCapital)} for ${life.educationCount} children. Those amounts are included if either person dies. Final expenses, probate, and tax at death stay in the need even after other coverage. On the chart, final expenses and probate rise with inflation. Tax at death on Fig. D1 and Fig. D2 follows Table F3: the tax on the balances that remain in that year of the retirement plan.`;
-  const person = `${personName()}: ${ratio} of income is ${formatDollars(life.annualIncomeNeed)} a year. ${formatDollars(life.annualIncomeNeed)} × ${life.years} years = ${formatDollars(life.incomeCapital)}. Existing coverage of ${formatDollars(life.existingLifeInsurance)} and assets of ${formatDollars(life.assetsAtDeath)} leave a life insurance gap of ${formatDollars(life.capitalNeed)}.`;
-  if (!model.spouseLife) return `${shared} ${person}`;
-  const spouse = model.spouseLife;
-  const partner = `${partnerName()}: ${ratio} of income is ${formatDollars(spouse.annualIncomeNeed)} a year. ${formatDollars(spouse.annualIncomeNeed)} × ${spouse.years} years = ${formatDollars(spouse.incomeCapital)}. Existing coverage of ${formatDollars(spouse.existingLifeInsurance)} and assets of ${formatDollars(spouse.assetsAtDeath)} leave a life insurance gap of ${formatDollars(spouse.capitalNeed)}.`;
-  return `${shared} ${person} ${partner}`;
-}
-
 function portfolioRow(model, age) {
   const rows = model.portfolio?.rows || [];
   if (!rows.length || age == null) return null;
   return rows.reduce((best, row) => (Math.abs(row.age - age) < Math.abs(best.age - age) ? row : best));
 }
 
-function wealthTotals(model) {
-  const rows = model.portfolio?.rows || [];
-  if (!rows.length) return null;
-  const retire = retirementAgeValue();
-  const atRetirement = retire == null ? null : portfolioRow(model, retire);
-  return {
-    atRetirement: atRetirement?.total ?? 0,
-    atDeath: rows[rows.length - 1].total,
-  };
-}
-
 function legacyGap(model) {
   const ending = model.portfolio?.ending ?? 0;
   const goal = model.retirement?.legacyAtDeath || 0;
   return { ending, goal, delta: ending - goal };
-}
-
-function retirementNarrative(model) {
-  const path = model.portfolio;
-  if (!path) return "Enter an age and a likely age at death after it to draw the balances.";
-  const end = path.rows[path.rows.length - 1];
-  const ranOut = path.depletedAge != null
-    ? `The balances reach $0 at age ${Math.round(path.depletedAge)}.`
-    : `At the end of the plan the balance is ${formatDollars(end.total)}.`;
-  const goal = model.retirement?.legacyAtDeath || 0;
-  const legacy = goal > 0
-    ? ` The legacy goal is ${formatDollars(goal)}. The balance at the end is ${formatDollars(Math.abs(end.total - goal))} ${end.total >= goal ? "past that goal" : "short of that goal"}.`
-    : "";
-  const retireRow = path.rows.find((row) => row.retired);
-  const pensionLine = retireRow
-    ? ` At retirement, CPP and OAS provide ${formatDollars(retireRow.pension)} and the accounts withdraw ${formatDollars(retireRow.withdrawal)} after tax.`
-    : "";
-  const schedule = contributionSentence(model);
-  return `${incomeTranslation(model.target)}${schedule ? ` ${schedule}` : ""} CPP and OAS cover part of the after-tax income. The accounts make up what remains, raised with inflation, from Other, non-registered, and the RRSP in proportion to those balances, so they run down together. The TFSA is used only after that pool is gone.${pensionLine} ${ranOut}${legacy}`;
 }
 
 function incomeTranslation(target) {
@@ -1211,13 +1051,6 @@ function pathSentence(points, chosenYears, usesAge, name, deathAgeId = "death-ag
   return `${opening} Income replacement stays at ${chosenYears} years through age ${holdThrough}, then steps down by one year each year of age. Those dollars rise with inflation. The mortgage pays down in a straight line. ${ending}${deathSentence}`;
 }
 
-function longevitySentence(model) {
-  const chosen = incomeYearsChosen();
-  const person = pathSentence(model.needPath, chosen, model.chartUsesAge, personName());
-  if (!model.partnerNeedPath) return person;
-  return `${person} ${pathSentence(model.partnerNeedPath, chosen, model.partnerChartUsesAge, partnerName(), "partner-death-age")}`;
-}
-
 function futureRoomSentence(model) {
   return `New room from next year through retirement, on top of the room available now, in each future year's dollars: TFSA ${formatDollars(model.room.householdTfsa)}, RRSP ${formatDollars(model.room.householdRrsp)}. The projection ignores a pension adjustment. TFSA limits after ${tfsaContributionLimit.taxYear} follow the inflation assumption and round to the nearest $500. Later RRSP dollar limits grow at ${formatPercent(model.room.rrspGrowth)} a year. TFSA room continues after retirement; this projection stops at the retirement age.`;
 }
@@ -1255,7 +1088,7 @@ function render() {
   const model = buildModel();
   const advisor = $("advisor-name").value.trim() || DEFAULT_ADVISOR.name;
   const firm = $("advisor-firm").value.trim() || DEFAULT_ADVISOR.firm;
-  const date = $("meeting-date").value || "Date not set";
+  const date = longDate($("meeting-date").value) || "Date not set";
   const preparedLine = `${date} · Prepared by ${advisor}, ${firm}`;
   const prepared = $("plan-prepared");
   if (prepared) prepared.textContent = preparedLine;
@@ -1349,7 +1182,7 @@ function render() {
   $("calc-notes").textContent = notes.join(" ");
   renderTfsaBreakdown(model.tfsa);
   $("tfsa-room-note").textContent = `Lifetime TFSA room on the schedule runs from ${tfsaContributionLimit.introducedYear} through ${tfsaContributionLimit.taxYear}. It assumes the birthday has already happened and Canadian residence in every year counted. Room available now is the amount you enter.`;
-  $("rrsp-room-note").textContent = `CPP uses earnings capped at the yearly maximum pensionable earnings, then the share of a 39-year contribution history already reached. One year at that cap is not the full maximum. OAS is years lived in Canada after 18, out of 40. Type a different amount, or use the maximum button. RRSP room available now is the amount you enter. New room ignores a pension adjustment.`;
+  $("rrsp-room-note").textContent = `CPP uses earnings capped at the yearly maximum pensionable earnings, then the share of a 39-year contribution history reached by retirement (at most 70). OAS counts years in Canada from 18 to 65, out of 40. Enter the age-65 amounts: the plan lowers CPP 0.6% a month when it starts before 65 and raises CPP 0.7% and OAS 0.6% a month when retirement is after 65, to 70. OAS rises 10% at 75. Type a different amount, or use the maximum button. RRSP room available now is the amount you enter. New room ignores a pension adjustment.`;
   $("future-room-note").textContent = futureRoomSentence(model);
   renderNeedChart(model);
   renderWealthChart(model);
@@ -1804,57 +1637,6 @@ function savingsDestination(model) {
   el.textContent = sentence;
 }
 
-function strategyPoint(outcome, model) {
-  if (!model.mix || !outcome) return null;
-  const age = ageOrNull("client-age");
-  const death = deathAgeValue();
-  if (age == null || death == null) return null;
-  const marginal = Number.isFinite(model.marginalNow) ? model.marginalNow : 0;
-  const retirementReturn = rateFrom("retirement-return");
-  const gap = model.retirement?.annualGap || 0;
-  const rough = plannedDraw(outcome, gap, 0);
-  const rate = rough.rrsp > 0 && model.retirement
-    ? taxOnInclusion(
-        model.retirement.pensionIncome,
-        rough.rrsp,
-        $("province").value,
-      ).rate
-    : 0;
-  const points = wealthPath({
-    opening: {
-      tfsa: model.accounts.tfsaBalance,
-      rrsp: model.accounts.rrspBalance,
-      nonReg: model.accounts.nonReg,
-    },
-    balancesByAge: outcome.balancesByAge,
-    currentAge: age,
-    retirementAge: retirementAgeValue(),
-    deathAge: death,
-    retirementReturn,
-    nonRegReturn: retirementReturn * (1 - 0.5 * marginal),
-    annualWithdrawal: plannedDraw(outcome, gap, rate).total,
-  });
-  return { points, atDeath: balanceAtAge(points, model.earlyAge) };
-}
-
-function taxOnPoint(point, age, model) {
-  if (!point) return 0;
-  const retirementAge = retirementAgeValue();
-  const retired = retirementAge != null && age >= retirementAge;
-  const base = retired && model.retirement
-    ? Math.max(0, readMoney($("client-retirement-income").value)) + model.retirement.cpp + model.retirement.oasNet
-    : Math.max(0, readMoney($("personal-income").value));
-  return deathTaxAtYear({
-    income: base,
-    rrsp: point.rrsp,
-    nonReg: point.nonReg,
-    estate: 0,
-    rollover: model.rollover,
-    province: $("province").value,
-    years: 0,
-  }).total;
-}
-
 function renderWealthChart(model) {
   const root = $("wealth-chart");
   const note = $("wealth-chart-note");
@@ -2066,7 +1848,7 @@ function renderPortfolioTable(model) {
     "Other",
     "Total",
     "Retirement income requested",
-    "CPP and OAS",
+    "CPP, OAS, and other income",
     "From the accounts",
     "Retirement income taken",
     "Tax on withdrawal",
@@ -2190,11 +1972,12 @@ function resetSession() {
     partnerCanadaYears: false,
     earlyDeath: false,
     disabilityMonths: false,
-    allocation: false,
   });
   fillDefaults();
   $("advisor-name").value = advisorName.trim() || DEFAULT_ADVISOR.name;
   $("advisor-firm").value = advisorFirm.trim() || DEFAULT_ADVISOR.firm;
+  questionnaireProfile = null;
+  syncInvestorProfileNote();
   ensureDependantInputs();
 }
 
@@ -2329,9 +2112,9 @@ function loadSample() {
   dirty.deathAge = true;
   $("partner-death-age").value = "88";
   dirty.partnerDeathAge = true;
-  $("canada-years").value = "24";
+  $("canada-years").value = "40";
   dirty.canadaYears = true;
-  $("partner-canada-years").value = "22";
+  $("partner-canada-years").value = "40";
   dirty.partnerCanadaYears = true;
 
   $("retirement-replacement").value = "70";
@@ -2397,7 +2180,6 @@ function markDirty(target) {
   if (target.id === "partner-canada-years") dirty.partnerCanadaYears = true;
   if (target.id === "early-death-age") dirty.earlyDeath = true;
   if (target.id === "disability-months") dirty.disabilityMonths = true;
-  if (target.id === "rrsp-share") dirty.allocation = true;
 }
 
 function syncInflation(target) {
@@ -2451,18 +2233,48 @@ function syncReturn(target) {
   }
 }
 
-function convertDesiredIncome(next) {
-  const mode = next === "future" ? "future" : "today";
-  if (mode === incomeMode) return;
-  const amount = readMoney($("desired-income").value);
-  const years = retirementHorizon().years || 0;
-  const inflation = inflationPercent();
-  if (amount > 0 && years > 0) {
-    const converted = mode === "future" ? inflate(amount, inflation, years) : deflate(amount, inflation, years);
-    $("desired-income").value = String(Math.round(converted));
+function setReturnsFromProfile(profile, { saving = true, retirement = true } = {}) {
+  if (saving) {
+    $("real-return").value = String(profile.saving);
+    $("real-return-slider").value = String(profile.saving);
   }
-  incomeMode = mode;
-  dirty.desired = true;
+  if (retirement) {
+    $("retirement-return").value = String(profile.retirement);
+    $("retirement-return-slider").value = String(profile.retirement);
+  }
+}
+
+function syncInvestorProfileNote() {
+  const note = $("investor-profile-note");
+  const chosen = investorProfiles.profileByKey($("investor-profile").value);
+  if (!chosen) {
+    note.textContent = defaultProfileNote;
+    return;
+  }
+  const parts = [
+    `${investorProfiles.describe(chosen)}.`,
+    `Suggested return: ${chosen.saving}% while saving, ${chosen.retirement}% in retirement.`,
+  ];
+  if (questionnaireProfile && questionnaireProfile !== chosen) {
+    const riskier = chosen.level > questionnaireProfile.level;
+    parts.push(`Your investor questionnaire result was ${questionnaireProfile.name}${riskier ? ", so this assumes more risk than you said you are comfortable with" : ""}.`);
+  }
+  note.textContent = parts.join(" ");
+}
+
+function syncInvestorProfile(target) {
+  if (!target) return;
+  if (target.id === "investor-profile") {
+    const chosen = investorProfiles.profileByKey(target.value);
+    if (chosen) setReturnsFromProfile(chosen);
+  } else if (target.id === "real-return" || target.id === "real-return-slider") {
+    if ($("real-return").value.trim() === "") return;
+    const matched = investorProfiles.profileForReturn(readMoney($("real-return").value));
+    if (matched) $("investor-profile").value = matched.key;
+  } else {
+    return;
+  }
+  syncInvestorProfileNote();
 }
 
 function initProvinces() {
@@ -2570,6 +2382,13 @@ function applyPrefillFromUrl() {
     }
   }
 
+  questionnaireProfile = investorProfiles.profileByKey(params.get("iq-profile"));
+  const profile = investorProfiles.profileByKey(params.get("investor-profile"));
+  if (profile) {
+    $("investor-profile").value = profile.key;
+    setReturnsFromProfile(profile, { saving: !params.has("real-return"), retirement: !params.has("retirement-return") });
+  }
+
   if (params.has("real-return")) {
     $("real-return-slider").value = String(Math.min(14, Math.max(0, readMoney($("real-return").value))));
   }
@@ -2595,12 +2414,15 @@ function init() {
   fillDefaults();
   $("advisor-name").value = DEFAULT_ADVISOR.name;
   $("advisor-firm").value = DEFAULT_ADVISOR.firm;
+  defaultProfileNote = $("investor-profile-note").textContent;
   applyPrefillFromUrl();
+  syncInvestorProfileNote();
   render();
 
   $("worksheet").addEventListener("input", (event) => {
     syncInflation(event.target);
     syncReturn(event.target);
+    syncInvestorProfile(event.target);
     syncIncomeYears(event.target);
     markDirty(event.target);
     render();
@@ -2617,8 +2439,7 @@ function init() {
   });
   $("use-max-oas").addEventListener("click", () => {
     dirty.oas = true;
-    const age = blank("retirement-age") ? 65 : readMoney($("retirement-age").value);
-    $("oas-annual").value = moneyInput(maxAnnualOas(age));
+    $("oas-annual").value = moneyInput(maxAnnualOas(65));
     render();
   });
   $("use-max-partner-cpp").addEventListener("click", () => {
@@ -2636,8 +2457,17 @@ function init() {
     const panels = [...document.querySelectorAll("#worksheet details")];
     const wasOpen = panels.map((panel) => panel.open);
     panels.forEach((panel) => { panel.open = true; });
+    const title = document.title;
+    const names = hasPartner() ? `${personName()}-${partnerName()}` : personName();
+    const fileName = ["Financial-Plan", names, $("meeting-date").value]
+      .filter(Boolean)
+      .join("-")
+      .replace(/[^\w-]+/g, "-")
+      .replace(/-+/g, "-");
+    document.title = fileName;
     const restore = () => {
       panels.forEach((panel, index) => { panel.open = wasOpen[index]; });
+      document.title = title;
       window.removeEventListener("afterprint", restore);
     };
     window.addEventListener("afterprint", restore);

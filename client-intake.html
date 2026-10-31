@@ -51,6 +51,7 @@
           <a href="/tfsa-calculator.html" data-nav="tfsa" role="menuitem">TFSA Calculator</a>
           <a href="/needs-analysis.html" data-nav="plan" role="menuitem">Financial Plan</a>
           <a href="/client-intake.html" data-nav="intake" role="menuitem">Client Intake</a>
+          <a href="/investor-questionnaire.html" data-nav="iq" role="menuitem">Investor Questionnaire</a>
         </div>
       </div>
       <a href="/insights.html" data-nav="insights" class="site-nav-link hover:text-navydeep transition">Insights</a>
@@ -71,9 +72,10 @@
     <a href="/tfsa-calculator.html" data-nav="tfsa" class="py-2 pl-2">TFSA Calculator</a>
     <a href="/needs-analysis.html" data-nav="plan" class="py-2 pl-2">Financial Plan</a>
     <a href="/client-intake.html" data-nav="intake" class="py-2 pl-2">Client Intake</a>
+    <a href="/investor-questionnaire.html" data-nav="iq" class="py-2 pl-2">Investor Questionnaire</a>
     <a href="/insights.html" data-nav="insights" class="py-2">Insights</a>
     <a href="/contact.html" data-nav="contact" class="py-2">Contact</a>
-    <a href="/schedule.html" data-nav="schedule" class="py-2">Schedule</a>
+    <a href="/schedule.html" data-nav="schedule" class="py-2">Book a Meeting</a>
   </div>
 </header>
 
@@ -82,13 +84,14 @@
   <div class="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[linear-gradient(90deg,transparent,rgba(193,165,123,0.08),transparent)]" aria-hidden="true"></div>
 
   <div class="relative mx-auto max-w-xl px-6 md:px-8 pt-14 pb-24">
-    <p class="text-[12px] font-semibold tracking-[0.16em] uppercase text-golddim mb-4">Confidential &middot; About 10 minutes</p>
+    <p class="flex items-center gap-2 text-[12px] font-semibold tracking-[0.16em] uppercase text-golddim mb-4"><svg width="18" height="14" viewBox="0 0 20 16" fill="none" aria-hidden="true"><path d="M1 2 L10 14 L19 2" stroke="currentColor" stroke-width="2.4"/></svg>Confidential &middot; About 10 minutes</p>
     <h1 class="font-serif font-semibold text-4xl md:text-5xl leading-[1.08] text-navydeep mb-4">Client intake</h1>
     <p class="text-[15.5px] leading-7 text-inksoft mb-10">Answer only what appears. Each answer opens the next detail needed for your financial plan. Nothing here is an application for insurance.</p>
 
     <form id="client-intake-form" name="client-intake" method="POST" data-netlify="true" netlify-honeypot="bot-field" class="flex flex-col gap-7" novalidate>
       <input type="hidden" name="form-name" value="client-intake">
       <input type="hidden" name="plan-link" id="plan-link-field" value="">
+      <input type="hidden" name="iq-link" id="iq-link-field" value="">
       <p class="hidden" aria-hidden="true"><label>Don't fill this out if you're human: <input name="bot-field" tabindex="-1" autocomplete="off"></label></p>
 
       <div class="intake-step" data-step="name">
@@ -250,6 +253,20 @@
       </div>
 
       <div class="intake-step hidden space-y-5" data-step="returns" data-requires="legacy">
+        <div>
+          <label class="block text-sm font-medium text-navydeep" for="intake-investor-profile">Investor profile
+            <select id="intake-investor-profile" name="investor-profile" class="mt-2 w-full rounded-sm border border-line bg-white/90 px-3.5 py-3 text-base shadow-sm focus:border-gold focus:outline-none">
+              <option value="">Not sure yet</option>
+              <option value="minimal-risk">Minimal Risk (0% equity, 100% fixed income)</option>
+              <option value="conservative">Conservative (20% equity, 80% fixed income)</option>
+              <option value="moderate-conservative">Moderate Conservative (40% equity, 60% fixed income)</option>
+              <option value="balanced">Balanced (60% equity, 40% fixed income)</option>
+              <option value="growth">Growth (80% equity, 20% fixed income)</option>
+              <option value="aggressive-growth">Aggressive Growth (100% equity)</option>
+            </select>
+          </label>
+          <p id="intake-profile-note" class="mt-2 text-sm leading-6 text-inksoft">Not sure? The <a href="/investor-questionnaire.html" target="_blank" rel="noopener" class="font-medium text-navydeep underline">investor questionnaire</a> (opens in a new tab) finds your profile in about 5 minutes. Choosing a profile sets the return rates below.</p>
+        </div>
         <label class="block text-sm font-medium text-navydeep" for="intake-return-saving">Estimated rate of return while saving (%)
           <input id="intake-return-saving" name="real-return" inputmode="decimal" value="5" class="mt-2 w-full rounded-sm border border-line bg-white/90 px-3.5 py-3 text-base shadow-sm focus:border-gold focus:outline-none" />
         </label>
@@ -289,30 +306,58 @@
         </div>
       </div>
     </form>
+
+    <aside id="intake-iq-card" class="mt-16 border border-line bg-white/90 px-5 py-6 md:px-7">
+      <p class="text-[11.5px] font-semibold uppercase tracking-[0.14em] text-golddim">Recommended next step</p>
+      <h2 class="mt-2 font-serif text-2xl text-navydeep">Complete the investor questionnaire</h2>
+      <p class="mt-2 text-[15px] leading-7 text-inksoft">Thirteen quick questions that measure your comfort with investment risk and point to a recommended portfolio mix. About 5 minutes.</p>
+      <a href="/investor-questionnaire.html" target="_blank" rel="noopener" class="mt-5 inline-flex items-center gap-2 px-6 py-3 rounded-sm bg-navydeep text-white text-sm font-semibold hover:bg-navy transition">
+        Start the investor questionnaire
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10h12m0 0-5-5m5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </aside>
   </div>
 </main>
 
-<footer class="bg-navydeep text-white/70 pt-14 pb-8">
+<footer class="bg-navydeep text-white/70 pt-14 pb-7">
   <div class="max-w-6xl mx-auto px-6 md:px-8">
-    <div class="grid md:grid-cols-3 gap-10 pb-10 border-b border-white/10">
-      <div>
-        <img src="assets/logo.png" alt="Marchand Wealth logo" width="700" height="161" class="h-8 w-auto mb-3.5 brightness-0 invert">
+    <div class="flex flex-wrap justify-between gap-10 pb-9 border-b border-white/10">
+      <div class="max-w-xs">
+        <div class="flex items-center gap-3 mb-4">
+          <img src="/assets/ethan-headshot.jpg" alt="Ethan Marchand" width="320" height="320" class="w-12 h-12 rounded-full object-cover flex-shrink-0">
+          <div>
+            <p class="text-white text-sm font-semibold m-0">Ethan Marchand</p>
+            <p class="text-white/55 text-[12px] m-0">Independent Insurance &amp; Wealth Advisor</p>
+          </div>
+        </div>
+        <img src="/assets/logo.png" alt="Marchand Wealth logo" width="700" height="161" class="h-8 w-auto mb-3.5 brightness-0 invert">
         <p class="text-white/55 text-sm m-0">Tax-efficient insurance and wealth planning for Alberta individuals, families, and business owners.</p>
       </div>
       <div>
         <h4 class="text-white text-[15px] mb-3.5">Site</h4>
         <div class="flex flex-col gap-2 text-sm">
-          <a href="index.html" class="hover:text-goldlight">Home</a>
-          <a href="needs-analysis.html" class="hover:text-goldlight">Needs Analysis</a>
-          <a href="client-intake.html" class="hover:text-goldlight">Client Intake Form</a>
-          <a href="contact.html" class="hover:text-goldlight">Contact</a>
-          <a href="schedule.html" class="hover:text-goldlight">Schedule a Meeting</a>
+          <a href="/index.html" class="hover:text-goldlight">Home</a>
+          <a href="/index.html#services" class="hover:text-goldlight">Services</a>
+          <a href="/index.html#faq" class="hover:text-goldlight">FAQ</a>
+          <a href="/insights.html" class="hover:text-goldlight">Insights</a>
+          <a href="/contact.html" class="hover:text-goldlight">Contact</a>
+          <a href="/schedule.html" class="hover:text-goldlight">Book a Meeting</a>
+        </div>
+      </div>
+      <div>
+        <h4 class="text-white text-[15px] mb-3.5">Tools</h4>
+        <div class="flex flex-col gap-2 text-sm">
+          <a href="/life-insurance-quote.html" class="hover:text-goldlight">Get a Quote</a>
+          <a href="/tfsa-calculator.html" class="hover:text-goldlight">TFSA Calculator</a>
+          <a href="/needs-analysis.html" class="hover:text-goldlight">Financial Plan</a>
+          <a href="/client-intake.html" class="hover:text-goldlight">Client Intake</a>
+          <a href="/investor-questionnaire.html" class="hover:text-goldlight">Investor Questionnaire</a>
         </div>
       </div>
       <div>
         <h4 class="text-white text-[15px] mb-3.5">Contact</h4>
         <div class="flex flex-col gap-2 text-sm">
-          <a href="tel:+17808680552" class="hover:text-goldlight">iPhone: 780-868-0552</a>
+          <a href="tel:+17808680552" class="hover:text-goldlight">Call or text: 780-868-0552</a>
           <a href="mailto:ethan@marchandwealth.ca" class="hover:text-goldlight">ethan@marchandwealth.ca</a>
           <span>Sherwood Park, Alberta</span>
         </div>
@@ -326,6 +371,7 @@
 </footer>
 
 <script src="script.js"></script>
+<script src="investor-profiles.js"></script>
 <script src="client-intake.js"></script>
 </body>
 </html>

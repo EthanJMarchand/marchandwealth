@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'tfsa-calculator.html': 'tfsa',
     'needs-analysis.html': 'plan',
     'client-intake.html': 'intake',
+    'investor-questionnaire.html': 'iq',
     'insights.html': 'insights',
     'insight.html': 'insights',
     'contact.html': 'contact',
@@ -39,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   let activeKey = navKeyByFile[file] || null;
   if (!activeKey && path.includes('/insights/')) activeKey = 'insights';
-  const toolKeys = new Set(['quote', 'tfsa', 'plan', 'intake']);
+  const toolKeys = new Set(['quote', 'tfsa', 'plan', 'intake', 'iq']);
   document.querySelectorAll('[data-nav]').forEach((link) => {
     if (link.getAttribute('data-nav') === activeKey) {
       link.classList.add('is-active');
@@ -395,18 +396,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Shows the calendar, or a backup plan if Google's having a day.
-  const gcalFrame = document.getElementById('gcal-embed');
-  const gcalFallback = document.getElementById('gcal-fallback');
-  if (gcalFrame && gcalFallback) {
-    const src = gcalFrame.getAttribute('src') || '';
-    if (!src || src.includes('PASTE_YOUR_APPOINTMENT_LINK_HERE')) {
-      gcalFrame.style.display = 'none';
-      gcalFallback.classList.remove('hidden');
-      gcalFallback.classList.add('flex');
-    }
-  }
-
   // The whole TFSA calculator lives below. Built by hand, checked by caffeine.
   const tfsaAgeInput = document.getElementById('tfsa-age');
   if (tfsaAgeInput && typeof TFSA_ANNUAL_LIMITS !== 'undefined') {
@@ -524,13 +513,15 @@ document.addEventListener('DOMContentLoaded', () => {
           finalPartialMonth = Math.round((backlog - fullMonthsThisYear * plannedMonthlyContribution) * 100) / 100;
           if (finalPartialMonth < 0.5) finalPartialMonth = 0;
         }
-        rows.push({ year: currentYear, age: currentAge, monthlyContribution: currentYearContribution / 12, capped: true });
+        rows.push({ year: currentYear, age: currentAge + 1, monthlyContribution: currentYearContribution / 12, capped: true });
         backlog = 0;
       }
 
-      for (let k = 1; k <= totalYears; k++) {
+      // Each row is 12 months of deposits, so the paused year counts toward the years until retirement.
+      const offset = pausedThisYear ? 1 : 0;
+      for (let k = 1; k <= totalYears - offset; k++) {
         const year = currentYear + k;
-        const age = currentAge + k;
+        const age = currentAge + k + offset;
         const newRoomThisYear = projectedLimitForYear(year);
         const availableThisYear = backlog + newRoomThisYear;
         const annualContribution = Math.min(plannedAnnual, availableThisYear);
@@ -754,7 +745,9 @@ document.addEventListener('DOMContentLoaded', () => {
             paceParts.push(`one final payment of ${currency(schedule.finalPartialMonth)}`);
           }
           const paceDescription = paceParts.length ? paceParts.join(', then ') : `a single ${currency(schedule.currentYearContribution)} contribution`;
-          el.contributionNote.textContent = `That's more than you're allowed to contribute right now — only ${currency(availableRoomNow)} of room is available this year. At ${currency(plannedMonthly)}/mo, that covers ${paceDescription}, for ${currency(schedule.currentYearContribution)} total this year. We've modeled contributions resuming next year once fresh room becomes available.`;
+          el.contributionNote.textContent = schedule.currentYearContribution > 0
+            ? `That's more than you're allowed to contribute right now — only ${currency(availableRoomNow)} of room is available this year. At ${currency(plannedMonthly)}/mo, that covers ${paceDescription}, for ${currency(schedule.currentYearContribution)} total this year. We've modelled contributions resuming next year once fresh room becomes available.`
+            : `There's no TFSA room available this year, so we've modelled contributions starting next year once fresh room becomes available.`;
           el.contributionNote.classList.remove('hidden');
         } else {
           el.contributionNote.classList.add('hidden');

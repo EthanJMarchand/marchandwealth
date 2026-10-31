@@ -150,14 +150,30 @@ export function withdrawProRataTaxable({
   };
 }
 
-// Each person's CPP counts from the later of retirement and age 60.
-// OAS counts from that person's age 65. Amounts are today's dollars;
-// the caller raises them with inflation.
+const clampAge = (age, low, high) => Math.min(high, Math.max(low, Math.floor(age)));
+
+// CPP drops 0.6% a month before 65 and rises 0.7% a month after, to age 70.
+function cppStartFactor(startAge) {
+  const start = clampAge(startAge, 60, 70);
+  return start < 65 ? 1 - 0.072 * (65 - start) : 1 + 0.084 * (start - 65);
+}
+
+// OAS rises 0.6% a month for each month deferred past 65, to age 70, and 10% at 75.
+function oasFactor(startAge, age) {
+  const start = clampAge(startAge, 65, 70);
+  return (1 + 0.072 * (start - 65)) * (age >= 75 ? 1.1 : 1);
+}
+
+// CPP and OAS amounts are the age-65 figures in today's dollars; the caller raises them
+// with inflation. Each person starts CPP at the later of retirement and 60, and OAS at the
+// later of retirement and 65, both capped at 70. The spouse retires with Person 1.
 // The recovery screen uses today's OAS threshold against today's pension income.
 function pensionCash({
   retired,
   age,
+  retireAge,
   partnerAge,
+  partnerRetireAge,
   clientCpp,
   clientOas,
   partnerCpp,
@@ -166,16 +182,23 @@ function pensionCash({
   threshold,
   rate,
 }) {
-  if (!retired) return 0;
-  const cpp = age >= 60 ? Math.max(0, clientCpp) : 0;
-  let oas = age >= 65 ? Math.max(0, clientOas) : 0;
+  if (!retired) return { client: 0, spouse: 0 };
+  const cppStart = clampAge(retireAge, 60, 70);
+  const oasStart = clampAge(retireAge, 65, 70);
+  const cpp = age >= cppStart ? Math.max(0, clientCpp) * cppStartFactor(cppStart) : 0;
+  let oas = age >= oasStart ? Math.max(0, clientOas) * oasFactor(oasStart, age) : 0;
   const proxy = Math.max(0, otherIncome) + cpp + oas;
   if (threshold > 0 && proxy > threshold) {
     oas -= Math.min(oas, rate * (proxy - threshold));
   }
-  const spouseCpp = partnerAge != null && partnerAge >= 60 ? Math.max(0, partnerCpp) : 0;
-  const spouseOas = partnerAge != null && partnerAge >= 65 ? Math.max(0, partnerOas) : 0;
-  return cpp + oas + spouseCpp + spouseOas;
+  let spouse = 0;
+  if (partnerAge != null) {
+    const spouseCppStart = clampAge(partnerRetireAge, 60, 70);
+    const spouseOasStart = clampAge(partnerRetireAge, 65, 70);
+    if (partnerAge >= spouseCppStart) spouse += Math.max(0, partnerCpp) * cppStartFactor(spouseCppStart);
+    if (partnerAge >= spouseOasStart) spouse += Math.max(0, partnerOas) * oasFactor(spouseOasStart, partnerAge);
+  }
+  return { client: cpp + oas, spouse };
 }
 
 // Year-by-year balances. Contributions are capped by room. At retirement,
@@ -254,7 +277,9 @@ export function projectPortfolio({
     const pension = pensionCash({
       retired,
       age,
+      retireAge: retire,
       partnerAge: Number.isFinite(partnerAge) ? partnerAge + year : null,
+      partnerRetireAge: Number.isFinite(partnerAge) ? partnerAge + (retire - ageNow) : null,
       clientCpp: clientCppToday,
       clientOas: clientOasToday,
       partnerCpp: partnerCppToday,
@@ -263,13 +288,14 @@ export function projectPortfolio({
       threshold: oasRecoveryThreshold,
       rate: oasRecoveryRate,
     });
-    const pensionNominal = pension * factor;
-    const otherNominal = Math.max(0, otherIncomeToday) * factor;
-    const pensionTax = taxNominal(otherNominal, pensionNominal, factor, province);
-    const afterTaxPension = Math.max(0, pensionNominal - pensionTax);
+    const clientPensionNominal = pension.client * factor;
+    const pensionNominal = (pension.client + pension.spouse) * factor;
+    const otherNominal = retired ? Math.max(0, otherIncomeToday) * factor : 0;
+    const incomeTax = taxNominal(0, pensionNominal + otherNominal, factor, province);
+    const afterTaxIncome = Math.max(0, pensionNominal + otherNominal - incomeTax);
     // Requested after-tax income, raised with inflation from today's dollars.
-    // CPP and OAS are kept in full even when they exceed that request; accounts
-    // only top up a shortfall.
+    // CPP, OAS, and other income are kept in full even when they exceed that
+    // request; accounts only top up a shortfall.
     const incomeRequested = retired ? Math.max(0, desiredIncomeToday) * factor : 0;
 
     // Tax if death this year is on the balances before retirement withdrawals.
@@ -281,13 +307,13 @@ export function projectPortfolio({
     const nonRegGainAtDeath = Math.max(0, nonReg - nonRegAcb);
     const otherGainAtDeath = Math.max(0, other - otherAcb);
     const totalAtDeath = tfsa + rrsp + nonReg + other;
-    const deathBase = retired ? otherNominal + pensionNominal : Math.max(0, workingIncomeToday) * factor;
+    const deathBase = retired ? otherNominal + clientPensionNominal : Math.max(0, workingIncomeToday) * factor;
     const deathInclusion = (rollover ? 0 : rrspAtDeath)
       + nonRegGainAtDeath * CAPITAL_GAINS_INCLUSION
       + otherGainAtDeath * CAPITAL_GAINS_INCLUSION;
     const deathTax = taxNominal(deathBase, deathInclusion, factor, province);
 
-    let need = Math.max(0, incomeRequested - afterTaxPension);
+    let need = Math.max(0, incomeRequested - afterTaxIncome);
     let tax = 0;
     let base = otherNominal + pensionNominal;
     const taxable = withdrawProRataTaxable({
@@ -313,8 +339,8 @@ export function projectPortfolio({
     tfsa -= tfsaTake;
     need -= tfsaTake;
 
-    const withdrawal = Math.max(0, incomeRequested - afterTaxPension - need);
-    const incomeTaken = afterTaxPension + withdrawal;
+    const withdrawal = Math.max(0, incomeRequested - afterTaxIncome - need);
+    const incomeTaken = afterTaxIncome + withdrawal;
     const total = tfsa + rrsp + nonReg + other;
     const short = retired && need > 1;
     if (short && depletedAge == null) depletedAge = age;
@@ -328,7 +354,7 @@ export function projectPortfolio({
       nonRegIn,
       incomeRequested,
       pension: pensionNominal,
-      pensionNet: afterTaxPension,
+      pensionNet: afterTaxIncome,
       withdrawal,
       incomeTaken,
       tax,

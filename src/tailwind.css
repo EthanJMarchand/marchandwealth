@@ -3,8 +3,6 @@
 @tailwind utilities;
 
 html { scroll-behavior: smooth; }
-body { font-family: 'Inter', sans-serif; }
-.font-serif { font-family: 'Fraunces', serif; }
 
 /* Shared site header — keep markup identical on every page */
 .site-nav-link.is-active {
@@ -43,7 +41,7 @@ body { font-family: 'Inter', sans-serif; }
 .site-nav-dropdown-menu a {
   display: block;
   padding: 0.65rem 0.8rem;
-  color: #5c6570;
+  color: #565f6c;
   font-size: 0.875rem;
   font-weight: 500;
   transition: color 120ms ease, background-color 120ms ease;
@@ -124,11 +122,47 @@ body { font-family: 'Inter', sans-serif; }
   50% { transform: translateY(4px); }
 }
 
+/* Investor questionnaire */
+.iq-option:has(input:checked) {
+  border-color: #c1a57b;
+  background: #fbf8f2;
+  box-shadow: inset 3px 0 0 #c1a57b;
+}
+.iq-option:focus-within {
+  border-color: #c1a57b;
+}
+.iq-step:not(.hidden) {
+  animation: iq-reveal 360ms ease both;
+}
+@keyframes iq-reveal {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.iq-profile {
+  transition: filter 200ms ease, opacity 200ms ease, box-shadow 200ms ease;
+}
+.iq-profile.is-muted {
+  filter: grayscale(1);
+  opacity: 0.42;
+}
+.iq-profile.is-active {
+  border-color: #c1a57b;
+  box-shadow: 0 0 0 1px #c1a57b, 0 12px 26px rgba(35, 42, 53, 0.1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .iq-step:not(.hidden) { animation: none; }
+}
+
 /* Ensure the native `hidden` attribute always wins over Tailwind's display
    utilities (flex/grid/block), regardless of class source order. Used by the
    intake form's personal/business toggle so `el.hidden = true/false` works
    reliably no matter what display utility an element also carries. */
 [hidden] { display: none !important; }
+
+@media print {
+  .no-print,
+  body > footer { display: none !important; }
+}
 
 /* FAQ accordions (homepage + TFSA calculator) */
 .faq-answer { max-height: 0; overflow: hidden; transition: max-height .3s ease; }
@@ -261,9 +295,6 @@ body.needs-worksheet #portfolio-table thead th.portfolio-sticky-year {
 }
 body.needs-worksheet #portfolio-table tr.portfolio-early-row .portfolio-sticky-year,
 body.needs-worksheet #portfolio-table tr.portfolio-early-row td {
-  background: #fef2f2;
-}
-body.needs-worksheet #portfolio-table tr.portfolio-early-row .portfolio-sticky-year {
   background: #fef2f2;
 }
 body.needs-worksheet .need-chart,
@@ -435,7 +466,17 @@ body.needs-worksheet .print-only {
 @media print {
   @page {
     size: letter landscape;
-    margin: 0.4in 0.45in;
+    margin: 0.4in 0.45in 0.55in;
+    @bottom-left {
+      content: "Marchand Financial Solutions Inc.  ·  marchandwealth.ca  ·  ethan@marchandwealth.ca  ·  780-868-0552";
+      font: 7.5pt Inter, Helvetica, Arial, sans-serif;
+      color: #565f6c;
+    }
+    @bottom-right {
+      content: "Page " counter(page) " of " counter(pages);
+      font: 7.5pt Inter, Helvetica, Arial, sans-serif;
+      color: #565f6c;
+    }
   }
 
   body.needs-worksheet .plan-ref,

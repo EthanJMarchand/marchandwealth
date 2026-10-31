@@ -2,7 +2,7 @@
   "name": "marchand-wealth-site",
   "private": true,
   "version": "1.0.0",
-  "description": "Marchand Wealth marketing site, intake form, scheduler, and TFSA calculator",
+  "description": "Marchand Wealth marketing site and client tools",
   "scripts": {
     "build:css": "tailwindcss -i ./src/tailwind.css -o ./assets/css/site.css --minify",
     "watch:css": "tailwindcss -i ./src/tailwind.css -o ./assets/css/site.css --watch",

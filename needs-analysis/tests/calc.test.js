@@ -6,7 +6,6 @@ import { planningAssumptions as assumptions } from "../data/planning-assumptions
 import { provinceOrder, probateFees } from "../data/probate-fees.js";
 import { rrspLimits } from "../data/rrsp-limits.js";
 import { tfsaAnnualLimits, tfsaContributionLimit } from "../data/tfsa-contribution-limit.js";
-import { allocationOutcome, accountCoversGoal, requiredOutOfPocket } from "../js/calc/allocation.js";
 import { projectFutureRoom, tfsaLimitForYear } from "../js/calc/contribution-room.js";
 import { deflate, inflate, purchasingPowerPath, roundPercent, trailingAverage } from "../js/calc/inflation.js";
 import { groupLimitYears, tfsaRoomEarned } from "../js/calc/tfsa-room.js";
@@ -17,9 +16,8 @@ import { incomeReplacementYears, incomeYearsAtAge, projectLifeNeed } from "../js
 import { CPP_FULL_CAREER_YEARS, cppContributionYears, estimateCpp, estimateOas } from "../js/calc/pensions.js";
 import { calculateProbate } from "../js/calc/probate.js";
 import { criticalIllnessLumpSum, disabilityMonthlyBenefit } from "../js/calc/protection.js";
-import { calculateRetirement, taxableRetirementIncome } from "../js/calc/retirement.js";
+import { calculateRetirement } from "../js/calc/retirement.js";
 import { depositsOverYears, describeDeposits, projectPortfolio, withdrawProRataTaxable } from "../js/calc/portfolio-path.js";
-import { balanceAfterWithdrawals, balanceAtAge, wealthPath } from "../js/calc/wealth-path.js";
 import { taxOnIncome, taxOnInclusion } from "../js/calc/tax.js";
 
 let failed = 0;
@@ -451,11 +449,6 @@ test("a large income goal does not claw back OAS when the taxable income is only
   assert.ok(cpp + oas < 95323);
 });
 
-test("OAS income counts RRSP withdrawals and half of non-registered withdrawals, and leaves TFSA withdrawals out", () => {
-  assert.equal(taxableRetirementIncome({ otherTaxable: 10000, rrspWithdrawal: 40000, nonRegisteredWithdrawal: 20000 }), 60000);
-  assert.equal(taxableRetirementIncome({}), 0);
-});
-
 test("already retired means the shortfall is a lump sum, not an annual savings plan", () => {
   const result = calculateRetirement({
     years: 0,
@@ -557,120 +550,6 @@ test("future room uses published limits first and does not repeat current room",
   assert.equal(room.clientTfsa, 7000 + 7500);
   assert.ok(room.years[1].dollarLimit > 35390);
   assert.equal(room.years[1].dollarLimit % 10, 0);
-});
-
-test("the TFSA and RRSP slider uses current room before projected room", () => {
-  const capped = allocationOutcome({
-    annualSavings: 10000,
-    rrspShare: 0,
-    years: 1,
-    savingsReturn: 0,
-    inflationRate: 0,
-    currentTfsaBalance: 0,
-    currentRrspBalance: 0,
-    currentTfsaRoom: 6000,
-    currentRrspRoom: 20000,
-    futureYears: [],
-    taxNow: null,
-  });
-  assert.equal(capped.thisYear.tfsa, 6000);
-  assert.equal(capped.thisYear.rrsp, 4000);
-  assert.equal(capped.thisYear.unsheltered, 0);
-  assert.equal(capped.tfsa, 6000);
-
-  const later = allocationOutcome({
-    annualSavings: 1000,
-    rrspShare: 1,
-    years: 2,
-    savingsReturn: 0,
-    inflationRate: 0,
-    currentTfsaBalance: 0,
-    currentRrspBalance: 5000,
-    currentTfsaRoom: 0,
-    currentRrspRoom: 0,
-    futureYears: [{ clientTfsa: 0, partnerTfsa: 0, clientRrsp: 4000, partnerRrsp: 0 }],
-    taxNow: 0.3,
-  });
-  assert.equal(later.usedJanuaryRoom, true);
-  assert.ok(Math.abs(later.thisYear.rrsp - 1000 / 0.7) < 0.001);
-  assert.equal(later.thisYear.unsheltered, 0);
-  assert.ok(Math.abs(later.rrspDeposits - (2000 / 0.7)) < 0.01);
-  assert.ok(later.thisYear.refund > 0);
-});
-
-test("a maxed-out year uses January room, and non-registered is only the overflow", () => {
-  const fits = allocationOutcome({
-    annualSavings: 10000,
-    rrspShare: 0,
-    years: 1,
-    savingsReturn: 0,
-    inflationRate: 0,
-    currentTfsaBalance: 0,
-    currentRrspBalance: 0,
-    currentClientTfsaRoom: 0,
-    currentPartnerTfsaRoom: 0,
-    currentClientRrspRoom: 0,
-    currentPartnerRrspRoom: 0,
-    futureYears: [{ clientTfsa: 7000, partnerTfsa: 0, clientRrsp: 17100, partnerRrsp: 0 }],
-    taxNow: 0.4,
-  });
-  assert.equal(fits.usedJanuaryRoom, true);
-  assert.equal(fits.thisYear.tfsa, 7000);
-  assert.equal(fits.thisYear.rrsp, 5000);
-  assert.equal(fits.thisYear.unsheltered, 0);
-
-  const overflow = allocationOutcome({
-    annualSavings: 40000,
-    rrspShare: 0,
-    years: 1,
-    savingsReturn: 0,
-    inflationRate: 0,
-    currentTfsaBalance: 0,
-    currentRrspBalance: 0,
-    currentClientTfsaRoom: 0,
-    currentPartnerTfsaRoom: 0,
-    currentClientRrspRoom: 0,
-    currentPartnerRrspRoom: 0,
-    futureYears: [{ clientTfsa: 7000, partnerTfsa: 0, clientRrsp: 17100, partnerRrsp: 0 }],
-    taxNow: 0.4,
-  });
-  assert.equal(overflow.thisYear.tfsa, 7000);
-  assert.equal(overflow.thisYear.rrsp, 17100);
-  assert.equal(overflow.thisYear.unsheltered, 22740);
-});
-
-test("TFSA and RRSP deposits stay inside each person's room, including the refund", () => {
-  const blocked = allocationOutcome({
-    annualSavings: 50000,
-    rrspShare: 1,
-    years: 2,
-    savingsReturn: 0,
-    inflationRate: 0,
-    currentTfsaBalance: 0,
-    currentRrspBalance: 0,
-    currentClientTfsaRoom: 7000,
-    currentPartnerTfsaRoom: 7000,
-    currentClientRrspRoom: 3000,
-    currentPartnerRrspRoom: 4000,
-    futureYears: [{ clientTfsa: 7000, partnerTfsa: 7000, clientRrsp: 5000, partnerRrsp: 5000 }],
-    taxNow: 0.4,
-  });
-  const first = blocked.thisYear;
-  assert.equal(first.clientRrsp, 3000);
-  assert.equal(first.partnerRrsp, 4000);
-  assert.equal(first.rrsp, 7000);
-  assert.equal(first.refund, 2800);
-  assert.equal(first.rrspFromSavings, 4200);
-  assert.equal(first.clientTfsa, 7000);
-  assert.equal(first.partnerTfsa, 7000);
-  assert.equal(first.unsheltered, 31800);
-  const second = blocked.yearly[1];
-  assert.equal(second.clientRrsp, 5000);
-  assert.equal(second.partnerRrsp, 5000);
-  assert.equal(second.clientTfsa, 7000);
-  assert.equal(second.partnerTfsa, 7000);
-  assert.ok(second.rrsp <= 10000);
-  assert.equal(second.rrspFromSavings + second.refund, second.rrsp);
 });
 
 test("years of income run until retirement or an earlier death", () => {
@@ -827,133 +706,6 @@ test("critical illness is a lump sum and disability is a monthly amount", () => 
   assert.equal(criticalIllnessLumpSum(100000, 0.7, 18), 105000);
   assert.equal(disabilityMonthlyBenefit(120000, 0.7), 7000);
   assert.equal(disabilityMonthlyBenefit(120000, 0.9), 7000);
-});
-
-test("withdrawing the income gap leaves a surplus above the legacy", () => {
-  const spent = wealthPath({
-    opening: { tfsa: 100000, rrsp: 0, nonReg: 0 },
-    balancesByAge: [{ age: 65, tfsa: 100000, rrsp: 0, nonReg: 0 }],
-    currentAge: 64,
-    retirementAge: 65,
-    deathAge: 67,
-    retirementReturn: 0,
-    nonRegReturn: 0,
-    annualWithdrawal: 50000,
-  });
-  assert.equal(spent[0].age, 64);
-  assert.equal(spent[spent.length - 1].age, 67);
-  assert.equal(spent[spent.length - 1].tfsa, 0);
-
-  const rate = 0.05;
-  const years = 10;
-  const gap = 10000;
-  const legacy = 50000;
-  const funded = presentValueOfAnnuity(gap, rate, years) + presentValue(legacy, rate, years);
-  const exact = wealthPath({
-    opening: { tfsa: funded, rrsp: 0, nonReg: 0 },
-    balancesByAge: [{ age: 65, tfsa: funded, rrsp: 0, nonReg: 0 }],
-    currentAge: 64,
-    retirementAge: 65,
-    deathAge: 75,
-    retirementReturn: rate,
-    nonRegReturn: rate,
-    annualWithdrawal: gap,
-  });
-  assert.ok(Math.abs(exact[exact.length - 1].tfsa - legacy) < 1);
-
-  const surplusStart = funded * 2;
-  const surplus = wealthPath({
-    opening: { tfsa: surplusStart, rrsp: 0, nonReg: 0 },
-    balancesByAge: [{ age: 65, tfsa: surplusStart, rrsp: 0, nonReg: 0 }],
-    currentAge: 64,
-    retirementAge: 65,
-    deathAge: 75,
-    retirementReturn: rate,
-    nonRegReturn: rate,
-    annualWithdrawal: gap,
-  });
-  const left = surplus[surplus.length - 1].tfsa;
-  assert.ok(left > legacy + funded);
-  assert.ok(Math.abs(left - balanceAfterWithdrawals(surplusStart, gap, rate, years)) < 1);
-});
-
-test("RRSP tax applies to the income withdrawal, and the legacy stays an account balance", () => {
-  assert.equal(accountCoversGoal({
-    tfsa: 0, rrsp: 100000, nonReg: 0, other: 0, futureTaxRate: 0.25,
-    incomeCapital: 75000, legacyCapital: 0,
-  }), true);
-  assert.equal(accountCoversGoal({
-    tfsa: 0, rrsp: 100000, nonReg: 0, other: 0, futureTaxRate: 0.25,
-    incomeCapital: 0, legacyCapital: 100000,
-  }), true);
-  assert.equal(accountCoversGoal({
-    tfsa: 0, rrsp: 100000, nonReg: 0, other: 0, futureTaxRate: 0.25,
-    incomeCapital: 75000, legacyCapital: 25000,
-  }), false);
-  assert.equal(accountCoversGoal({
-    tfsa: 0, rrsp: 125000, nonReg: 0, other: 0, futureTaxRate: 0.25,
-    incomeCapital: 75000, legacyCapital: 25000,
-  }), true);
-});
-
-test("a TFSA balance is not taxed at death, and an RRSP balance is", () => {
-  const tfsa = deathTaxAtYear({ income: 80000, rrsp: 0, nonReg: 0, estate: 0, province: "AB", years: 0 });
-  const rrsp = deathTaxAtYear({ income: 80000, rrsp: 400000, nonReg: 0, estate: 0, province: "AB", years: 0 });
-  assert.equal(tfsa.total, 0);
-  assert.ok(rrsp.total > 100000);
-  const path = wealthPath({
-    opening: { tfsa: 0, rrsp: 400000, nonReg: 0 },
-    balancesByAge: [],
-    currentAge: 50,
-    retirementAge: 65,
-    deathAge: 50,
-    retirementReturn: 0.03,
-    nonRegReturn: 0.03,
-  });
-  assert.equal(balanceAtAge(path, 50).rrsp, 400000);
-});
-
-test("RRSP tax savings are invested back into the RRSP", () => {
-  const shared = {
-    annualSavings: 1000,
-    rrspShare: 1,
-    years: 1,
-    savingsReturn: 0,
-    inflationRate: 0,
-    currentTfsaBalance: 0,
-    currentRrspBalance: 0,
-    currentTfsaRoom: 0,
-    currentRrspRoom: 10000,
-    futureYears: [],
-  };
-  const grossed = allocationOutcome({ ...shared, taxNow: 0.3 });
-  const untaxed = allocationOutcome({ ...shared, taxNow: 0 });
-  assert.equal(untaxed.thisYear.rrsp, 1000);
-  assert.ok(Math.abs(grossed.thisYear.rrsp - 1000 / 0.7) < 0.001);
-  assert.equal(Math.round(grossed.thisYear.refund), Math.round(grossed.thisYear.rrsp * 0.3));
-});
-
-test("the same goal costs less out of pocket when the RRSP refund is worth more than the tax at withdrawal", () => {
-  const shared = {
-    years: 20,
-    savingsReturn: 0.05,
-    inflationRate: 0,
-    currentTfsaBalance: 0,
-    currentRrspBalance: 0,
-    currentNonRegBalance: 0,
-    nonRegReturn: 0.05,
-    currentTfsaRoom: 1000000,
-    currentRrspRoom: 1000000,
-    currentOtherBalance: 0,
-    futureYears: [],
-  };
-  const target = 100000;
-  const tfsa = requiredOutOfPocket({ ...shared, rrspShare: 0, taxNow: 0.4, futureTaxRate: 0 }, target);
-  const rrsp = requiredOutOfPocket({ ...shared, rrspShare: 1, taxNow: 0.4, futureTaxRate: 0.2 }, target);
-  assert.ok(Math.abs(tfsa - savingsForFutureValue(target, 0.05, 20)) < 1);
-  const grossContribution = savingsForFutureValue(target / 0.8, 0.05, 20);
-  assert.ok(Math.abs(rrsp - grossContribution * 0.6) < 1);
-  assert.ok(rrsp < tfsa);
 });
 
 test("the schedule reports this year's deposit and when the room is binding", () => {
@@ -1129,7 +881,7 @@ test("CPP and OAS reduce what the accounts withdraw", () => {
   assert.ok(helped.ending > alone.ending);
 });
 
-test("CPP waits until each person is 60, and a younger spouse is left out", () => {
+test("CPP waits until each person is 60, is reduced when it starts early, and a younger spouse is left out", () => {
   const shared = {
     currentAge: 65,
     retirementAge: 65,
@@ -1144,7 +896,7 @@ test("CPP waits until each person is 60, and a younger spouse is left out", () =
   const partnerTooYoung = projectPortfolio({ ...shared, partnerAge: 48 });
   assert.equal(partnerTooYoung.rows[0].pension, 18000);
   const partnerCppOnly = projectPortfolio({ ...shared, partnerAge: 60 });
-  assert.equal(partnerCppOnly.rows[0].pension, 28000);
+  assert.equal(partnerCppOnly.rows[0].pension, 18000 + 10000 * 0.64);
   const bothOfAge = projectPortfolio({ ...shared, partnerAge: 65 });
   assert.equal(bothOfAge.rows[0].pension, 36000);
   const clientTooYoung = projectPortfolio({
@@ -1170,7 +922,7 @@ test("OAS starts at 65 and CPP counts from retirement", () => {
     inflationRate: 0,
     province: "AB",
   });
-  assert.equal(early.rows[0].pension, 10000);
+  assert.equal(early.rows[0].pension, 10000 * 0.64);
   const later = projectPortfolio({
     currentAge: 65,
     retirementAge: 65,
@@ -1182,6 +934,37 @@ test("OAS starts at 65 and CPP counts from retirement", () => {
     province: "AB",
   });
   assert.equal(later.rows[0].pension, 18000);
+});
+
+test("retiring at 70 defers CPP and OAS for larger amounts, and OAS rises 10% at 75", () => {
+  const deferred = projectPortfolio({
+    currentAge: 70,
+    retirementAge: 70,
+    years: 5,
+    clientCppToday: 10000,
+    clientOasToday: 8000,
+    inflationRate: 0,
+    province: "AB",
+  });
+  assert.ok(Math.abs(deferred.rows[0].pension - (10000 * 1.42 + 8000 * 1.36)) < 0.01);
+  assert.ok(Math.abs(deferred.rows[5].pension - (10000 * 1.42 + 8000 * 1.36 * 1.1)) < 0.01);
+});
+
+test("other retirement income reduces what the accounts withdraw", () => {
+  const shared = {
+    currentAge: 65,
+    retirementAge: 65,
+    years: 1,
+    desiredIncomeToday: 40000,
+    rrspOpening: 500000,
+    inflationRate: 0,
+    retirementReturn: 0,
+    province: "AB",
+  };
+  const alone = projectPortfolio(shared);
+  const pension = projectPortfolio({ ...shared, otherIncomeToday: 20000 });
+  assert.ok(pension.rows[0].withdrawal < alone.rows[0].withdrawal - 15000);
+  assert.ok(Math.abs(pension.rows[0].incomeTaken - 40000) < 1);
 });
 
 test("retirement income requested rises with inflation, and accounts only top up a shortfall after CPP and OAS", () => {

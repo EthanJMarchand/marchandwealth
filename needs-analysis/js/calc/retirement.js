@@ -75,9 +75,3 @@ export function calculateRetirement({
     annualSavings: horizon > 0 ? savingsForFutureValue(capitalShortfall, savingsReturn, horizon) : capitalShortfall,
   };
 }
-
-// Other taxable income, RRSP withdrawals, and half of a non-registered withdrawal.
-// Half is the capital-gains stand-in used elsewhere. A TFSA withdrawal is not income.
-export function taxableRetirementIncome({ otherTaxable = 0, rrspWithdrawal = 0, nonRegisteredWithdrawal = 0 } = {}) {
-  return Math.max(0, otherTaxable) + Math.max(0, rrspWithdrawal) + Math.max(0, nonRegisteredWithdrawal) * 0.5;
-}

@@ -82,6 +82,7 @@
           <a href="/tfsa-calculator.html" data-nav="tfsa" role="menuitem">TFSA Calculator</a>
           <a href="/needs-analysis.html" data-nav="plan" role="menuitem">Financial Plan</a>
           <a href="/client-intake.html" data-nav="intake" role="menuitem">Client Intake</a>
+          <a href="/investor-questionnaire.html" data-nav="iq" role="menuitem">Investor Questionnaire</a>
         </div>
       </div>
       <a href="/insights.html" data-nav="insights" class="site-nav-link hover:text-navydeep transition">Insights</a>
@@ -102,9 +103,10 @@
     <a href="/tfsa-calculator.html" data-nav="tfsa" class="py-2 pl-2">TFSA Calculator</a>
     <a href="/needs-analysis.html" data-nav="plan" class="py-2 pl-2">Financial Plan</a>
     <a href="/client-intake.html" data-nav="intake" class="py-2 pl-2">Client Intake</a>
+    <a href="/investor-questionnaire.html" data-nav="iq" class="py-2 pl-2">Investor Questionnaire</a>
     <a href="/insights.html" data-nav="insights" class="py-2">Insights</a>
     <a href="/contact.html" data-nav="contact" class="py-2">Contact</a>
-    <a href="/schedule.html" data-nav="schedule" class="py-2">Schedule</a>
+    <a href="/schedule.html" data-nav="schedule" class="py-2">Book a Meeting</a>
   </div>
 </header>
 
@@ -463,14 +465,14 @@
               <input id="income-history" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
               <span class="mt-1 block font-normal text-inksoft">Leave this blank to use this year's income.</span>
             </label>
-            <label class="block text-sm font-medium">Years lived in Canada after age 18
+            <label class="block text-sm font-medium">Years in Canada from age 18 to 65
               <input id="canada-years" inputmode="numeric" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
             </label>
-            <label class="block text-sm font-medium">CPP you are counting on, yearly
+            <label class="block text-sm font-medium">CPP you are counting on at 65, yearly
               <input id="cpp-annual" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
               <button id="use-max-cpp" type="button" class="mt-2 text-sm font-semibold text-golddim underline hover:text-navydeep">Use the 2026 maximum at 65</button>
             </label>
-            <label class="block text-sm font-medium">OAS you are counting on, yearly
+            <label class="block text-sm font-medium">OAS you are counting on at 65, yearly
               <input id="oas-annual" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
               <button id="use-max-oas" type="button" class="mt-2 text-sm font-semibold text-golddim underline hover:text-navydeep">Use the current maximum</button>
             </label>
@@ -481,7 +483,7 @@
               <input id="partner-income-history" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
               <span class="mt-1 block font-normal text-inksoft">Leave this blank to use this year's income.</span>
             </label>
-            <label class="partner-only hidden block text-sm font-medium"><span id="partner-canada-label">Years Person 2 has lived in Canada after age 18</span>
+            <label class="partner-only hidden block text-sm font-medium"><span id="partner-canada-label">Years Person 2 will have lived in Canada from 18 to 65</span>
               <input id="partner-canada-years" inputmode="numeric" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
             </label>
             <label class="partner-only hidden block text-sm font-medium"><span id="partner-cpp-label">Person 2 CPP, yearly</span>
@@ -496,7 +498,7 @@
             <label class="block text-sm font-medium sm:col-span-2">
               <span id="client-retirement-income-label">Other taxable income Person 1 will have in retirement, besides CPP, OAS, and these savings</span>
               <input id="client-retirement-income" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" value="0" />
-              <span id="client-retirement-income-note" class="mt-1 block font-normal text-inksoft">A pension or rent. Leave this at zero when there is none. CPP and OAS reduce what the accounts withdraw. TFSA withdrawals are not income for the OAS screen.</span>
+              <span id="client-retirement-income-note" class="mt-1 block font-normal text-inksoft">A pension or rent. Leave this at zero when there is none. This income, CPP, and OAS reduce what the accounts withdraw. TFSA withdrawals are not income for the OAS screen.</span>
             </label>
             <div class="sm:col-span-2">
               <label class="flex gap-2 text-sm font-medium">
@@ -578,6 +580,20 @@
               <span class="mt-1 block font-normal text-inksoft">Real estate or anything outside the TFSA, RRSP, and non-registered accounts. Only the growth is taxed when it is spent.</span>
             </label>
               </div>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="block text-sm font-medium" for="investor-profile">Investor profile
+                <select id="investor-profile" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm">
+                  <option value="">Not set</option>
+                  <option value="minimal-risk">Minimal Risk (0% equity, 100% fixed income)</option>
+                  <option value="conservative">Conservative (20% equity, 80% fixed income)</option>
+                  <option value="moderate-conservative">Moderate Conservative (40% equity, 60% fixed income)</option>
+                  <option value="balanced">Balanced (60% equity, 40% fixed income)</option>
+                  <option value="growth">Growth (80% equity, 20% fixed income)</option>
+                  <option value="aggressive-growth">Aggressive Growth (100% equity)</option>
+                </select>
+              </label>
+              <p id="investor-profile-note" class="mt-2 text-sm text-inksoft">Choosing a profile sets both rates of return below. Moving the return-while-saving rate updates the profile to match.</p>
             </div>
             <div class="sm:col-span-2">
               <label class="block text-sm font-medium" for="real-return-slider"><span class="plan-ref plan-ref-control" title="Slider S.7">S.7</span>Estimated rate of return while saving</label>
@@ -765,39 +781,45 @@
   </div>
 </section>
 
-<footer class="no-print bg-navydeep text-white/70 pt-14 pb-7">
+<footer class="bg-navydeep text-white/70 pt-14 pb-7">
   <div class="max-w-6xl mx-auto px-6 md:px-8">
     <div class="flex flex-wrap justify-between gap-10 pb-9 border-b border-white/10">
       <div class="max-w-xs">
         <div class="flex items-center gap-3 mb-4">
-          <img src="assets/ethan-headshot.jpg" alt="Ethan Marchand" width="320" height="320" class="w-12 h-12 rounded-full object-cover flex-shrink-0">
+          <img src="/assets/ethan-headshot.jpg" alt="Ethan Marchand" width="320" height="320" class="w-12 h-12 rounded-full object-cover flex-shrink-0">
           <div>
             <p class="text-white text-sm font-semibold m-0">Ethan Marchand</p>
             <p class="text-white/55 text-[12px] m-0">Independent Insurance &amp; Wealth Advisor</p>
           </div>
         </div>
-        <img src="assets/logo.png" alt="Marchand Wealth logo" width="700" height="161" class="h-8 w-auto mb-3.5 brightness-0 invert">
+        <img src="/assets/logo.png" alt="Marchand Wealth logo" width="700" height="161" class="h-8 w-auto mb-3.5 brightness-0 invert">
         <p class="text-white/55 text-sm m-0">Tax-efficient insurance and wealth planning for Alberta individuals, families, and business owners.</p>
       </div>
       <div>
         <h4 class="text-white text-[15px] mb-3.5">Site</h4>
         <div class="flex flex-col gap-2 text-sm">
-          <a href="index.html" class="hover:text-goldlight">Home</a>
-          <a href="index.html#services" class="hover:text-goldlight">Services</a>
-          <a href="index.html#faq" class="hover:text-goldlight">FAQ</a>
-          <a href="life-insurance-quote.html" class="hover:text-goldlight">Get a Quote</a>
-          <a href="tfsa-calculator.html" class="hover:text-goldlight">TFSA Calculator</a>
-          <a href="needs-analysis.html" class="hover:text-goldlight">Financial Plan</a>
-          <a href="insights.html" class="hover:text-goldlight">Insights</a>
-          <a href="client-intake.html" class="hover:text-goldlight">Client Intake Form</a>
-          <a href="contact.html" class="hover:text-goldlight">Contact</a>
-          <a href="schedule.html" class="hover:text-goldlight">Schedule a Meeting</a>
+          <a href="/index.html" class="hover:text-goldlight">Home</a>
+          <a href="/index.html#services" class="hover:text-goldlight">Services</a>
+          <a href="/index.html#faq" class="hover:text-goldlight">FAQ</a>
+          <a href="/insights.html" class="hover:text-goldlight">Insights</a>
+          <a href="/contact.html" class="hover:text-goldlight">Contact</a>
+          <a href="/schedule.html" class="hover:text-goldlight">Book a Meeting</a>
+        </div>
+      </div>
+      <div>
+        <h4 class="text-white text-[15px] mb-3.5">Tools</h4>
+        <div class="flex flex-col gap-2 text-sm">
+          <a href="/life-insurance-quote.html" class="hover:text-goldlight">Get a Quote</a>
+          <a href="/tfsa-calculator.html" class="hover:text-goldlight">TFSA Calculator</a>
+          <a href="/needs-analysis.html" class="hover:text-goldlight">Financial Plan</a>
+          <a href="/client-intake.html" class="hover:text-goldlight">Client Intake</a>
+          <a href="/investor-questionnaire.html" class="hover:text-goldlight">Investor Questionnaire</a>
         </div>
       </div>
       <div>
         <h4 class="text-white text-[15px] mb-3.5">Contact</h4>
         <div class="flex flex-col gap-2 text-sm">
-          <a href="tel:+17808680552" class="hover:text-goldlight">iPhone: 780-868-0552</a>
+          <a href="tel:+17808680552" class="hover:text-goldlight">Call or text: 780-868-0552</a>
           <a href="mailto:ethan@marchandwealth.ca" class="hover:text-goldlight">ethan@marchandwealth.ca</a>
           <span>Sherwood Park, Alberta</span>
         </div>
@@ -811,6 +833,7 @@
 </footer>
 
 <script src="script.js"></script>
+<script src="investor-profiles.js"></script>
 <script type="module" src="needs-analysis/js/app.js"></script>
 </body>
 </html>

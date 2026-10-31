@@ -49,6 +49,12 @@
   force = true
 
 [[redirects]]
+  from = "/investor-questionnaire"
+  to = "/investor-questionnaire.html"
+  status = 301
+  force = true
+
+[[redirects]]
   from = "/needs-analysis"
   to = "/needs-analysis.html"
   status = 301
