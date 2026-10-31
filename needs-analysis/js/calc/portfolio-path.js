@@ -20,10 +20,10 @@ function taxNominal(nominalBase, nominalInclusion, factor, province, person = {}
   return result ? result.tax * scale : 0;
 }
 
-function incomeTaxNominal(nominalIncome, factor, province, age, nominalPension = 0) {
+function incomeTaxNominal(nominalIncome, factor, province, age) {
   if (nominalIncome <= 0) return 0;
   const scale = factor > 0 ? factor : 1;
-  const tax = taxOnIncome(nominalIncome / scale, province, undefined, { age, pensionIncome: nominalPension / scale });
+  const tax = taxOnIncome(nominalIncome / scale, province, undefined, { age });
   return tax == null ? 0 : tax * scale;
 }
 
@@ -250,7 +250,6 @@ export function projectPortfolio({
   partnerCppToday = 0,
   partnerOasToday = 0,
   partnerAge = null,
-  otherIncomeToday = 0,
   oasRecoveryThreshold = 0,
   oasRecoveryRate = 0,
   workingIncomeToday = 0,
@@ -304,12 +303,10 @@ export function projectPortfolio({
       partnerCpp: partnerCppToday,
       partnerOas: partnerOasToday,
     });
-    const otherToday = retired ? Math.max(0, otherIncomeToday) : 0;
-    const otherNominal = otherToday * factor;
     const couple = Number.isFinite(partnerAge);
     const spouseAge = couple ? partnerAge + year : 0;
     // Requested after-tax income, raised with inflation from today's dollars.
-    // CPP, OAS, and other income are kept in full even when they exceed that
+    // CPP and OAS are kept in full even when they exceed that
     // request; accounts only top up a shortfall.
     const incomeRequested = retired ? Math.max(0, desiredIncomeToday) * factor : 0;
 
@@ -335,13 +332,11 @@ export function projectPortfolio({
     let clientPension = 0;
     let spousePension = 0;
     let pensionNet = 0;
-    let otherNet = 0;
-    let clientBase = 0;
     let taxable = null;
     for (let pass = 0; pass < 6; pass += 1) {
       clientOas = oasAfterRecovery(
         benefits.clientOas,
-        otherToday + benefits.clientCpp + benefits.clientOas + extraToday,
+        benefits.clientCpp + benefits.clientOas + extraToday,
         oasRecoveryThreshold,
         oasRecoveryRate,
       );
@@ -350,13 +345,10 @@ export function projectPortfolio({
         : 0;
       clientPension = (benefits.clientCpp + clientOas) * factor;
       spousePension = (benefits.spouseCpp + spouseOas) * factor;
-      clientBase = clientPension + otherNominal;
-      const clientTax = incomeTaxNominal(clientBase, factor, province, age, otherNominal);
+      const clientTax = incomeTaxNominal(clientPension, factor, province, age);
       const spouseTax = incomeTaxNominal(spousePension, factor, province, spouseAge);
-      const pensionShare = clientBase > 0 ? clientPension / clientBase : 0;
-      pensionNet = clientPension - clientTax * pensionShare + spousePension - spouseTax;
-      otherNet = otherNominal - clientTax * (1 - pensionShare);
-      const payers = [{ base: clientBase, pension: otherNominal, age }];
+      pensionNet = clientPension - clientTax + spousePension - spouseTax;
+      const payers = [{ base: clientPension, pension: 0, age }];
       if (couple) payers.push({ base: spousePension, pension: 0, age: spouseAge });
       taxable = withdrawProRataTaxable({
         other,
@@ -364,20 +356,20 @@ export function projectPortfolio({
         nonReg,
         nonRegAcb,
         rrsp,
-        need: Math.max(0, incomeRequested - pensionNet - otherNet),
+        need: Math.max(0, incomeRequested - pensionNet),
         payers,
         factor,
         province,
       });
-      const nextExtra = (taxable.payers[0].base - clientBase) / factor;
+      const nextExtra = (taxable.payers[0].base - clientPension) / factor;
       if (Math.abs(nextExtra - extraToday) < 1) break;
       extraToday = nextExtra;
     }
-    const afterTaxIncome = Math.max(0, pensionNet + otherNet);
+    const afterTaxIncome = Math.max(0, pensionNet);
     const pensionNominal = clientPension + spousePension;
     const oasRecovery = (benefits.clientOas - clientOas + benefits.spouseOas - spouseOas) * factor;
-    const deathBase = retired ? clientBase : Math.max(0, workingIncomeToday) * factor;
-    const deathTax = taxNominal(deathBase, deathInclusion, factor, province, { age, pension: retired ? otherNominal : 0 });
+    const deathBase = retired ? clientPension : Math.max(0, workingIncomeToday) * factor;
+    const deathTax = taxNominal(deathBase, deathInclusion, factor, province, { age });
 
     let need = taxable.need;
     const tax = taxable.tax;
@@ -406,7 +398,6 @@ export function projectPortfolio({
       incomeRequested,
       pension: pensionNominal,
       pensionNet,
-      otherNet,
       oasRecovery,
       withdrawal,
       incomeTaken,

@@ -3,13 +3,12 @@ import { annuityPayment, futureValue, presentValue, presentValueOfAnnuity, savin
 // Amounts are in today's dollars. The savings return and the retirement return
 // are the estimated rates from the worksheet, used as entered. Inflation is not
 // taken off either rate. Public pensions are amounts the advisor entered.
-// OAS repayment is a screen: 15% of (client share + CPP + gross OAS − threshold),
+// OAS repayment is a screen: 15% of (CPP + gross OAS − threshold),
 // capped at the OAS entered. It uses the threshold stored for the current year
 // against today's-dollar income, so it is not a future-year forecast.
 export function calculateRetirement({
   years,
   desiredRetirementIncome,
-  clientRetirementIncome,
   cppAnnual,
   oasAnnual,
   partnerCppAnnual,
@@ -28,7 +27,7 @@ export function calculateRetirement({
   const oasGross = Math.max(0, oasAnnual);
   const partnerCpp = Math.max(0, partnerCppAnnual);
   const partnerOas = Math.max(0, partnerOasAnnual);
-  const netIncomeProxy = Math.max(0, clientRetirementIncome) + cpp + oasGross;
+  const netIncomeProxy = cpp + oasGross;
   let oasRepayment = 0;
   if (recoveryThreshold > 0 && netIncomeProxy > recoveryThreshold) {
     oasRepayment = Math.min(oasGross, recoveryTaxRate * (netIncomeProxy - recoveryThreshold));

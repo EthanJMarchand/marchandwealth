@@ -275,7 +275,6 @@ test("retirement savings fund only the gap after pensions, in today's dollars", 
   const result = calculateRetirement({
     years: 23,
     desiredRetirementIncome: 98000,
-    clientRetirementIncome: 66500,
     cppAnnual: 0,
     oasAnnual: 0,
     partnerCppAnnual: 0,
@@ -310,7 +309,6 @@ test("estimated returns compound as entered and are not reduced by inflation", (
   const result = calculateRetirement({
     years: 10,
     desiredRetirementIncome: 10000,
-    clientRetirementIncome: 10000,
     cppAnnual: 0,
     oasAnnual: 0,
     partnerCppAnnual: 0,
@@ -341,7 +339,6 @@ test("estimated returns compound as entered and are not reduced by inflation", (
 test("a legacy is still there at death, and no legacy means the plan ends at zero", () => {
   const shared = {
     years: 20,
-    clientRetirementIncome: 0,
     cppAnnual: 0,
     oasAnnual: 0,
     partnerCppAnnual: 0,
@@ -389,7 +386,6 @@ test("OAS repayment is 15% of income above the threshold, capped at OAS", () => 
   const result = calculateRetirement({
     years: 10,
     desiredRetirementIncome: 120000,
-    clientRetirementIncome: 100000,
     cppAnnual: cpp,
     oasAnnual: oas,
     partnerCppAnnual: 0,
@@ -398,7 +394,7 @@ test("OAS repayment is 15% of income above the threshold, capped at OAS", () => 
     savingsReturn: 0.03,
     retirementReturn: 0.03,
     retirementYears: 20,
-    recoveryThreshold: 95323,
+    recoveryThreshold: 20000,
     recoveryTaxRate: 0.15,
     tfsaHolders: 1,
     tfsaAnnualDollarLimit: 7000,
@@ -412,7 +408,7 @@ test("OAS repayment is 15% of income above the threshold, capped at OAS", () => 
     rrspNextYearDollarLimit: 35390,
   });
 
-  const excess = 100000 + cpp + oas - 95323;
+  const excess = cpp + oas - 20000;
   assert.equal(result.oasRepayment, Math.min(oas, 0.15 * excess));
   assert.ok(result.oasRepayment < oas);
 });
@@ -423,7 +419,6 @@ test("a large income goal does not claw back OAS when the taxable income is only
   const result = calculateRetirement({
     years: 10,
     desiredRetirementIncome: 200000,
-    clientRetirementIncome: 0,
     cppAnnual: cpp,
     oasAnnual: oas,
     partnerCppAnnual: 0,
@@ -453,7 +448,6 @@ test("already retired means the shortfall is a lump sum, not an annual savings p
   const result = calculateRetirement({
     years: 0,
     desiredRetirementIncome: 40000,
-    clientRetirementIncome: 40000,
     cppAnnual: 0,
     oasAnnual: 0,
     partnerCppAnnual: 0,
@@ -970,26 +964,6 @@ test("retiring at 70 defers CPP and OAS for larger amounts, and OAS rises 10% at
   assert.ok(Math.abs(deferred.rows[5].pension - (10000 * 1.42 + 8000 * 1.36 * 1.1)) < 0.01);
 });
 
-test("other retirement income reduces what the accounts withdraw", () => {
-  const shared = {
-    currentAge: 65,
-    retirementAge: 65,
-    years: 1,
-    desiredIncomeToday: 40000,
-    rrspOpening: 500000,
-    inflationRate: 0,
-    retirementReturn: 0,
-    province: "AB",
-  };
-  const alone = projectPortfolio(shared);
-  const pension = projectPortfolio({ ...shared, otherIncomeToday: 20000 });
-  assert.ok(pension.rows[0].withdrawal < alone.rows[0].withdrawal - 15000);
-  assert.ok(Math.abs(pension.rows[0].incomeTaken - 40000) < 1);
-  // $20,000 of pension at 65 in Alberta is under the basic, age, and pension credits.
-  assert.equal(pension.rows[0].otherNet, 20000);
-  assert.equal(pension.rows[0].pensionNet, 0);
-});
-
 test("each spouse's CPP and OAS is taxed on that spouse's own return", () => {
   const shared = { currentAge: 65, retirementAge: 65, years: 0, inflationRate: 0, province: "AB" };
   const single = projectPortfolio({ ...shared, clientCppToday: 100000, clientOasToday: 20000 });
@@ -1106,14 +1080,13 @@ test("only the growth on other assets is taxed, and a rollover drops the RRSP de
     retirementReturn: 0,
     savingsReturn: 0,
     inflationRate: 0,
-    desiredIncomeToday: 70000,
-    otherIncomeToday: 60000,
-    otherOpening: 100000,
+    desiredIncomeToday: 1000000,
+    otherOpening: 10000000,
     province: "AB",
   });
   assert.equal(grown.rows[0].tax, 0);
   assert.ok(grown.rows[0].withdrawal > 0);
-  assert.ok(Math.abs(grown.rows[0].other - (100000 - grown.rows[0].withdrawal)) < 0.01);
+  assert.ok(Math.abs(grown.rows[0].other - (10000000 - grown.rows[0].withdrawal)) < 1);
   assert.ok(grown.rows[1].tax > 0);
 
   const shared = {

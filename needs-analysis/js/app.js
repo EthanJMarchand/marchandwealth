@@ -29,7 +29,6 @@ const $ = (id) => document.getElementById(id);
 
 const dirty = {
   desired: false,
-  clientShare: false,
   deathAge: false,
   partnerDeathAge: false,
   cpp: false,
@@ -215,8 +214,6 @@ function applyNames() {
   $("partner-canada-label").textContent = `Years ${partner} will have lived in Canada from 18 to 65`;
   $("partner-cpp-label").textContent = `${partner} CPP, yearly`;
   $("partner-oas-label").textContent = `${partner} OAS, yearly`;
-  $("client-retirement-income-label").textContent = `Other taxable income ${person} will have in retirement, besides CPP, OAS, and these savings`;
-  $("client-retirement-income-note").textContent = `A pension or rent. Leave this at zero when there is none. CPP and OAS reduce what the accounts withdraw. TFSA withdrawals are not income for the OAS screen.`;
   $("death-age-label").textContent = `${person}'s likely age at death`;
   $("partner-death-age-label").textContent = `${partner}'s likely age at death`;
 }
@@ -379,7 +376,6 @@ function applySuggestions() {
   if (!dirty.disabilityMonths) {
     $("disability-months").value = String(Math.round(incomeYearsChosen() * 12));
   }
-  if (!dirty.clientShare) $("client-retirement-income").value = "0";
 }
 
 function retirementHorizon() {
@@ -413,7 +409,7 @@ function householdTfsa() {
   return { client, partner, lifetime };
 }
 
-function retirementQuote(clientRetirementIncome) {
+function retirementQuote() {
   const horizon = retirementHorizon();
   if (horizon.missing || horizon.invalid) return null;
   const partner = hasPartner();
@@ -421,7 +417,6 @@ function retirementQuote(clientRetirementIncome) {
   return calculateRetirement({
     years: horizon.years,
     desiredRetirementIncome: target.today,
-    clientRetirementIncome,
     cppAnnual: readMoney($("cpp-annual").value),
     oasAnnual: readMoney($("oas-annual").value),
     partnerCppAnnual: partner ? readMoney($("partner-cpp").value) : 0,
@@ -656,7 +651,7 @@ function buildModel() {
   const horizon = retirementHorizon();
   const target = retirementTarget(horizon.years || 0);
   const tfsa = householdTfsa();
-  let retirement = retirementQuote(readMoney($("client-retirement-income").value));
+  let retirement = retirementQuote();
 
   const room = projectFutureRoom({
     yearsOfWork: horizon.years || 0,
@@ -700,7 +695,6 @@ function buildModel() {
     partnerCppToday: partner ? readMoney($("partner-cpp").value) : 0,
     partnerOasToday: partner ? readMoney($("partner-oas").value) : 0,
     partnerAge: partner ? ageOrNull("partner-age") : null,
-    otherIncomeToday: readMoney($("client-retirement-income").value),
     oasRecoveryThreshold: oasAmounts.recoveryThreshold,
     oasRecoveryRate: oasAmounts.recoveryTaxRate,
     workingIncomeToday: personalIncome,
@@ -1167,7 +1161,7 @@ function render() {
     savingsDestination(model);
     const clawed = model.portfolio?.rows.find((row) => row.oasRecovery > 0.5);
     if (clawed) {
-      notes.push(`From age ${clawed.age}, OAS is reduced by the recovery tax, ${formatDollars(clawed.oasRecovery)} that year. The income counted is CPP, OAS, other taxable income, RRSP withdrawals, and the taxable gain on non-registered and other withdrawals. TFSA withdrawals are not included.`);
+      notes.push(`From age ${clawed.age}, OAS is reduced by the recovery tax, ${formatDollars(clawed.oasRecovery)} that year. The income counted is CPP, OAS, RRSP withdrawals, and the taxable gain on non-registered and other withdrawals. TFSA withdrawals are not included.`);
     }
     if (!blank("retirement-age") && readMoney($("retirement-age").value) < 60 && readMoney($("cpp-annual").value) > 0) {
       notes.push("CPP starts at 60. Until then, the income from the accounts does not subtract it.");
@@ -1850,7 +1844,6 @@ function renderPortfolioTable(model) {
     "Total",
     "Retirement income requested",
     "CPP and OAS",
-    "Other income",
     "From the accounts",
     "Tax on withdrawal",
     "Tax if death",
@@ -1867,7 +1860,6 @@ function renderPortfolioTable(model) {
     formatDollars(row.total),
     formatDollars(row.incomeRequested),
     formatDollars(row.pensionNet),
-    formatDollars(row.otherNet),
     formatDollars(row.withdrawal),
     formatDollars(row.tax),
     formatDollars(row.deathTax),
@@ -1892,7 +1884,6 @@ function renderPortfolioTable(model) {
       "Total",
       "Requested",
       "CPP/OAS",
-      "Other inc",
       "From accts",
       "Tax wd",
       "Tax death",
@@ -1909,7 +1900,6 @@ function renderPortfolioTable(model) {
       compactDollars(row.total),
       compactDollars(row.incomeRequested),
       compactDollars(row.pensionNet),
-      compactDollars(row.otherNet),
       compactDollars(row.withdrawal),
       compactDollars(row.tax),
       compactDollars(row.deathTax),
@@ -1932,8 +1922,8 @@ function renderPortfolioTable(model) {
 
   if (note) {
     note.textContent = hasPartner()
-      ? "Each year shows the deposit the room allows, up to the monthly slider. At retirement the deposits stop. Retirement income requested is the after-tax amount chosen at the start of retirement, raised with inflation each year. CPP and OAS, and other income (the pension or rent entered above), are shown after tax. Each person's CPP and OAS is taxed on that person's own return, and other income is taxed with Person 1's. Taxable withdrawals are split evenly between both returns when a spouse is on the plan. Tax subtracts the basic personal, age, and pension income credits; other income and RRIF withdrawals from age 65 count as pension income. They are kept in full even when they exceed the request, and nothing is taken from the accounts in those years. When they fall short, the shortfall is taken from Other, non-registered, and the RRSP in proportion to those balances so they run down together. The TFSA is used only after that pool is gone. OAS is reduced by the recovery tax when a person's CPP, OAS, other income, and share of taxable withdrawals pass the threshold. Tax if death is the tax on that year's balances before the retirement withdrawal: with a spouse on the plan the RRSP rolls over and is not taxed, non-registered and other assets tax only the gain, and the TFSA is not taxed. The red row is the age on the early-death slider."
-      : "Each year shows the deposit the room allows, up to the monthly slider. At retirement the deposits stop. Retirement income requested is the after-tax amount chosen at the start of retirement, raised with inflation each year. CPP and OAS, and other income (the pension or rent entered above), are shown after tax. Each person's CPP and OAS is taxed on that person's own return, and other income is taxed with Person 1's. Taxable withdrawals are split evenly between both returns when a spouse is on the plan. Tax subtracts the basic personal, age, and pension income credits; other income and RRIF withdrawals from age 65 count as pension income. They are kept in full even when they exceed the request, and nothing is taken from the accounts in those years. When they fall short, the shortfall is taken from Other, non-registered, and the RRSP in proportion to those balances so they run down together. The TFSA is used only after that pool is gone. OAS is reduced by the recovery tax when a person's CPP, OAS, other income, and share of taxable withdrawals pass the threshold. Tax if death is the tax on that year's balances before the retirement withdrawal: with no spouse on the plan the full RRSP is taxed on the final return, non-registered and other assets tax only the gain, and the TFSA is not taxed. The red row is the age on the early-death slider.";
+      ? "Each year shows the deposit the room allows, up to the monthly slider. At retirement the deposits stop. Retirement income requested is the after-tax amount chosen at the start of retirement, raised with inflation each year. CPP and OAS are shown after tax, with each person's taxed on that person's own return. Taxable withdrawals are split evenly between both returns when a spouse is on the plan. Tax subtracts the basic personal, age, and pension income credits; RRIF withdrawals from age 65 count as pension income. CPP and OAS are kept in full even when they exceed the request, and nothing is taken from the accounts in those years. When they fall short, the shortfall is taken from Other, non-registered, and the RRSP in proportion to those balances so they run down together. The TFSA is used only after that pool is gone. OAS is reduced by the recovery tax when a person's CPP, OAS, and share of taxable withdrawals pass the threshold. Tax if death is the tax on that year's balances before the retirement withdrawal: with a spouse on the plan the RRSP rolls over and is not taxed, non-registered and other assets tax only the gain, and the TFSA is not taxed. The red row is the age on the early-death slider."
+      : "Each year shows the deposit the room allows, up to the monthly slider. At retirement the deposits stop. Retirement income requested is the after-tax amount chosen at the start of retirement, raised with inflation each year. CPP and OAS are shown after tax, with each person's taxed on that person's own return. Taxable withdrawals are split evenly between both returns when a spouse is on the plan. Tax subtracts the basic personal, age, and pension income credits; RRIF withdrawals from age 65 count as pension income. CPP and OAS are kept in full even when they exceed the request, and nothing is taken from the accounts in those years. When they fall short, the shortfall is taken from Other, non-registered, and the RRSP in proportion to those balances so they run down together. The TFSA is used only after that pool is gone. OAS is reduced by the recovery tax when a person's CPP, OAS, and share of taxable withdrawals pass the threshold. Tax if death is the tax on that year's balances before the retirement withdrawal: with no spouse on the plan the full RRSP is taxed on the final return, non-registered and other assets tax only the gain, and the TFSA is not taxed. The red row is the age on the early-death slider.";
   }
 }
 
@@ -1962,8 +1952,7 @@ function resetSession() {
   incomeMode = "today";
   Object.assign(dirty, {
     desired: false,
-    clientShare: false,
-    deathAge: false,
+      deathAge: false,
     partnerDeathAge: false,
     cpp: false,
     oas: false,
@@ -2122,8 +2111,6 @@ function loadSample() {
   $("desired-income").value = "98000";
   $("desired-income-slider").value = "98000";
   dirty.desired = true;
-  $("client-retirement-income").value = "0";
-  dirty.clientShare = true;
   $("leave-legacy").checked = true;
   $("legacy-amount").value = "100000";
   $("inflation-rate").value = String(defaultInflation);
@@ -2170,7 +2157,6 @@ function loadSample() {
 
 function markDirty(target) {
   if (target.id === "desired-income" || target.id === "desired-income-slider") dirty.desired = true;
-  if (target.id === "client-retirement-income") dirty.clientShare = true;
   if (target.id === "death-age") dirty.deathAge = true;
   if (target.id === "partner-death-age") dirty.partnerDeathAge = true;
   if (target.id === "cpp-annual") dirty.cpp = true;
