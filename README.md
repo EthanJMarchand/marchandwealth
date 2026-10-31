@@ -114,7 +114,7 @@ Nothing else in the codebase needs to be touched:
 
 ## The financial plan
 
-[`needs-analysis.html`](needs-analysis.html) is a simplified financial plan for life insurance need, disability and critical illness amounts, and the retirement savings path. It is a normal page on this site, with the same header, footer, and colours as the rest of Marchand Wealth. The calculation code lives in [`needs-analysis/`](needs-analysis/) and is loaded by the page. Nothing on the page is posted to a server, and nothing is written to the browser. Print the plan when a copy needs to be kept. The print sets the file name to `Financial-Plan-<names>-<date>`, and each page carries the same footer line as the questionnaire PDF, with page numbers.
+[`needs-analysis.html`](needs-analysis.html) is a simplified financial plan for life insurance need, disability and critical illness amounts, and the retirement savings path. It is a normal page on this site, with the same header, footer, and colours as the rest of Marchand Wealth. The calculation code lives in [`needs-analysis/`](needs-analysis/) and is loaded by the page. Nothing on the page is posted to a server, and nothing is written to the browser. Print the plan when a copy needs to be kept. The print sets the file name to `YYYY-MM-DD-Financial-Plan-<names>` (the meeting date, or today if none is set), and each page carries the same footer line as the questionnaire PDF, with page numbers.
 
 The meeting starts by choosing life insurance, disability, and critical illness, financial planning, or both. Sections that do not belong to that choice stay off the page and out of the letter. The page does not choose a product.
 

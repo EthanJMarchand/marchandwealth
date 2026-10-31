@@ -2459,7 +2459,9 @@ function init() {
     panels.forEach((panel) => { panel.open = true; });
     const title = document.title;
     const names = hasPartner() ? `${personName()}-${partnerName()}` : personName();
-    const fileName = ["Financial-Plan", names, $("meeting-date").value]
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const fileName = [$("meeting-date").value || today, "Financial-Plan", names]
       .filter(Boolean)
       .join("-")
       .replace(/[^\w-]+/g, "-")

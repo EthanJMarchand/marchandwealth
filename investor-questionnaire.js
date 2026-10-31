@@ -922,7 +922,7 @@
       const name = nameInput.value.trim();
       const doc = buildPdf(JsPDF, { name, date: completedDate, answers: a, result: scoreAnswers(a) }, logo);
       const safeName = name.replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "") || "Client";
-      doc.save(`Investor-Questionnaire-${safeName}-${completedDate}.pdf`);
+      doc.save(`${completedDate}-Investor-Questionnaire-${safeName}.pdf`);
     } catch {
       downloadStatus.textContent = "The PDF could not be created. Please try again.";
     } finally {
