@@ -183,22 +183,26 @@ function applyNames() {
   $("partner-heading-retirement").textContent = partner;
   $("person-heading-accounts").textContent = `${person} accounts`;
   $("partner-heading-accounts").textContent = `${partner} accounts`;
-  $("mobile-life-label").textContent = `${person} life capital`;
-  $("meeting-person-life-label").textContent = `${person}, life capital`;
-  $("meeting-person-di-label").textContent = `${person}, disability, monthly`;
-  $("meeting-person-ci-label").textContent = `${person}, critical illness`;
-  $("meeting-partner-life-label").textContent = `${partner}, life capital`;
-  $("meeting-partner-di-label").textContent = `${partner}, disability, monthly`;
-  $("meeting-partner-ci-label").textContent = `${partner}, critical illness`;
+  $("mobile-life-label").textContent = `${person} life insurance gap`;
+  $("meeting-person-life-label").textContent = `${person}, life insurance gap`;
+  $("meeting-person-di-label").textContent = `${person}, disability gap, monthly`;
+  $("meeting-person-ci-label").textContent = `${person}, critical illness gap`;
+  $("meeting-partner-life-label").textContent = `${partner}, life insurance gap`;
+  $("meeting-partner-di-label").textContent = `${partner}, disability gap, monthly`;
+  $("meeting-partner-ci-label").textContent = `${partner}, critical illness gap`;
   $("client-owns-corp-label").textContent = `${person} owns a corporation`;
   $("partner-owns-corp-label").textContent = `${partner} owns a corporation`;
   $("client-coverage-label").textContent = `Personal life insurance in force on ${person}`;
+  $("client-existing-di-label").textContent = `Disability already in force on ${person}, monthly`;
+  $("client-existing-ci-label").textContent = `Critical illness already in force on ${person}`;
   $("client-corporate-coverage-label").textContent = `Life insurance the corporation already owns on ${person}`;
-  $("client-count-corporate-label").textContent = `Count that corporate coverage toward ${person}'s capital need`;
+  $("client-count-corporate-label").textContent = `Count that corporate coverage toward ${person}'s life insurance gap`;
   $("partner-personal-coverage-label").textContent = `Personal life insurance already in force on ${partner}`;
-  $("partner-coverage-note").textContent = `This reduces ${partner}'s need only. The mortgage and the children's education stay in both.`;
+  $("partner-existing-di-label").textContent = `Disability already in force on ${partner}, monthly`;
+  $("partner-existing-ci-label").textContent = `Critical illness already in force on ${partner}`;
+  $("partner-coverage-note").textContent = `This reduces ${partner}'s life insurance gap only. The mortgage and the children's education stay in both.`;
   $("partner-corporate-coverage-label").textContent = `Life insurance a corporation already owns on ${partner}`;
-  $("partner-count-corporate-label").textContent = `Count that corporate coverage toward ${partner}'s capital need`;
+  $("partner-count-corporate-label").textContent = `Count that corporate coverage toward ${partner}'s life insurance gap`;
   $("partner-history-label").textContent = `${partner}'s average income over the last 5 years`;
   $("partner-tfsa-balance-label").textContent = `${partner}'s TFSA balance`;
   $("partner-tfsa-room-label").textContent = `${partner}'s TFSA room available now`;
@@ -745,14 +749,20 @@ function buildModel() {
     : null;
   const ciMonths = Math.max(0, readMoney($("ci-months").value));
   const ciRatio = rateFrom("ci-ratio");
+  const disabilityRatio = Math.min(0.7, rateFrom("disability-ratio"));
+  const clientDisabilityGross = disabilityMonthlyBenefit(personalIncome, disabilityRatio);
+  const spouseDisabilityGross = partner ? disabilityMonthlyBenefit(partnerIncome, disabilityRatio) : 0;
+  const clientCriticalGross = criticalIllnessLumpSum(personalIncome, ciRatio, ciMonths);
+  const spouseCriticalGross = partner ? criticalIllnessLumpSum(partnerIncome, ciRatio, ciMonths) : 0;
   const protection = {
-    clientDisability: disabilityMonthlyBenefit(personalIncome, replacementRatio),
-    spouseDisability: partner ? disabilityMonthlyBenefit(partnerIncome, replacementRatio) : 0,
+    clientDisability: Math.max(0, clientDisabilityGross - readMoney($("existing-disability").value)),
+    spouseDisability: Math.max(0, spouseDisabilityGross - (partner ? readMoney($("partner-existing-disability").value) : 0)),
     disabilityMonths: readMoney($("disability-months").value),
+    disabilityRatio,
     ciMonths,
     ciRatio,
-    clientCritical: criticalIllnessLumpSum(personalIncome, ciRatio, ciMonths),
-    spouseCritical: partner ? criticalIllnessLumpSum(partnerIncome, ciRatio, ciMonths) : 0,
+    clientCritical: Math.max(0, clientCriticalGross - readMoney($("existing-ci").value)),
+    spouseCritical: Math.max(0, spouseCriticalGross - (partner ? readMoney($("partner-existing-ci").value) : 0)),
     childLifeEach: readMoney($("child-life").value),
     childCiEach: readMoney($("child-ci").value),
   };
@@ -1060,10 +1070,10 @@ function lifeNarrative(model) {
   const life = model.life;
   const ratio = formatPercent(rateFrom("replacement-ratio"));
   const shared = `The mortgage and other debts are ${formatDollars(life.debts)}, and education is ${formatDollars(life.educationCapital)} for ${life.educationCount} children. Those amounts are included if either person dies. Final expenses, probate, and tax at death stay in the need even after other coverage. On the chart, final expenses and probate rise with inflation. Tax at death on Fig. D1 and Fig. D2 follows Table F3: the tax on the balances that remain in that year of the retirement plan.`;
-  const person = `${personName()}: ${ratio} of income is ${formatDollars(life.annualIncomeNeed)} a year. ${formatDollars(life.annualIncomeNeed)} × ${life.years} years = ${formatDollars(life.incomeCapital)}. Existing coverage of ${formatDollars(life.existingLifeInsurance)} and assets of ${formatDollars(life.assetsAtDeath)} leave a capital need of ${formatDollars(life.capitalNeed)}.`;
+  const person = `${personName()}: ${ratio} of income is ${formatDollars(life.annualIncomeNeed)} a year. ${formatDollars(life.annualIncomeNeed)} × ${life.years} years = ${formatDollars(life.incomeCapital)}. Existing coverage of ${formatDollars(life.existingLifeInsurance)} and assets of ${formatDollars(life.assetsAtDeath)} leave a life insurance gap of ${formatDollars(life.capitalNeed)}.`;
   if (!model.spouseLife) return `${shared} ${person}`;
   const spouse = model.spouseLife;
-  const partner = `${partnerName()}: ${ratio} of income is ${formatDollars(spouse.annualIncomeNeed)} a year. ${formatDollars(spouse.annualIncomeNeed)} × ${spouse.years} years = ${formatDollars(spouse.incomeCapital)}. Existing coverage of ${formatDollars(spouse.existingLifeInsurance)} and assets of ${formatDollars(spouse.assetsAtDeath)} leave a capital need of ${formatDollars(spouse.capitalNeed)}.`;
+  const partner = `${partnerName()}: ${ratio} of income is ${formatDollars(spouse.annualIncomeNeed)} a year. ${formatDollars(spouse.annualIncomeNeed)} × ${spouse.years} years = ${formatDollars(spouse.incomeCapital)}. Existing coverage of ${formatDollars(spouse.existingLifeInsurance)} and assets of ${formatDollars(spouse.assetsAtDeath)} leave a life insurance gap of ${formatDollars(spouse.capitalNeed)}.`;
   return `${shared} ${person} ${partner}`;
 }
 
@@ -1133,7 +1143,7 @@ function deathTaxPiece(name, bill) {
     pieces.push(`RRSP tax of ${formatDollars(bill.rrspTax)} on ${formatDollars(bill.rrspBalance)}`);
   }
   const detail = pieces.length ? `${pieces.join(", ")}.` : "no tax from these accounts.";
-  return `${name}: ${detail} ${formatDollars(bill.total)} is in the life insurance need.`;
+  return `${name}: ${detail} ${formatDollars(bill.total)} is in the life insurance gap.`;
 }
 
 function deathTaxSentence(model) {
@@ -1143,7 +1153,7 @@ function deathTaxSentence(model) {
     deathTaxPiece(personName(), model.deathTaxBill),
   ];
   if (model.partnerDeathTaxBill) parts.push(deathTaxPiece(partnerName(), model.partnerDeathTaxBill));
-  parts.push(`The cost base of the non-registered account and of the estate property is counted as zero, and half of each amount is included as a capital gain. Leave the non-registered balance out of the estate value. An RRSP that does not roll over is included in full. Today's tax figure stays in the life insurance need. On Fig. D1 and Fig. D2, tax at death follows Table F3 for that year of the retirement plan — remaining account balances after withdrawals, with a rolled RRSP left out. Brackets are the ${latestTaxYear()} combined federal and provincial rates. Basic personal credits are not subtracted.`);
+  parts.push(`The cost base of the non-registered account and of the estate property is counted as zero, and half of each amount is included as a capital gain. Leave the non-registered balance out of the estate value. An RRSP that does not roll over is included in full. Today's tax figure stays in the life insurance gap. On Fig. D1 and Fig. D2, tax at death follows Table F3 for that year of the retirement plan — remaining account balances after withdrawals, with a rolled RRSP left out. Brackets are the ${latestTaxYear()} combined federal and provincial rates. Basic personal credits are not subtracted.`);
   if (model.portfolio && !$("early-death-age").disabled) {
     const row = portfolioRow(model, model.earlyAge);
     if (row) {
@@ -1157,18 +1167,18 @@ function deathTaxSentence(model) {
   parts.push(`Personal life insurance in force on this life is ${formatDollars(model.personalCoverage)}. A death benefit paid to a named beneficiary is generally tax-free and generally bypasses probate.`);
   if ($("client-owns-corp").checked || model.corporateCoverage > 0) {
     const counted = model.countCorporate
-      ? `It is counted in ${personName()}'s capital need.`
-      : `It is not counted in ${personName()}'s capital need.`;
+      ? `It is counted in ${personName()}'s life insurance gap.`
+      : `It is not counted in ${personName()}'s life insurance gap.`;
     parts.push(`A corporation owns ${formatDollars(model.corporateCoverage)} of life insurance on this life. Proceeds minus the adjusted cost base of ${formatDollars(model.corporateAcb)} leave about ${formatDollars(model.capitalDividend)} that can usually be paid as a capital dividend. ${counted}`);
   } else {
     parts.push("No corporation is marked as owning life insurance on this life.");
   }
   if (hasPartner()) {
-    parts.push(`Personal coverage on ${partnerName()} is ${formatDollars(readMoney($("partner-existing-coverage").value))}. It reduces ${partnerName()}'s need only.`);
+    parts.push(`Personal coverage on ${partnerName()} is ${formatDollars(readMoney($("partner-existing-coverage").value))}. It reduces ${partnerName()}'s life insurance gap only.`);
     if ($("partner-owns-corp").checked) {
       const counted = model.partnerCountCorporate
-        ? `It is counted in ${partnerName()}'s capital need.`
-        : `It is not counted in ${partnerName()}'s capital need.`;
+        ? `It is counted in ${partnerName()}'s life insurance gap.`
+        : `It is not counted in ${partnerName()}'s life insurance gap.`;
       const dividend = Math.max(0, model.partnerCorporateCoverage - model.partnerCorporateAcb);
       parts.push(`${partnerName()} owns a corporation with ${formatDollars(model.partnerCorporateCoverage)} of life insurance on that life. Proceeds minus the adjusted cost base of ${formatDollars(model.partnerCorporateAcb)} leave about ${formatDollars(dividend)} that can usually be paid as a capital dividend. ${counted}`);
     }
@@ -1181,7 +1191,7 @@ function pathSentence(points, chosenYears, usesAge, name, deathAgeId = "death-ag
   if (!points.length) return "";
   const today = points[0];
   const when = usesAge ? `at age ${today.age}` : "today";
-  const opening = `If ${name} dies ${when}, the life insurance need is ${formatDollars(today.capitalNeed)}.`;
+  const opening = `If ${name} dies ${when}, the life insurance gap is ${formatDollars(today.capitalNeed)}.`;
   const retirementAge = retirementAgeValue();
   const deathAge = deathAgeValue(deathAgeId);
   const atDeath = points[points.length - 1];
@@ -1190,7 +1200,7 @@ function pathSentence(points, chosenYears, usesAge, name, deathAgeId = "death-ag
     : "";
   if (!usesAge || retirementAge == null) return `${opening}${deathSentence}`;
   const atRetirement = points.find((point) => point.age >= retirementAge) || points[points.length - 1];
-  const ending = `At retirement the life insurance need is ${formatDollars(atRetirement.capitalNeed)}.`;
+  const ending = `At retirement the life insurance gap is ${formatDollars(atRetirement.capitalNeed)}.`;
   if (today.age >= retirementAge) {
     return `${opening} This age is already at retirement, so the chart does not include years of income.${deathSentence}`;
   }
@@ -1285,11 +1295,11 @@ function render() {
   const notes = [];
   if (model.invalidAges) notes.push("Enter dependant ages from 0 to 120.");
   if (blank("personal-income")) notes.push("Personal income is blank, so it is counted as zero.");
-  if (model.life.capitalNeed === model.life.floor && model.life.offsets > 0) {
-    notes.push(`The life insurance need stays at ${formatDollars(model.life.floor)}, which covers final expenses, probate, and tax at death.`);
+  if (model.life.capitalNeed === 0 && model.life.offsets > 0 && model.life.grossNeed > 0) {
+    notes.push(`Existing coverage and assets cover the full life insurance need of ${formatDollars(model.life.grossNeed)}, so the gap is $0.`);
   }
   if (model.corporateCoverage > 0 && !model.countCorporate) {
-    notes.push("Corporate coverage is shown and is not subtracted from the capital need.");
+    notes.push("Corporate coverage is shown and is not subtracted from the life insurance gap.");
   }
   if (rider) notes.push(rider);
 
@@ -1554,7 +1564,7 @@ function drawNeedChart({ root, points, usesAge, sentence, empty }) {
     guideX.style.opacity = "0";
     tip.style.opacity = "0";
   });
-  const legendParts = ["Solid line: capital need"];
+  const legendParts = ["Solid line: life insurance gap"];
   if (hasMortgage) legendParts.push("gold dashed: mortgage");
   if (hasEducation) legendParts.push("olive dashed: education until independence age");
   if (hasTax) legendParts.push("dotted: tax at death");
@@ -1761,7 +1771,7 @@ function renderProtection(model) {
   $("meeting-partner-ci").textContent = formatDollars(protection.spouseCritical);
   renderChildren(model);
   const enteredMonths = Math.round(protection.disabilityMonths);
-  $("disability-hint").textContent = `The monthly disability benefit replaces ${formatPercent(rateFrom("replacement-ratio"))} of earned income for ${enteredMonths} months.`;
+  $("disability-hint").textContent = `The monthly disability benefit replaces ${formatPercent(protection.disabilityRatio)} of earned income for ${enteredMonths} months, capped at 70%.`;
   const spouseLine = model.spouseLife
     ? ` ${partnerName()}'s lump sum is ${formatDollars(protection.spouseCritical)}, from ${partnerName()}'s earned income for the same months.`
     : "";
@@ -2202,6 +2212,8 @@ function fillDefaults() {
   $("retirement-replacement").value = String(assumptions.retirementIncomeReplacement * 100);
   $("planned-children").value = "0";
   $("future-amortization").value = "25";
+  $("disability-ratio").value = "70";
+  $("disability-ratio-slider").value = "70";
   $("ci-ratio").value = "70";
   $("ci-ratio-slider").value = "70";
   $("ci-months").value = "12";
@@ -2239,6 +2251,11 @@ function planHasEntries() {
     "debts",
     "other-debts",
     "existing-coverage",
+    "existing-disability",
+    "existing-ci",
+    "partner-existing-coverage",
+    "partner-existing-disability",
+    "partner-existing-ci",
     "tfsa-balance",
     "rrsp-balance",
     "nonreg-balance",
@@ -2288,6 +2305,10 @@ function loadSample() {
   $("independence-age").value = String(assumptions.dependantIndependenceAge);
   $("existing-coverage").value = "100000";
   $("partner-existing-coverage").value = "50000";
+  $("existing-disability").value = "0";
+  $("existing-ci").value = "0";
+  $("partner-existing-disability").value = "0";
+  $("partner-existing-ci").value = "0";
   $("assets-at-death").value = "40000";
   $("client-owns-corp").checked = false;
   $("partner-owns-corp").checked = false;
@@ -2295,6 +2316,8 @@ function loadSample() {
 
   $("disability-months").value = "120";
   dirty.disabilityMonths = true;
+  $("disability-ratio").value = "70";
+  $("disability-ratio-slider").value = "70";
   $("ci-ratio").value = "70";
   $("ci-ratio-slider").value = "70";
   $("ci-months").value = "12";
@@ -2400,6 +2423,12 @@ function syncIncomeYears(target) {
   if (target.id === "ci-ratio") {
     $("ci-ratio-slider").value = String(Math.min(100, Math.max(0, readMoney(target.value))));
   }
+  if (target.id === "disability-ratio-slider") $("disability-ratio").value = target.value;
+  if (target.id === "disability-ratio") {
+    const capped = Math.min(70, Math.max(0, readMoney(target.value)));
+    $("disability-ratio").value = String(capped);
+    $("disability-ratio-slider").value = String(capped);
+  }
 }
 
 function syncReturn(target) {
@@ -2456,12 +2485,117 @@ function clearLegacyStorage() {
   }
 }
 
+function applyPrefillFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  if (![...params.keys()].length) return false;
+
+  const textFields = [
+    "client-name",
+    "partner-name",
+    "client-age",
+    "partner-age",
+    "personal-income",
+    "partner-income",
+    "dependant-count",
+    "debts",
+    "other-debts",
+    "existing-coverage",
+    "existing-disability",
+    "existing-ci",
+    "partner-existing-coverage",
+    "partner-existing-disability",
+    "partner-existing-ci",
+    "retirement-age",
+    "tfsa-balance",
+    "tfsa-room",
+    "rrsp-balance",
+    "rrsp-room",
+    "nonreg-balance",
+    "partner-tfsa-balance",
+    "partner-tfsa-room",
+    "partner-rrsp-balance",
+    "partner-rrsp-room",
+    "partner-nonreg-balance",
+    "real-return",
+    "retirement-return",
+    "tfsa-contribution",
+    "rrsp-contribution",
+    "nonreg-contribution",
+    "province",
+    "legacy-amount",
+    "disability-ratio",
+  ];
+
+  for (const id of textFields) {
+    if (!params.has(id)) continue;
+    const el = $(id);
+    if (!el) continue;
+    el.value = params.get(id) ?? "";
+  }
+
+  if (params.has("has-partner")) {
+    const raw = (params.get("has-partner") || "").toLowerCase();
+    $("has-partner").checked = raw === "1" || raw === "true" || raw === "yes";
+  }
+
+  if (params.has("leave-legacy")) {
+    const raw = (params.get("leave-legacy") || "").toLowerCase();
+    const wantsLegacy = raw === "1" || raw === "true" || raw === "yes";
+    $("leave-legacy").checked = wantsLegacy;
+  } else if (params.has("legacy-amount")) {
+    $("leave-legacy").checked = readMoney(params.get("legacy-amount")) > 0;
+  }
+
+  if (params.has("disability-ratio")) {
+    const capped = Math.min(70, Math.max(0, readMoney($("disability-ratio").value)));
+    $("disability-ratio").value = String(capped);
+    $("disability-ratio-slider").value = String(capped);
+  }
+
+  if (params.has("planning-mode")) {
+    const mode = params.get("planning-mode");
+    const radio = document.querySelector(`input[name="planning-mode"][value="${mode}"]`);
+    if (radio) radio.checked = true;
+  } else {
+    const both = document.querySelector('input[name="planning-mode"][value="both"]');
+    if (both) both.checked = true;
+  }
+
+  const count = Math.min(12, Math.max(0, Math.round(readMoney($("dependant-count").value))));
+  if (count > 0) {
+    const ages = ensureDependantInputs();
+    for (let index = 0; index < count; index += 1) {
+      const key = `dependant-age-${index}`;
+      if (params.has(key) && ages[index]) ages[index].value = params.get(key) ?? "";
+    }
+  }
+
+  if (params.has("real-return")) {
+    $("real-return-slider").value = String(Math.min(14, Math.max(0, readMoney($("real-return").value))));
+  }
+  if (params.has("retirement-return")) {
+    $("retirement-return-slider").value = String(Math.min(8, Math.max(0, readMoney($("retirement-return").value))));
+  }
+  if (params.has("tfsa-contribution")) {
+    $("tfsa-contribution-slider").value = String(Math.min(10000, Math.max(0, readMoney($("tfsa-contribution").value))));
+  }
+  if (params.has("rrsp-contribution")) {
+    $("rrsp-contribution-slider").value = String(Math.min(10000, Math.max(0, readMoney($("rrsp-contribution").value))));
+  }
+  if (params.has("nonreg-contribution")) {
+    $("nonreg-contribution-slider").value = String(Math.min(10000, Math.max(0, readMoney($("nonreg-contribution").value))));
+  }
+
+  return true;
+}
+
 function init() {
   clearLegacyStorage();
   initProvinces();
   fillDefaults();
   $("advisor-name").value = DEFAULT_ADVISOR.name;
   $("advisor-firm").value = DEFAULT_ADVISOR.firm;
+  applyPrefillFromUrl();
   render();
 
   $("worksheet").addEventListener("input", (event) => {

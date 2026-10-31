@@ -137,7 +137,7 @@ test("life need cannot go below zero when offsets cover the gross need", () => {
   assert.equal(result.surplus, 4000);
 });
 
-test("life insurance need stays at least the inflated final expenses and probate", () => {
+test("existing coverage can reduce the life insurance gap to zero, including final expenses", () => {
   const covered = calculateLifeNeed({
     personalIncome: 0,
     replacementRatio: 0.7,
@@ -152,7 +152,10 @@ test("life insurance need stays at least the inflated final expenses and probate
     discountRate: 0.03,
     probateFee: 750,
   });
-  assert.equal(covered.capitalNeed, 15750);
+  assert.equal(covered.floor, 15750);
+  assert.equal(covered.grossNeed, 15750);
+  assert.equal(covered.capitalNeed, 0);
+  assert.equal(covered.surplus, 200000 - 15750);
   assert.equal(endOfLifeFloor(15000, 750, 3, 10), inflate(15000, 3, 10) + inflate(750, 3, 10));
 });
 
@@ -197,7 +200,8 @@ test("tax on a non-registered account, the estate, and an RRSP stays in the life
     deathTax: today.total,
   });
   assert.equal(covered.deathTax, today.total);
-  assert.equal(covered.capitalNeed, 15750 + today.total);
+  assert.equal(covered.grossNeed, 15750 + today.total);
+  assert.equal(covered.capitalNeed, 0);
 
   const path = projectLifeNeed({
     currentAge: 40,
@@ -223,9 +227,9 @@ test("tax on a non-registered account, the estate, and an RRSP stays in the life
     taxAtYear: (elapsed) => deathTaxAtYear({ ...shared, rollover: false, years: elapsed }).total,
   }, 50);
   assert.equal(path[0].deathTax, today.total);
-  assert.equal(path[0].capitalNeed, today.total);
+  assert.equal(path[0].capitalNeed, 0);
   assert.ok(path[10].deathTax > path[0].deathTax);
-  assert.equal(path[10].capitalNeed, path[10].deathTax);
+  assert.equal(path[10].capitalNeed, 0);
 });
 
 test("education stays on the need path until each child reaches the independence age, then comes off", () => {
@@ -822,6 +826,7 @@ test("critical illness is a lump sum and disability is a monthly amount", () => 
   assert.equal(criticalIllnessLumpSum(100000, 0.7, 12), 70000);
   assert.equal(criticalIllnessLumpSum(100000, 0.7, 18), 105000);
   assert.equal(disabilityMonthlyBenefit(120000, 0.7), 7000);
+  assert.equal(disabilityMonthlyBenefit(120000, 0.9), 7000);
 });
 
 test("withdrawing the income gap leaves a surplus above the legacy", () => {

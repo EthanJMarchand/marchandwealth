@@ -65,38 +65,46 @@
 <!-- Hand-coded by Ethan Marchand. The plan runs in the browser. Entries are not saved and are not sent anywhere. -->
 
 <header class="no-print sticky top-0 z-50 bg-paper/90 backdrop-blur border-b border-line">
-  <nav class="max-w-6xl mx-auto flex items-center justify-between px-6 md:px-8 py-4">
-    <a href="index.html" class="flex items-center gap-2 shrink-0">
-      <img src="assets/logo.png" alt="Marchand Wealth logo" width="700" height="161" class="h-8 md:h-9 w-auto">
+  <nav class="max-w-6xl mx-auto flex items-center justify-between gap-4 px-6 md:px-8 py-3.5" aria-label="Primary">
+    <a href="/index.html" class="flex items-center gap-2 shrink-0">
+      <img src="/assets/logo.png" alt="Marchand Wealth logo" width="700" height="161" class="h-8 md:h-9 w-auto">
     </a>
-    <div class="hidden lg:flex items-center gap-x-3 xl:gap-x-5 text-[13px] xl:text-sm font-medium text-inksoft">
-      <a href="index.html" class="hover:text-navydeep transition">Home</a>
-      <a href="index.html#services" class="hover:text-navydeep transition">Services</a>
-      <a href="index.html#faq" class="hover:text-navydeep transition">FAQ</a>
-      <a href="life-insurance-quote.html" class="hover:text-navydeep transition">Get a Quote</a>
-      <a href="tfsa-calculator.html" class="hover:text-navydeep transition">TFSA Calculator</a>
-      <a href="needs-analysis.html" class="text-navydeep border-b-2 border-gold pb-1">Financial Plan</a>
-      <a href="insights.html" class="hover:text-navydeep transition">Insights</a>
-      <a href="contact.html" class="hover:text-navydeep transition">Contact</a>
-      <a href="schedule.html" class="hover:text-navydeep transition">Schedule</a>
+    <div class="hidden lg:flex items-center gap-x-6 text-sm font-medium text-inksoft">
+      <a href="/index.html" data-nav="home" class="site-nav-link hover:text-navydeep transition">Home</a>
+      <a href="/index.html#services" data-nav="services" class="site-nav-link hover:text-navydeep transition">Services</a>
+      <div class="site-nav-dropdown relative">
+        <button type="button" data-nav-dropdown class="site-nav-dropdown-trigger site-nav-link inline-flex items-center gap-1.5 hover:text-navydeep transition" aria-expanded="false" aria-haspopup="true">
+          Tools
+          <svg class="site-nav-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 4.5 L6 8 L9.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="site-nav-dropdown-menu" role="menu">
+          <a href="/life-insurance-quote.html" data-nav="quote" role="menuitem">Get a Quote</a>
+          <a href="/tfsa-calculator.html" data-nav="tfsa" role="menuitem">TFSA Calculator</a>
+          <a href="/needs-analysis.html" data-nav="plan" role="menuitem">Financial Plan</a>
+          <a href="/client-intake.html" data-nav="intake" role="menuitem">Client Intake</a>
+        </div>
+      </div>
+      <a href="/insights.html" data-nav="insights" class="site-nav-link hover:text-navydeep transition">Insights</a>
+      <a href="/contact.html" data-nav="contact" class="site-nav-link hover:text-navydeep transition">Contact</a>
     </div>
     <div class="flex items-center gap-3 shrink-0">
-      <a href="schedule.html" class="hidden sm:inline-flex items-center px-5 py-2.5 rounded-sm bg-gold text-navydeep text-sm font-semibold hover:bg-golddim transition">Book a Meeting</a>
-      <button id="nav-toggle" aria-label="Toggle menu" class="lg:hidden text-navydeep">
+      <a href="/schedule.html" data-nav="schedule" class="hidden sm:inline-flex items-center px-5 py-2.5 rounded-sm bg-gold text-navydeep text-sm font-semibold hover:bg-golddim transition">Book a Meeting</a>
+      <button id="nav-toggle" aria-label="Toggle menu" aria-controls="mobile-menu" class="lg:hidden text-navydeep">
         <svg width="24" height="18" viewBox="0 0 22 16" fill="none"><path d="M0 1h22M0 8h22M0 15h22" stroke="currentColor" stroke-width="2"/></svg>
       </button>
     </div>
   </nav>
-  <div id="mobile-menu" class="hidden lg:hidden flex-col gap-4 px-6 pb-6 text-sm font-medium text-inksoft bg-paper border-t border-line">
-    <a href="index.html" class="py-1">Home</a>
-    <a href="index.html#services" class="py-1">Services</a>
-    <a href="index.html#faq" class="py-1">FAQ</a>
-    <a href="life-insurance-quote.html" class="py-1">Get a Quote</a>
-    <a href="tfsa-calculator.html" class="py-1">TFSA Calculator</a>
-    <a href="needs-analysis.html" class="py-1">Financial Plan</a>
-    <a href="insights.html" class="py-1">Insights</a>
-    <a href="contact.html" class="py-1">Contact</a>
-    <a href="schedule.html" class="py-1">Schedule</a>
+  <div id="mobile-menu" class="hidden lg:hidden flex-col gap-1 px-6 pb-6 pt-2 text-sm font-medium text-inksoft bg-paper border-t border-line">
+    <a href="/index.html" data-nav="home" class="py-2">Home</a>
+    <a href="/index.html#services" data-nav="services" class="py-2">Services</a>
+    <p class="pt-2 pb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-golddim">Tools</p>
+    <a href="/life-insurance-quote.html" data-nav="quote" class="py-2 pl-2">Get a Quote</a>
+    <a href="/tfsa-calculator.html" data-nav="tfsa" class="py-2 pl-2">TFSA Calculator</a>
+    <a href="/needs-analysis.html" data-nav="plan" class="py-2 pl-2">Financial Plan</a>
+    <a href="/client-intake.html" data-nav="intake" class="py-2 pl-2">Client Intake</a>
+    <a href="/insights.html" data-nav="insights" class="py-2">Insights</a>
+    <a href="/contact.html" data-nav="contact" class="py-2">Contact</a>
+    <a href="/schedule.html" data-nav="schedule" class="py-2">Schedule</a>
   </div>
 </header>
 
@@ -118,7 +126,7 @@
     <div class="worksheet-sticky-summary sticky top-[4.5rem] z-40 border-b border-line bg-paper/95 no-print backdrop-blur lg:hidden">
       <div class="mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-x-4 gap-y-2 px-4 py-3">
         <div class="scope-insurance min-w-0 flex-1">
-          <p id="mobile-life-label" class="text-xs uppercase tracking-wide text-inksoft">Person 1 life capital</p>
+          <p id="mobile-life-label" class="text-xs uppercase tracking-wide text-inksoft">Person 1 life insurance gap</p>
           <p data-out="life" class="figure nums font-serif font-semibold text-2xl text-navydeep">$0</p>
         </div>
         <div class="scope-planning min-w-0 flex-1 text-right">
@@ -313,7 +321,7 @@
               </div>
               <label class="mt-4 flex gap-2 text-sm font-medium">
                 <input id="count-corporate" type="checkbox" />
-                <span id="client-count-corporate-label">Count that corporate coverage toward Person 1's capital need</span>
+                <span id="client-count-corporate-label">Count that corporate coverage toward Person 1's life insurance gap</span>
               </label>
               <p class="mt-2 text-sm text-inksoft">This is asked only after the corporation box is checked. It reduces this person's need only when you count it. The death benefit is generally tax-free. The corporation can usually pay the proceeds minus the adjusted cost base out as a capital dividend.</p>
             </div>
@@ -330,7 +338,7 @@
               </div>
               <label class="mt-4 flex gap-2 text-sm font-medium">
                 <input id="partner-count-corporate" type="checkbox" />
-                <span id="partner-count-corporate-label">Count that corporate coverage toward Person 2's capital need</span>
+                <span id="partner-count-corporate-label">Count that corporate coverage toward Person 2's life insurance gap</span>
               </label>
               <p class="mt-2 text-sm text-inksoft">This is asked only after Person 2's corporation box is checked. It reduces Person 2's need only when you count it. It does not reduce the other person's need.</p>
             </div>
@@ -355,8 +363,12 @@
             <p id="house-plan-note" class="mt-3 hidden text-sm leading-6 text-inksoft"></p>
           </div>
           <div class="mt-5">
-            <h3 class="font-serif font-semibold text-xl text-navydeep">Life insurance need over time</h3>
-            <p class="mt-1 text-sm text-inksoft">Each chart runs from today to the likely age at death. The solid line is the capital need. Income replacement stays at the years chosen until retirement is that close, then it steps down, and those dollars rise with inflation. The gold dashed line is the mortgage, paid down in a straight line. The olive dashed line is education for each child still under the independence age; it steps off when that child reaches the age. The dotted line is tax at death on the balances that remain in that year of the retirement plan — the same figure as Table F3. Final expenses and probate rise with inflation and stay in the solid line. Amounts are on the left. Age is along the bottom.</p>
+            <h3 class="font-serif font-semibold text-xl text-navydeep">Life insurance gap over time</h3>
+            <p class="mt-3 border-l-2 border-gold bg-paperdim px-4 py-3 text-sm leading-6 text-ink">
+              <span class="font-semibold text-navydeep">Important.</span>
+              Term life insurance can only run to age 85. After that, any term coverage you did not convert to whole life expires with no value. That can leave a life insurance need beyond age 85 that this chart does not illustrate.
+            </p>
+            <p class="mt-3 text-sm text-inksoft">Each chart runs from today to the likely age at death. The solid line is the life insurance gap. Income replacement stays at the years chosen until retirement is that close, then it steps down, and those dollars rise with inflation. The gold dashed line is the mortgage, paid down in a straight line. The olive dashed line is education for each child still under the independence age; it steps off when that child reaches the age. The dotted line is tax at death on the balances that remain in that year of the retirement plan — the same figure as Table F3. Final expenses and probate rise with inflation and stay in the solid line. Amounts are on the left. Age is along the bottom.</p>
             <div id="ref-fig-d1" data-plan-ref="Fig. D1" class="mt-4">
               <p class="plan-ref plan-ref-fig">Fig. D1</p>
               <p id="need-chart-person" class="text-xs font-semibold uppercase tracking-[0.14em] text-inksoft">Person 1</p>
@@ -374,36 +386,56 @@
 
         <section id="ref-e" data-plan-ref="E" class="scope-insurance rounded-sm border border-line bg-white p-5 md:p-6 shadow-sm">
           <h2 class="font-serif font-semibold text-2xl text-navydeep"><span class="plan-ref" title="Section E">E</span>Disability and critical illness</h2>
-          <p class="mt-1 text-sm leading-6 text-inksoft">Disability is a monthly benefit. Critical illness is one lump sum for the months of earned income needed to recover. This replaces earned income only. Income from investments is not included. These are amounts. This worksheet does not choose a product.</p>
+          <p class="mt-1 text-sm leading-6 text-inksoft">Enter any disability or critical illness already in force first. The figures below are the gaps after that coverage. Disability is a monthly benefit. Critical illness is one lump sum for the months of earned income needed to recover. This replaces earned income only. Income from investments is not included. These are amounts. This worksheet does not choose a product.</p>
           <div class="mt-4 grid gap-4 lg:grid-cols-2">
             <div class="rounded-sm border border-line bg-white p-4">
               <p id="person-heading-protection" class="text-xs font-semibold uppercase tracking-[0.14em] text-inksoft">Person 1</p>
-              <p class="mt-3 text-sm">Disability benefit, monthly</p>
+              <label class="mt-3 block text-sm font-medium"><span id="client-existing-di-label">Disability already in force on Person 1, monthly</span>
+                <input id="existing-disability" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
+              </label>
+              <label class="mt-3 block text-sm font-medium"><span id="client-existing-ci-label">Critical illness already in force on Person 1</span>
+                <input id="existing-ci" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
+              </label>
+              <p class="mt-4 text-sm">Disability gap, monthly</p>
               <p id="client-di" class="figure nums text-2xl">$0</p>
-              <p class="mt-3 text-sm">Critical illness, lump sum</p>
+              <p class="mt-3 text-sm">Critical illness gap</p>
               <p id="client-ci" class="figure nums text-2xl">$0</p>
             </div>
             <div class="person-spouse partner-only hidden rounded-sm p-4">
               <p id="partner-heading-protection" class="text-xs font-semibold uppercase tracking-[0.14em] text-olive">Person 2</p>
-              <p class="mt-3 text-sm">Disability benefit, monthly</p>
+              <label class="mt-3 block text-sm font-medium"><span id="partner-existing-di-label">Disability already in force on Person 2, monthly</span>
+                <input id="partner-existing-disability" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
+              </label>
+              <label class="mt-3 block text-sm font-medium"><span id="partner-existing-ci-label">Critical illness already in force on Person 2</span>
+                <input id="partner-existing-ci" inputmode="decimal" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
+              </label>
+              <p class="mt-4 text-sm">Disability gap, monthly</p>
               <p id="spouse-di" class="figure nums text-2xl">$0</p>
-              <p class="mt-3 text-sm">Critical illness, lump sum</p>
+              <p class="mt-3 text-sm">Critical illness gap</p>
               <p id="spouse-ci" class="figure nums text-2xl">$0</p>
             </div>
+          </div>
+          <div class="mt-4 max-w-xl">
+            <label class="block text-sm font-medium" for="disability-ratio-slider"><span class="plan-ref plan-ref-control" title="Slider S.2">S.2</span>Monthly income if disabled (% of earned income)</label>
+            <div class="mt-2 flex items-center gap-4">
+              <input id="disability-ratio-slider" type="range" min="0" max="70" step="1" value="70" class="w-full" />
+              <input id="disability-ratio" inputmode="decimal" value="70" aria-label="Percent of earned income to replace if disabled, maximum 70" class="w-24 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
+            </div>
+            <p class="mt-2 text-sm text-inksoft">Capped at 70% of earned income. That is the usual ceiling for individual disability coverage.</p>
           </div>
           <label class="mt-4 block text-sm font-medium sm:max-w-xs">Months of income the disability benefit should replace
             <input id="disability-months" inputmode="numeric" class="mt-1 block w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
           </label>
           <p id="disability-hint" class="mt-2 text-sm text-inksoft"></p>
           <div class="mt-4 max-w-xl">
-            <label class="block text-sm font-medium" for="ci-ratio-slider"><span class="plan-ref plan-ref-control" title="Slider S.2">S.2</span>Earned income to replace for a critical illness (%)</label>
+            <label class="block text-sm font-medium" for="ci-ratio-slider"><span class="plan-ref plan-ref-control" title="Slider S.3">S.3</span>Earned income to replace for a critical illness (%)</label>
             <div class="mt-2 flex items-center gap-4">
               <input id="ci-ratio-slider" type="range" min="0" max="100" step="1" value="70" class="w-full" />
               <input id="ci-ratio" inputmode="decimal" value="70" aria-label="Percent of earned income to replace for a critical illness" class="w-24 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
             </div>
           </div>
           <div class="mt-4 max-w-xl">
-            <label class="block text-sm font-medium" for="ci-months-slider"><span class="plan-ref plan-ref-control" title="Slider S.3">S.3</span>Months of earned income to recover from a critical illness</label>
+            <label class="block text-sm font-medium" for="ci-months-slider"><span class="plan-ref plan-ref-control" title="Slider S.4">S.4</span>Months of earned income to recover from a critical illness</label>
             <div class="mt-2 flex items-center gap-4">
               <input id="ci-months-slider" type="range" min="0" max="36" step="1" value="12" class="w-full" />
               <input id="ci-months" inputmode="numeric" value="12" aria-label="Months of earned income to recover from a critical illness" class="w-24 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
@@ -477,7 +509,7 @@
               <p id="legacy-note" class="mt-2 text-sm text-inksoft"></p>
             </div>
             <div class="sm:col-span-2">
-              <label class="block text-sm font-medium" for="desired-income-slider"><span class="plan-ref plan-ref-control" title="Slider S.4">S.4</span>How much after-tax annual income do you need from retirement to the end of life, in today's dollars?</label>
+              <label class="block text-sm font-medium" for="desired-income-slider"><span class="plan-ref plan-ref-control" title="Slider S.5">S.5</span>How much after-tax annual income do you need from retirement to the end of life, in today's dollars?</label>
               <div class="mt-2 flex items-center gap-4">
                 <input id="desired-income-slider" type="range" min="0" max="300000" step="1000" value="0" class="w-full" />
                 <input id="desired-income" inputmode="decimal" value="0" aria-label="After-tax annual income in today's dollars" class="w-32 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
@@ -485,7 +517,7 @@
               <p id="desired-income-note" class="mt-2 text-sm text-inksoft">Starts at 70% of combined income. Slide it, or type an amount.</p>
             </div>
             <div class="sm:col-span-2">
-              <label class="block text-sm font-medium" for="inflation-slider"><span class="plan-ref plan-ref-control" title="Slider S.5">S.5</span>Inflation assumption</label>
+              <label class="block text-sm font-medium" for="inflation-slider"><span class="plan-ref plan-ref-control" title="Slider S.6">S.6</span>Inflation assumption</label>
               <div class="mt-2 flex items-center gap-4">
                 <input id="inflation-slider" type="range" min="0" max="8" step="0.1" class="w-full" />
                 <input id="inflation-rate" inputmode="decimal" aria-label="Inflation percent" class="w-24 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
@@ -548,14 +580,14 @@
               </div>
             </div>
             <div class="sm:col-span-2">
-              <label class="block text-sm font-medium" for="real-return-slider"><span class="plan-ref plan-ref-control" title="Slider S.6">S.6</span>Estimated rate of return while saving</label>
+              <label class="block text-sm font-medium" for="real-return-slider"><span class="plan-ref plan-ref-control" title="Slider S.7">S.7</span>Estimated rate of return while saving</label>
               <div class="mt-2 flex items-center gap-4">
                 <input id="real-return-slider" type="range" min="0" max="14" step="0.1" class="w-full" />
                 <input id="real-return" inputmode="decimal" aria-label="Estimated rate of return while saving, percent" class="w-24 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
               </div>
             </div>
             <div class="sm:col-span-2">
-              <label class="block text-sm font-medium" for="other-return-slider"><span class="plan-ref plan-ref-control" title="Slider S.7">S.7</span>Average internal rate of return for all other assets</label>
+              <label class="block text-sm font-medium" for="other-return-slider"><span class="plan-ref plan-ref-control" title="Slider S.8">S.8</span>Average internal rate of return for all other assets</label>
               <div class="mt-2 flex items-center gap-4">
                 <input id="other-return-slider" type="range" min="0" max="14" step="0.1" value="0" class="w-full" />
                 <input id="other-return" inputmode="decimal" value="0" aria-label="Average internal rate of return for other assets, percent" class="w-24 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
@@ -563,7 +595,7 @@
               <p class="mt-2 text-sm text-inksoft">Starts at 0%. Use this when other assets include real estate. It applies before and after retirement.</p>
             </div>
             <div class="sm:col-span-2">
-              <label class="block text-sm font-medium" for="retirement-return-slider"><span class="plan-ref plan-ref-control" title="Slider S.8">S.8</span>Estimated rate of return in retirement</label>
+              <label class="block text-sm font-medium" for="retirement-return-slider"><span class="plan-ref plan-ref-control" title="Slider S.9">S.9</span>Estimated rate of return in retirement</label>
               <div class="mt-2 flex items-center gap-4">
                 <input id="retirement-return-slider" type="range" min="0" max="8" step="0.1" class="w-full" />
                 <input id="retirement-return" inputmode="decimal" aria-label="Estimated rate of return in retirement, percent" class="w-24 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
@@ -571,7 +603,7 @@
               <p class="mt-2 text-sm text-inksoft">At retirement, contributions stop. CPP and OAS cover part of the income. The TFSA, RRSP, and non-registered accounts withdraw the rest and switch to this rate.</p>
             </div>
             <div class="sm:col-span-2">
-              <label class="block text-sm font-medium" for="tfsa-contribution-slider"><span class="plan-ref plan-ref-control" title="Slider S.9">S.9</span>TFSA contribution, monthly</label>
+              <label class="block text-sm font-medium" for="tfsa-contribution-slider"><span class="plan-ref plan-ref-control" title="Slider S.10">S.10</span>TFSA contribution, monthly</label>
               <div class="mt-2 flex items-center gap-4">
                 <input id="tfsa-contribution-slider" type="range" min="0" max="10000" step="50" value="0" class="w-full" />
                 <input id="tfsa-contribution" inputmode="decimal" value="0" aria-label="TFSA contribution per month" class="w-28 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
@@ -579,7 +611,7 @@
               <p class="mt-2 text-sm text-inksoft">The most you would contribute. Deposits stay at this amount until the room is used, then they follow the room that is still available.</p>
             </div>
             <div class="sm:col-span-2">
-              <label class="block text-sm font-medium" for="rrsp-contribution-slider"><span class="plan-ref plan-ref-control" title="Slider S.10">S.10</span>RRSP contribution, monthly</label>
+              <label class="block text-sm font-medium" for="rrsp-contribution-slider"><span class="plan-ref plan-ref-control" title="Slider S.11">S.11</span>RRSP contribution, monthly</label>
               <div class="mt-2 flex items-center gap-4">
                 <input id="rrsp-contribution-slider" type="range" min="0" max="10000" step="50" value="0" class="w-full" />
                 <input id="rrsp-contribution" inputmode="decimal" value="0" aria-label="RRSP contribution per month" class="w-28 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
@@ -589,7 +621,7 @@
               <p id="rrsp-rollover-tip" class="mt-1.5 hidden text-xs leading-5 text-inksoft"></p>
             </div>
             <div class="sm:col-span-2">
-              <label class="block text-sm font-medium" for="nonreg-contribution-slider"><span class="plan-ref plan-ref-control" title="Slider S.11">S.11</span>Non-registered contribution, monthly</label>
+              <label class="block text-sm font-medium" for="nonreg-contribution-slider"><span class="plan-ref plan-ref-control" title="Slider S.12">S.12</span>Non-registered contribution, monthly</label>
               <div class="mt-2 flex items-center gap-4">
                 <input id="nonreg-contribution-slider" type="range" min="0" max="10000" step="50" value="0" class="w-full" />
                 <input id="nonreg-contribution" inputmode="decimal" value="0" aria-label="Non-registered contribution per month" class="w-28 rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm" autocomplete="off" />
@@ -603,7 +635,7 @@
                 <p id="wealth-chart-note" class="mt-3 text-sm leading-6"></p>
               </div>
               <div class="mt-4">
-                <label class="block text-sm font-medium" for="early-death-age"><span class="plan-ref plan-ref-control" title="Slider S.12">S.12</span>Age if death comes at this point
+                <label class="block text-sm font-medium" for="early-death-age"><span class="plan-ref plan-ref-control" title="Slider S.13">S.13</span>Age if death comes at this point
                   <span id="early-death-readout" class="nums"></span>
                 </label>
                 <input id="early-death-age" type="range" min="1" max="100" step="1" class="mt-2 w-full" />
@@ -627,7 +659,7 @@
 
         <section id="ref-g" data-plan-ref="G" class="scope-insurance rounded-sm border border-line bg-white p-5 md:p-6 shadow-sm">
           <h2 class="font-serif font-semibold text-2xl text-navydeep"><span class="plan-ref" title="Section G">G</span>Tax and probate on death</h2>
-          <p class="mt-1 text-sm leading-6 text-inksoft">Canada has no inheritance tax. Probate is a court fee on what actually goes through the estate. A non-registered account, and other assets that move through the estate, can be taxed as a capital gain on death. An RRSP is income on the final return unless it rolls to an eligible beneficiary. Those taxes are added to the life insurance need, and the chart raises them as the accounts and the estate value grow. This is a screen, not a tax opinion.</p>
+          <p class="mt-1 text-sm leading-6 text-inksoft">Canada has no inheritance tax. Probate is a court fee on what actually goes through the estate. A non-registered account, and other assets that move through the estate, can be taxed as a capital gain on death. An RRSP is income on the final return unless it rolls to an eligible beneficiary. Those taxes are added to the life insurance gap, and the chart raises them as the accounts and the estate value grow. This is a screen, not a tax opinion.</p>
           <div class="mt-4 grid gap-4 sm:grid-cols-2">
             <label class="block text-sm font-medium">Province or territory
               <select id="province" class="mt-1 w-full rounded-sm border border-line bg-paperdim px-3.5 py-2.5 text-sm"></select>
@@ -647,7 +679,7 @@
 
         <details id="ref-h" data-plan-ref="H" class="rounded-sm border border-line bg-white p-5 md:p-6 shadow-sm">
           <summary class="cursor-pointer font-serif font-semibold text-2xl text-navydeep"><span class="plan-ref" title="Section H">H</span>Assumptions you can change for this case</summary>
-          <p class="mt-2 text-sm text-inksoft">These are planning choices for this case. Inflation is the slider in the retirement section. Life insurance capital stays in today's dollars, so that slider does not shrink the insurance number.</p>
+          <p class="mt-2 text-sm text-inksoft">These are planning choices for this case. Inflation is the slider in the retirement section. The life insurance gap stays in today's dollars, so that slider does not shrink the insurance number.</p>
           <p class="scope-planning mt-3 text-sm leading-6 text-inksoft">In retirement, CPP and OAS (when they apply) cover part of the after-tax income goal. Any shortfall is taken from Other assets, non-registered accounts, and the RRSP in proportion to those three balances, so they run down together and reach $0 at the same time. Example: if those accounts total $1,000,000 — $500,000 Other, $300,000 non-registered, and $200,000 RRSP — a $100,000 shortfall draws about $50,000, $30,000, and $20,000 from each. The TFSA is not used until Other, non-registered, and the RRSP are gone.</p>
           <div class="mt-4 grid gap-4 sm:grid-cols-2">
             <label class="block text-sm font-medium">Dependant independence age
@@ -676,21 +708,21 @@
         <p class="text-xs font-semibold uppercase tracking-[0.14em] text-golddim">Plan summary</p>
         <p id="plan-prepared" class="mt-2 text-sm leading-6 text-inksoft"></p>
         <div class="scope-insurance">
-          <p id="meeting-person-life-label" class="mt-4 text-sm font-medium text-golddim">Person 1, life capital</p>
+          <p id="meeting-person-life-label" class="mt-4 text-sm font-medium text-golddim">Person 1, life insurance gap</p>
           <p data-out="life" class="figure nums font-serif text-4xl">$0</p>
           <p id="meeting-years" class="mt-1 text-sm leading-6 text-inksoft"></p>
           <ul id="life-waterfall" class="mt-3 space-y-1 text-sm"></ul>
-          <p id="meeting-person-di-label" class="mt-4 text-sm font-medium text-golddim">Person 1, disability, monthly</p>
+          <p id="meeting-person-di-label" class="mt-4 text-sm font-medium text-golddim">Person 1, disability gap, monthly</p>
           <p id="meeting-di" class="figure nums font-serif text-3xl">$0</p>
-          <p id="meeting-person-ci-label" class="mt-4 text-sm font-medium text-golddim">Person 1, critical illness</p>
+          <p id="meeting-person-ci-label" class="mt-4 text-sm font-medium text-golddim">Person 1, critical illness gap</p>
           <p id="meeting-ci" class="figure nums font-serif text-3xl">$0</p>
           <div id="meeting-partner" class="person-spouse partner-only mt-6 hidden">
-            <p id="meeting-partner-life-label" class="text-sm font-medium text-golddim">Person 2, life capital</p>
+            <p id="meeting-partner-life-label" class="text-sm font-medium text-golddim">Person 2, life insurance gap</p>
             <p id="meeting-partner-life" class="figure nums font-serif text-4xl">$0</p>
             <ul id="partner-life-waterfall" class="mt-3 space-y-1 text-sm"></ul>
-            <p id="meeting-partner-di-label" class="mt-4 text-sm font-medium text-golddim">Person 2, disability, monthly</p>
+            <p id="meeting-partner-di-label" class="mt-4 text-sm font-medium text-golddim">Person 2, disability gap, monthly</p>
             <p id="meeting-partner-di" class="figure nums font-serif text-3xl">$0</p>
-            <p id="meeting-partner-ci-label" class="mt-4 text-sm font-medium text-golddim">Person 2, critical illness</p>
+            <p id="meeting-partner-ci-label" class="mt-4 text-sm font-medium text-golddim">Person 2, critical illness gap</p>
             <p id="meeting-partner-ci" class="figure nums font-serif text-3xl">$0</p>
           </div>
           <div id="meeting-children" class="mt-6 space-y-4"></div>
@@ -757,6 +789,7 @@
           <a href="tfsa-calculator.html" class="hover:text-goldlight">TFSA Calculator</a>
           <a href="needs-analysis.html" class="hover:text-goldlight">Financial Plan</a>
           <a href="insights.html" class="hover:text-goldlight">Insights</a>
+          <a href="client-intake.html" class="hover:text-goldlight">Client Intake Form</a>
           <a href="contact.html" class="hover:text-goldlight">Contact</a>
           <a href="schedule.html" class="hover:text-goldlight">Schedule a Meeting</a>
         </div>

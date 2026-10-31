@@ -6,6 +6,124 @@ html { scroll-behavior: smooth; }
 body { font-family: 'Inter', sans-serif; }
 .font-serif { font-family: 'Fraunces', serif; }
 
+/* Shared site header — keep markup identical on every page */
+.site-nav-link.is-active {
+  color: #232a35;
+  border-bottom: 2px solid #c1a57b;
+  padding-bottom: 0.15rem;
+}
+.site-nav-dropdown {
+  /* Keep a little hit area under the label so the pointer can travel into the menu. */
+  padding-bottom: 0.85rem;
+  margin-bottom: -0.85rem;
+}
+.site-nav-dropdown-menu {
+  position: absolute;
+  top: calc(100% - 0.85rem);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 13.5rem;
+  padding: 0.45rem;
+  background: #f7f4ef;
+  border: 1px solid #ddd7ca;
+  box-shadow: 0 12px 28px rgba(35, 42, 53, 0.1);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 140ms ease, visibility 140ms ease;
+  z-index: 60;
+}
+.site-nav-dropdown.is-open .site-nav-dropdown-menu,
+.site-nav-dropdown:hover .site-nav-dropdown-menu,
+.site-nav-dropdown:focus-within .site-nav-dropdown-menu {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+.site-nav-dropdown-menu a {
+  display: block;
+  padding: 0.65rem 0.8rem;
+  color: #5c6570;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: color 120ms ease, background-color 120ms ease;
+}
+.site-nav-dropdown-menu a:hover,
+.site-nav-dropdown-menu a.is-active {
+  color: #232a35;
+  background: rgba(193, 165, 123, 0.14);
+}
+.site-nav-dropdown-trigger .site-nav-chevron {
+  transition: transform 140ms ease;
+}
+.site-nav-dropdown.is-open .site-nav-chevron,
+.site-nav-dropdown:hover .site-nav-chevron,
+.site-nav-dropdown:focus-within .site-nav-chevron {
+  transform: rotate(180deg);
+}
+.site-nav-dropdown-trigger.is-active {
+  color: #232a35;
+  border-bottom: 2px solid #c1a57b;
+  padding-bottom: 0.15rem;
+}
+#mobile-menu a.is-active {
+  color: #232a35;
+  font-weight: 600;
+}
+
+/* Client intake — Person 2 blocks match the financial plan spouse treatment */
+.intake-person-2 {
+  background: #f7f4ee;
+  border: 1px solid #c1a57b;
+}
+.intake-person-2 input,
+.intake-person-2 select {
+  background: #fffdf8;
+}
+
+/* Client intake — “more below” control on the current question */
+.intake-next-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: fit-content;
+  margin: 1rem auto 0;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid #c1a57b;
+  background: rgba(193, 165, 123, 0.12);
+  color: #232a35;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+.intake-next-arrow:hover:not(:disabled),
+.intake-next-arrow:focus-visible:not(:disabled) {
+  background: #c1a57b;
+  color: #232a35;
+  outline: none;
+}
+.intake-next-arrow svg {
+  animation: intake-next-bounce 1.6s ease-in-out infinite;
+}
+.intake-next-arrow.is-waiting,
+.intake-next-arrow:disabled {
+  opacity: 0.55;
+  cursor: default;
+  animation: none;
+}
+.intake-next-arrow.is-waiting svg,
+.intake-next-arrow:disabled svg {
+  animation: none;
+}
+@keyframes intake-next-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(4px); }
+}
+
 /* Ensure the native `hidden` attribute always wins over Tailwind's display
    utilities (flex/grid/block), regardless of class source order. Used by the
    intake form's personal/business toggle so `el.hidden = true/false` works

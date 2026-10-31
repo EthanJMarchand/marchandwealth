@@ -7,6 +7,12 @@
   to = "/contact.html"
   status = 301
 
+[[redirects]]
+  from = "/client-intake"
+  to = "/client-intake.html"
+  status = 301
+  force = true
+
 # Netlify auto-serves e.g. contact.html at the extension-less /contact too,
 # which Google was crawling as a separate duplicate URL (still correctly
 # canonicalizing back to the .html version, but cleaner to just redirect it

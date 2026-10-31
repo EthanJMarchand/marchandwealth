@@ -48,7 +48,8 @@ export function calculateLifeNeed({
     existingLifeInsurance: Math.max(0, existingLifeInsurance),
     assetsAtDeath: Math.max(0, assetsAtDeath),
     offsets,
-    capitalNeed: Math.max(floor, grossNeed - offsets),
-    surplus: Math.max(0, offsets - (grossNeed - floor)),
+    // Final expenses stay in the gross need, but in-force coverage and assets can close the gap to $0.
+    capitalNeed: Math.max(0, grossNeed - offsets),
+    surplus: Math.max(0, offsets - grossNeed),
   };
 }

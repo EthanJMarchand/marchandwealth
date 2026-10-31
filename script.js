@@ -22,6 +22,54 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // One nav for every page: mark the current section, and open Tools on click/tap.
+  const path = (window.location.pathname || '').replace(/\/$/, '') || '/index.html';
+  const file = path.split('/').pop() || 'index.html';
+  const navKeyByFile = {
+    'index.html': 'home',
+    '': 'home',
+    'life-insurance-quote.html': 'quote',
+    'tfsa-calculator.html': 'tfsa',
+    'needs-analysis.html': 'plan',
+    'client-intake.html': 'intake',
+    'insights.html': 'insights',
+    'insight.html': 'insights',
+    'contact.html': 'contact',
+    'schedule.html': 'schedule'
+  };
+  let activeKey = navKeyByFile[file] || null;
+  if (!activeKey && path.includes('/insights/')) activeKey = 'insights';
+  const toolKeys = new Set(['quote', 'tfsa', 'plan', 'intake']);
+  document.querySelectorAll('[data-nav]').forEach((link) => {
+    if (link.getAttribute('data-nav') === activeKey) {
+      link.classList.add('is-active');
+      link.setAttribute('aria-current', 'page');
+    }
+  });
+  const toolsTrigger = document.querySelector('[data-nav-dropdown]');
+  const toolsDropdown = toolsTrigger?.closest('.site-nav-dropdown');
+  if (toolsTrigger && toolKeys.has(activeKey)) toolsTrigger.classList.add('is-active');
+  if (toolsTrigger && toolsDropdown) {
+    const setToolsOpen = (open) => {
+      toolsDropdown.classList.toggle('is-open', open);
+      toolsTrigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+    };
+    // Hover keeps the menu open while moving from the label into the panel.
+    toolsDropdown.addEventListener('mouseenter', () => setToolsOpen(true));
+    toolsDropdown.addEventListener('mouseleave', () => setToolsOpen(false));
+    // Click remains for touch / keyboard users.
+    toolsTrigger.addEventListener('click', (event) => {
+      event.preventDefault();
+      setToolsOpen(!toolsDropdown.classList.contains('is-open'));
+    });
+    document.addEventListener('click', (event) => {
+      if (!toolsDropdown.contains(event.target)) setToolsOpen(false);
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') setToolsOpen(false);
+    });
+  }
+
   // Click to expand. Kind of like my client meetings.
   document.querySelectorAll('.faq-toggle').forEach(btn => {
     btn.addEventListener('click', () => {

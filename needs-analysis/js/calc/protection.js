@@ -5,6 +5,10 @@ export function criticalIllnessLumpSum(annualEarnedIncome, replacementRatio, mon
   return annual * (Math.max(0, months) / 12);
 }
 
+// Insurers typically cap individual disability income replacement at 70% of earned income.
+export const DISABILITY_REPLACEMENT_CEILING = 0.7;
+
 export function disabilityMonthlyBenefit(annualIncome, replacementRatio) {
-  return (Math.max(0, annualIncome) * Math.max(0, replacementRatio)) / 12;
+  const ratio = Math.min(DISABILITY_REPLACEMENT_CEILING, Math.max(0, replacementRatio));
+  return (Math.max(0, annualIncome) * ratio) / 12;
 }

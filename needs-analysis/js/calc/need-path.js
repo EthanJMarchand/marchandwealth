@@ -92,7 +92,8 @@ export function lifeNeedAtYear({
     debts,
     deathTax: tax,
     floor,
-    capitalNeed: Math.max(floor, gross - offsets),
+    // Final expenses stay in the gross need, but in-force coverage and assets can close the gap to $0.
+    capitalNeed: Math.max(0, gross - offsets),
   };
 }
 

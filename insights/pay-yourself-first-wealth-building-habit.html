@@ -45,37 +45,47 @@
 <body class="bg-paper text-ink antialiased">
 <!-- Hand-coded by Ethan Marchand. This page renders whichever post matches the URL from insights-data.js. -->
 
-<header class="sticky top-0 z-50 bg-paper/90 backdrop-blur border-b border-line">
-  <nav class="max-w-6xl mx-auto flex items-center justify-between px-6 md:px-8 py-4">
+<header class="no-print sticky top-0 z-50 bg-paper/90 backdrop-blur border-b border-line">
+  <nav class="max-w-6xl mx-auto flex items-center justify-between gap-4 px-6 md:px-8 py-3.5" aria-label="Primary">
     <a href="/index.html" class="flex items-center gap-2 shrink-0">
       <img src="/assets/logo.png" alt="Marchand Wealth logo" width="700" height="161" class="h-8 md:h-9 w-auto">
     </a>
-    <div class="hidden lg:flex items-center gap-x-3 xl:gap-x-5 text-[13px] xl:text-sm font-medium text-inksoft">
-      <a href="/index.html" class="hover:text-navydeep transition">Home</a>
-      <a href="/index.html#services" class="hover:text-navydeep transition">Services</a>
-      <a href="/life-insurance-quote.html" class="hover:text-navydeep transition">Get a Quote</a>
-      <a href="/tfsa-calculator.html" class="hover:text-navydeep transition">TFSA Calculator</a>
-      <a href="/needs-analysis.html" class="hover:text-navydeep transition">Needs Analysis</a>
-      <a href="/insights.html" class="text-navydeep border-b-2 border-gold pb-1">Insights</a>
-      <a href="/contact.html" class="hover:text-navydeep transition">Contact</a>
-      <a href="/schedule.html" class="hover:text-navydeep transition">Schedule</a>
+    <div class="hidden lg:flex items-center gap-x-6 text-sm font-medium text-inksoft">
+      <a href="/index.html" data-nav="home" class="site-nav-link hover:text-navydeep transition">Home</a>
+      <a href="/index.html#services" data-nav="services" class="site-nav-link hover:text-navydeep transition">Services</a>
+      <div class="site-nav-dropdown relative">
+        <button type="button" data-nav-dropdown class="site-nav-dropdown-trigger site-nav-link inline-flex items-center gap-1.5 hover:text-navydeep transition" aria-expanded="false" aria-haspopup="true">
+          Tools
+          <svg class="site-nav-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 4.5 L6 8 L9.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="site-nav-dropdown-menu" role="menu">
+          <a href="/life-insurance-quote.html" data-nav="quote" role="menuitem">Get a Quote</a>
+          <a href="/tfsa-calculator.html" data-nav="tfsa" role="menuitem">TFSA Calculator</a>
+          <a href="/needs-analysis.html" data-nav="plan" role="menuitem">Financial Plan</a>
+          <a href="/client-intake.html" data-nav="intake" role="menuitem">Client Intake</a>
+        </div>
+      </div>
+      <a href="/insights.html" data-nav="insights" class="site-nav-link hover:text-navydeep transition">Insights</a>
+      <a href="/contact.html" data-nav="contact" class="site-nav-link hover:text-navydeep transition">Contact</a>
     </div>
     <div class="flex items-center gap-3 shrink-0">
-      <a href="/schedule.html" class="hidden sm:inline-flex items-center px-5 py-2.5 rounded-sm bg-gold text-navydeep text-sm font-semibold hover:bg-golddim transition">Book a Meeting</a>
-      <button id="nav-toggle" aria-label="Toggle menu" class="lg:hidden text-navydeep">
+      <a href="/schedule.html" data-nav="schedule" class="hidden sm:inline-flex items-center px-5 py-2.5 rounded-sm bg-gold text-navydeep text-sm font-semibold hover:bg-golddim transition">Book a Meeting</a>
+      <button id="nav-toggle" aria-label="Toggle menu" aria-controls="mobile-menu" class="lg:hidden text-navydeep">
         <svg width="24" height="18" viewBox="0 0 22 16" fill="none"><path d="M0 1h22M0 8h22M0 15h22" stroke="currentColor" stroke-width="2"/></svg>
       </button>
     </div>
   </nav>
-  <div id="mobile-menu" class="hidden lg:hidden flex-col gap-4 px-6 pb-6 text-sm font-medium text-inksoft bg-paper border-t border-line">
-    <a href="/index.html" class="py-1">Home</a>
-    <a href="/index.html#services" class="py-1">Services</a>
-    <a href="/life-insurance-quote.html" class="py-1">Get a Quote</a>
-    <a href="/tfsa-calculator.html" class="py-1">TFSA Calculator</a>
-    <a href="/needs-analysis.html" class="py-1">Needs Analysis</a>
-    <a href="/insights.html" class="py-1">Insights</a>
-    <a href="/contact.html" class="py-1">Contact</a>
-    <a href="/schedule.html" class="py-1">Schedule</a>
+  <div id="mobile-menu" class="hidden lg:hidden flex-col gap-1 px-6 pb-6 pt-2 text-sm font-medium text-inksoft bg-paper border-t border-line">
+    <a href="/index.html" data-nav="home" class="py-2">Home</a>
+    <a href="/index.html#services" data-nav="services" class="py-2">Services</a>
+    <p class="pt-2 pb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-golddim">Tools</p>
+    <a href="/life-insurance-quote.html" data-nav="quote" class="py-2 pl-2">Get a Quote</a>
+    <a href="/tfsa-calculator.html" data-nav="tfsa" class="py-2 pl-2">TFSA Calculator</a>
+    <a href="/needs-analysis.html" data-nav="plan" class="py-2 pl-2">Financial Plan</a>
+    <a href="/client-intake.html" data-nav="intake" class="py-2 pl-2">Client Intake</a>
+    <a href="/insights.html" data-nav="insights" class="py-2">Insights</a>
+    <a href="/contact.html" data-nav="contact" class="py-2">Contact</a>
+    <a href="/schedule.html" data-nav="schedule" class="py-2">Schedule</a>
   </div>
 </header>
 
@@ -192,6 +202,7 @@
           <a href="/tfsa-calculator.html" class="hover:text-goldlight">TFSA Calculator</a>
           <a href="/needs-analysis.html" class="hover:text-goldlight">Needs Analysis</a>
           <a href="/insights.html" class="hover:text-goldlight">Insights</a>
+          <a href="/client-intake.html" class="hover:text-goldlight">Client Intake Form</a>
           <a href="/contact.html" class="hover:text-goldlight">Contact</a>
           <a href="/schedule.html" class="hover:text-goldlight">Schedule a Meeting</a>
         </div>
