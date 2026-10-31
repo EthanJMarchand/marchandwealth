@@ -13,7 +13,7 @@ import { deathTaxAtYear } from "../js/calc/death-tax.js";
 import { calculateLifeNeed, endOfLifeFloor } from "../js/calc/life-need.js";
 import { annuityPayment, presentValue, presentValueOfAnnuity, readMoney, savingsForFutureValue } from "../js/calc/money.js";
 import { incomeReplacementYears, incomeYearsAtAge, projectLifeNeed } from "../js/calc/need-path.js";
-import { CPP_FULL_CAREER_YEARS, cppContributionYears, estimateCpp, estimateOas } from "../js/calc/pensions.js";
+import { cppCareerShare, estimateCpp, estimateOas } from "../js/calc/pensions.js";
 import { calculateProbate } from "../js/calc/probate.js";
 import { criticalIllnessLumpSum, disabilityMonthlyBenefit } from "../js/calc/protection.js";
 import { calculateRetirement } from "../js/calc/retirement.js";
@@ -678,27 +678,47 @@ test("the insurance path pays the mortgage down, and a future house stays out of
 
 test("CPP and OAS guesses use earnings and years in Canada", () => {
   const maxCpp = Math.round(cppAmounts.maxMonthlyRetirementAt65 * 12 * 100) / 100;
-  const full = CPP_FULL_CAREER_YEARS;
-  assert.equal(cppContributionYears(42), 24);
-  assert.equal(estimateCpp(cppAmounts.ympe, cppAmounts.ympe, maxCpp, full), maxCpp);
-  assert.equal(estimateCpp(95000, cppAmounts.ympe, maxCpp, full), maxCpp);
-  assert.equal(estimateCpp(95000, cppAmounts.ympe, maxCpp, 24), Math.round(maxCpp * (24 / full) * 100) / 100);
-  assert.ok(estimateCpp(95000, cppAmounts.ympe, maxCpp, 24) < maxCpp * 0.7);
-  assert.equal(estimateCpp(37300, cppAmounts.ympe, maxCpp, full), Math.round(maxCpp * 0.5 * 100) / 100);
+  // Work from 18 to 65: 47 years, 17% dropped, so the full share is reached.
+  assert.equal(cppCareerShare(65), 1);
+  // Retire at 60 and start then: 42 years, 34.86 counted, all worked.
+  assert.equal(cppCareerShare(60), 1);
+  // Stop at 50, start at 60: 32 years worked of 34.86 counted.
+  assert.ok(Math.abs(cppCareerShare(50) - 32 / (42 * 0.83)) < 1e-9);
+  assert.equal(estimateCpp(cppAmounts.ympe, cppAmounts.ympe, maxCpp, 1), maxCpp);
+  assert.equal(estimateCpp(95000, cppAmounts.ympe, maxCpp, 1), maxCpp);
+  assert.equal(estimateCpp(95000, cppAmounts.ympe, maxCpp, 0.5), Math.round(maxCpp * 0.5 * 100) / 100);
+  assert.equal(estimateCpp(37300, cppAmounts.ympe, maxCpp, 1), Math.round(maxCpp * 0.5 * 100) / 100);
   assert.equal(estimateCpp(95000, cppAmounts.ympe, maxCpp), 0);
   const maxOas = oasAmounts.maxMonthlyAge65to74 * 12;
   assert.equal(estimateOas(40, maxOas), maxOas);
   assert.equal(estimateOas(24, maxOas), Math.round(maxOas * 0.6 * 100) / 100);
+  assert.equal(estimateOas(10, maxOas), Math.round(maxOas * 0.25 * 100) / 100);
+  assert.equal(estimateOas(9, maxOas), 0);
 });
 
-test("combined tax uses federal and provincial brackets", () => {
-  assert.equal(taxOnIncome(100000, "AB", 2026), 25472.01);
+test("combined tax uses federal and provincial brackets less the basic personal credits", () => {
+  // Federal 16,696.01 - 16,452 x 14%; Alberta 8,776 - 22,769 x 8%.
+  assert.equal(taxOnIncome(100000, "AB", 2026), 21347.21);
   const inclusion = taxOnInclusion(100000, 200000, "AB", 2026);
   assert.ok(inclusion.rate > 0.2);
   const quebec = taxOnIncome(100000, "QC", 2026);
-  assert.equal(quebec, 30223.91);
+  // Federal (16,696.01 - 2,303.28) less the 16.5% abatement; Quebec 16,282.75 - 18,952 x 14%.
+  assert.equal(quebec, 25647.4);
   const ontario = taxOnIncome(300000, "ON", 2026);
   assert.ok(ontario > 110000);
+});
+
+test("seniors get the age and pension income credits, and the age amount fades with income", () => {
+  // CPP and OAS only: basic and age credits. Federal 4,200 - (16,452 + 9,208) x 14%; Alberta 2,400 - (22,769 + 6,345) x 8%.
+  assert.equal(taxOnIncome(30000, "AB", 2026, { age: 66 }), 678.48);
+  // Under 65: no age amount. Federal 4,200 - 2,303.28; Alberta 2,400 - 1,821.52.
+  assert.equal(taxOnIncome(30000, "AB", 2026, { age: 64 }), 2475.2);
+  const withPension = taxOnIncome(30000, "AB", 2026, { age: 66, pensionIncome: 10000 });
+  // Credits are non-refundable: Alberta's 70.88 can't go below zero, federal is 607.60 - 2,000 x 14%.
+  assert.equal(withPension, 327.6);
+  // Above $107,819 federal and $89,534 Alberta, the age amount is gone.
+  assert.equal(taxOnIncome(120000, "AB", 2026, { age: 70 }), taxOnIncome(120000, "AB", 2026, { age: 50 }));
+  assert.equal(taxOnIncome(15000, "AB", 2026, { age: 70 }), 0);
 });
 
 test("critical illness is a lump sum and disability is a monthly amount", () => {
@@ -965,6 +985,62 @@ test("other retirement income reduces what the accounts withdraw", () => {
   const pension = projectPortfolio({ ...shared, otherIncomeToday: 20000 });
   assert.ok(pension.rows[0].withdrawal < alone.rows[0].withdrawal - 15000);
   assert.ok(Math.abs(pension.rows[0].incomeTaken - 40000) < 1);
+  // $20,000 of pension at 65 in Alberta is under the basic, age, and pension credits.
+  assert.equal(pension.rows[0].otherNet, 20000);
+  assert.equal(pension.rows[0].pensionNet, 0);
+});
+
+test("each spouse's CPP and OAS is taxed on that spouse's own return", () => {
+  const shared = { currentAge: 65, retirementAge: 65, years: 0, inflationRate: 0, province: "AB" };
+  const single = projectPortfolio({ ...shared, clientCppToday: 100000, clientOasToday: 20000 });
+  const couple = projectPortfolio({
+    ...shared,
+    clientCppToday: 50000,
+    clientOasToday: 10000,
+    partnerCppToday: 50000,
+    partnerOasToday: 10000,
+    partnerAge: 65,
+  });
+  assert.equal(single.rows[0].pension, couple.rows[0].pension);
+  assert.ok(couple.rows[0].pensionNet > single.rows[0].pensionNet + 1000);
+});
+
+test("a couple's RRIF withdrawals are split evenly between both returns", () => {
+  const shared = {
+    currentAge: 65,
+    retirementAge: 65,
+    years: 0,
+    desiredIncomeToday: 90000,
+    rrspOpening: 1500000,
+    inflationRate: 0,
+    retirementReturn: 0,
+    province: "AB",
+  };
+  const single = projectPortfolio(shared);
+  const couple = projectPortfolio({ ...shared, partnerAge: 65 });
+  assert.ok(Math.abs(couple.rows[0].incomeTaken - 90000) < 1);
+  // Two returns at $45,000 each, with age and pension credits, instead of one at $90,000.
+  assert.ok(couple.rows[0].tax < single.rows[0].tax / 2);
+});
+
+test("RRSP withdrawals count toward the OAS recovery tax", () => {
+  const shared = {
+    currentAge: 66,
+    retirementAge: 65,
+    years: 0,
+    clientCppToday: 18000,
+    clientOasToday: 9000,
+    rrspOpening: 3000000,
+    inflationRate: 0,
+    oasRecoveryThreshold: 95323,
+    oasRecoveryRate: 0.15,
+    province: "AB",
+  };
+  const modest = projectPortfolio({ ...shared, desiredIncomeToday: 30000 });
+  const large = projectPortfolio({ ...shared, desiredIncomeToday: 120000 });
+  assert.equal(modest.rows[0].pension, 27000);
+  assert.ok(large.rows[0].pension < 27000 - 1000);
+  assert.ok(Math.abs(large.rows[0].incomeTaken - 120000) < 1);
 });
 
 test("retirement income requested rises with inflation, and accounts only top up a shortfall after CPP and OAS", () => {
@@ -1030,13 +1106,14 @@ test("only the growth on other assets is taxed, and a rollover drops the RRSP de
     retirementReturn: 0,
     savingsReturn: 0,
     inflationRate: 0,
-    desiredIncomeToday: 5000,
+    desiredIncomeToday: 70000,
+    otherIncomeToday: 60000,
     otherOpening: 100000,
     province: "AB",
   });
   assert.equal(grown.rows[0].tax, 0);
-  assert.ok(Math.abs(grown.rows[0].other - 95000) < 0.01);
-  assert.ok(grown.rows[1].other > 95000);
+  assert.ok(grown.rows[0].withdrawal > 0);
+  assert.ok(Math.abs(grown.rows[0].other - (100000 - grown.rows[0].withdrawal)) < 0.01);
   assert.ok(grown.rows[1].tax > 0);
 
   const shared = {

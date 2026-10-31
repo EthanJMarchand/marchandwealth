@@ -12,7 +12,7 @@ import { deflate, inflate, purchasingPowerPath, roundPercent, trailingAverage } 
 import { calculateLifeNeed } from "./calc/life-need.js";
 import { formatDollars, formatMoney, readMoney } from "./calc/money.js";
 import { incomeYearsAtAge, projectLifeNeed } from "./calc/need-path.js";
-import { cppContributionYears, estimateCpp, estimateOas, residenceYearsFromAge } from "./calc/pensions.js";
+import { cppCareerShare, estimateCpp, estimateOas, residenceYearsFromAge } from "./calc/pensions.js";
 import { calculateProbate } from "./calc/probate.js";
 import { criticalIllnessLumpSum, disabilityMonthlyBenefit } from "./calc/protection.js";
 import { calculateRetirement } from "./calc/retirement.js";
@@ -344,7 +344,7 @@ function applySuggestions() {
       earningsForCpp("income-history", "personal-income"),
       cppAmounts.ympe,
       maxAnnualCpp(),
-      cppContributionYears(clientStopAge),
+      cppCareerShare(clientStopAge),
     ));
   }
   if (!dirty.oas) {
@@ -363,7 +363,7 @@ function applySuggestions() {
         earningsForCpp("partner-income-history", "partner-income"),
         cppAmounts.ympe,
         maxAnnualCpp(),
-        cppContributionYears(partnerStopAge),
+        cppCareerShare(partnerStopAge),
       ));
     }
     if (!dirty.partnerOas) {
@@ -993,7 +993,7 @@ function deathTaxSentence(model) {
     deathTaxPiece(personName(), model.deathTaxBill),
   ];
   if (model.partnerDeathTaxBill) parts.push(deathTaxPiece(partnerName(), model.partnerDeathTaxBill));
-  parts.push(`The cost base of the non-registered account and of the estate property is counted as zero, and half of each amount is included as a capital gain. Leave the non-registered balance out of the estate value. An RRSP that does not roll over is included in full. Today's tax figure stays in the life insurance gap. On Fig. D1 and Fig. D2, tax at death follows Table F3 for that year of the retirement plan — remaining account balances after withdrawals, with a rolled RRSP left out. Brackets are the ${latestTaxYear()} combined federal and provincial rates. Basic personal credits are not subtracted.`);
+  parts.push(`The cost base of the non-registered account and of the estate property is counted as zero, and half of each amount is included as a capital gain. Leave the non-registered balance out of the estate value. An RRSP that does not roll over is included in full. Today's tax figure stays in the life insurance gap. On Fig. D1 and Fig. D2, tax at death follows Table F3 for that year of the retirement plan — remaining account balances after withdrawals, with a rolled RRSP left out. Brackets are the ${latestTaxYear()} combined federal and provincial rates. The basic personal credit is subtracted, plus the age and pension income credits in retirement years.`);
   if (model.portfolio && !$("early-death-age").disabled) {
     const row = portfolioRow(model, model.earlyAge);
     if (row) {
@@ -1165,8 +1165,9 @@ function render() {
     }
     fillList("retirement-waterfall", rows);
     savingsDestination(model);
-    if (model.retirement?.oasRepayment > 0) {
-      notes.push(`OAS is reduced by ${formatDollars(model.retirement.oasRepayment)}. The income counted is CPP, OAS, and other taxable income entered above. TFSA withdrawals are not included. That total is above the ${oasAmounts.incomeYear} threshold.`);
+    const clawed = model.portfolio?.rows.find((row) => row.oasRecovery > 0.5);
+    if (clawed) {
+      notes.push(`From age ${clawed.age}, OAS is reduced by the recovery tax, ${formatDollars(clawed.oasRecovery)} that year. The income counted is CPP, OAS, other taxable income, RRSP withdrawals, and the taxable gain on non-registered and other withdrawals. TFSA withdrawals are not included.`);
     }
     if (!blank("retirement-age") && readMoney($("retirement-age").value) < 60 && readMoney($("cpp-annual").value) > 0) {
       notes.push("CPP starts at 60. Until then, the income from the accounts does not subtract it.");
@@ -1848,9 +1849,9 @@ function renderPortfolioTable(model) {
     "Other",
     "Total",
     "Retirement income requested",
-    "CPP, OAS, and other income",
+    "CPP and OAS",
+    "Other income",
     "From the accounts",
-    "Retirement income taken",
     "Tax on withdrawal",
     "Tax if death",
   ];
@@ -1866,8 +1867,8 @@ function renderPortfolioTable(model) {
     formatDollars(row.total),
     formatDollars(row.incomeRequested),
     formatDollars(row.pensionNet),
+    formatDollars(row.otherNet),
     formatDollars(row.withdrawal),
-    formatDollars(row.incomeTaken),
     formatDollars(row.tax),
     formatDollars(row.deathTax),
   ]);
@@ -1891,8 +1892,8 @@ function renderPortfolioTable(model) {
       "Total",
       "Requested",
       "CPP/OAS",
+      "Other inc",
       "From accts",
-      "Taken",
       "Tax wd",
       "Tax death",
     ];
@@ -1908,8 +1909,8 @@ function renderPortfolioTable(model) {
       compactDollars(row.total),
       compactDollars(row.incomeRequested),
       compactDollars(row.pensionNet),
+      compactDollars(row.otherNet),
       compactDollars(row.withdrawal),
-      compactDollars(row.incomeTaken),
       compactDollars(row.tax),
       compactDollars(row.deathTax),
     ]);
@@ -1931,8 +1932,8 @@ function renderPortfolioTable(model) {
 
   if (note) {
     note.textContent = hasPartner()
-      ? "Each year shows the deposit the room allows, up to the monthly slider. At retirement the deposits stop. Retirement income requested is the after-tax amount chosen at the start of retirement, raised with inflation each year. CPP and OAS (after tax on those benefits) are kept in full even when they exceed that request, and nothing is taken from the accounts in those years. When they fall short, the shortfall is taken from Other, non-registered, and the RRSP in proportion to those balances so they run down together. The TFSA is used only after that pool is gone. Retirement income taken is CPP and OAS plus from the accounts. Tax if death is the tax on that year's balances before the retirement withdrawal: with a spouse on the plan the RRSP rolls over and is not taxed, non-registered and other assets tax only the gain, and the TFSA is not taxed. The red row is the age on the early-death slider."
-      : "Each year shows the deposit the room allows, up to the monthly slider. At retirement the deposits stop. Retirement income requested is the after-tax amount chosen at the start of retirement, raised with inflation each year. CPP and OAS (after tax on those benefits) are kept in full even when they exceed that request, and nothing is taken from the accounts in those years. When they fall short, the shortfall is taken from Other, non-registered, and the RRSP in proportion to those balances so they run down together. The TFSA is used only after that pool is gone. Retirement income taken is CPP and OAS plus from the accounts. Tax if death is the tax on that year's balances before the retirement withdrawal: with no spouse on the plan the full RRSP is taxed on the final return, non-registered and other assets tax only the gain, and the TFSA is not taxed. The red row is the age on the early-death slider.";
+      ? "Each year shows the deposit the room allows, up to the monthly slider. At retirement the deposits stop. Retirement income requested is the after-tax amount chosen at the start of retirement, raised with inflation each year. CPP and OAS, and other income (the pension or rent entered above), are shown after tax. Each person's CPP and OAS is taxed on that person's own return, and other income is taxed with Person 1's. Taxable withdrawals are split evenly between both returns when a spouse is on the plan. Tax subtracts the basic personal, age, and pension income credits; other income and RRIF withdrawals from age 65 count as pension income. They are kept in full even when they exceed the request, and nothing is taken from the accounts in those years. When they fall short, the shortfall is taken from Other, non-registered, and the RRSP in proportion to those balances so they run down together. The TFSA is used only after that pool is gone. OAS is reduced by the recovery tax when a person's CPP, OAS, other income, and share of taxable withdrawals pass the threshold. Tax if death is the tax on that year's balances before the retirement withdrawal: with a spouse on the plan the RRSP rolls over and is not taxed, non-registered and other assets tax only the gain, and the TFSA is not taxed. The red row is the age on the early-death slider."
+      : "Each year shows the deposit the room allows, up to the monthly slider. At retirement the deposits stop. Retirement income requested is the after-tax amount chosen at the start of retirement, raised with inflation each year. CPP and OAS, and other income (the pension or rent entered above), are shown after tax. Each person's CPP and OAS is taxed on that person's own return, and other income is taxed with Person 1's. Taxable withdrawals are split evenly between both returns when a spouse is on the plan. Tax subtracts the basic personal, age, and pension income credits; other income and RRIF withdrawals from age 65 count as pension income. They are kept in full even when they exceed the request, and nothing is taken from the accounts in those years. When they fall short, the shortfall is taken from Other, non-registered, and the RRSP in proportion to those balances so they run down together. The TFSA is used only after that pool is gone. OAS is reduced by the recovery tax when a person's CPP, OAS, other income, and share of taxable withdrawals pass the threshold. Tax if death is the tax on that year's balances before the retirement withdrawal: with no spouse on the plan the full RRSP is taxed on the final return, non-registered and other assets tax only the gain, and the TFSA is not taxed. The red row is the age on the early-death slider.";
   }
 }
 

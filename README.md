@@ -138,6 +138,7 @@ Add a year by copying the newest block in the file. Do not change older years.
 | `needs-analysis/data/cpp-amounts.js` | The new maximum monthly CPP at 65, YMPE, and YAMPE. |
 | `needs-analysis/data/oas-amounts.js` | The new OAS maximums and the recovery-tax threshold. |
 | `needs-analysis/data/tax-brackets.js` | Combined federal and provincial brackets for the new year, for every province and territory. |
+| `needs-analysis/data/tax-credits.js` | The new basic personal, age, and pension income amounts (and the age-amount thresholds) for federal and every province and territory. |
 | `needs-analysis/data/life-expectancy.js` | The new Statistics Canada life expectancy at birth, if a new release replaces the year on file. |
 | `needs-analysis/data/probate-fees.js` | A province's schedule when the fee changes. Set `asOf`. |
 | `needs-analysis/data/planning-assumptions.js` | Only if the default planning choices should change. |

@@ -7,7 +7,7 @@
 // https://www.canada.ca/en/revenue-agency/services/tax/individuals/frequently-asked-questions-individuals/canadian-income-tax-rates-individuals-current-previous-years/all-years.html
 // https://www.canada.ca/en/revenue-agency/services/tax/individuals/tax-rates-brackets/current-year.html
 // Quebec 2026 and the 2026 Ontario surtax thresholds: KPMG personal tax tables, current to September 30, 2026.
-// Basic personal credits are not in this screen. Quebec federal tax is reduced by the 16.5% abatement.
+// Non-refundable credits are in tax-credits.js. Quebec federal tax is reduced by the 16.5% abatement.
 
 export const taxBrackets = {
   quebecAbatement: 0.165,

@@ -1,5 +1,5 @@
 import { CAPITAL_GAINS_INCLUSION } from "./death-tax.js";
-import { taxOnInclusion } from "./tax.js";
+import { taxOnIncome, taxOnInclusion } from "./tax.js";
 
 function grow(balance, rate) {
   if (balance <= 0) return 0;
@@ -7,12 +7,28 @@ function grow(balance, rate) {
   return balance * (1 + rate);
 }
 
-function taxNominal(nominalBase, nominalInclusion, factor, province) {
+// Brackets and credits are today's, so nominal amounts are taxed in today's dollars.
+// person: { age, pension } where pension is eligible pension income already in the base.
+function taxNominal(nominalBase, nominalInclusion, factor, province, person = {}, inclusionIsPension = false) {
   if (nominalInclusion <= 0) return 0;
   const scale = factor > 0 ? factor : 1;
-  const result = taxOnInclusion(nominalBase / scale, nominalInclusion / scale, province);
+  const result = taxOnInclusion(nominalBase / scale, nominalInclusion / scale, province, undefined, {
+    age: person.age ?? 0,
+    basePension: (person.pension ?? 0) / scale,
+    inclusionIsPension,
+  });
   return result ? result.tax * scale : 0;
 }
+
+function incomeTaxNominal(nominalIncome, factor, province, age, nominalPension = 0) {
+  if (nominalIncome <= 0) return 0;
+  const scale = factor > 0 ? factor : 1;
+  const tax = taxOnIncome(nominalIncome / scale, province, undefined, { age, pensionIncome: nominalPension / scale });
+  return tax == null ? 0 : tax * scale;
+}
+
+// A RRIF withdrawal at 65 or older is eligible pension income.
+const pensionEligible = (kind, payer) => kind === "rrsp" && payer.age >= 65;
 
 // The slider is the most someone would contribute. Unused room carries forward.
 // Once that room is gone, a year is limited to the new room arriving that year.
@@ -37,9 +53,14 @@ function inclusionFor(taken, balance, acb, kind) {
   return taken * (gain / balance) * CAPITAL_GAINS_INCLUSION;
 }
 
-function takeTaxable({ balance, acb, kind, need, base, factor, province }) {
-  if (need <= 0 || balance <= 0) return { taken: 0, tax: 0, net: 0, balance, acb, base };
-  const taxOn = (taken) => taxNominal(base, inclusionFor(taken, balance, acb, kind), factor, province);
+// payers share each withdrawal evenly; each payer is { base, pension, age } in nominal dollars.
+function takeTaxable({ balance, acb, kind, need, payers, factor, province }) {
+  if (need <= 0 || balance <= 0) return { taken: 0, tax: 0, net: 0, balance, acb, payers };
+  const share = (taken) => inclusionFor(taken, balance, acb, kind) / payers.length;
+  const taxOn = (taken) => payers.reduce(
+    (sum, payer) => sum + taxNominal(payer.base, share(taken), factor, province, payer, pensionEligible(kind, payer)),
+    0,
+  );
   const netOf = (taken) => taken - taxOn(taken);
   let taken = balance;
   if (netOf(balance) > need) {
@@ -60,13 +81,18 @@ function takeTaxable({ balance, acb, kind, need, base, factor, province }) {
     net: taken - tax,
     balance: balance - taken,
     acb: acbLeft,
-    base: base + inclusionFor(taken, balance, acb, kind),
+    payers: payers.map((payer) => ({
+      ...payer,
+      base: payer.base + share(taken),
+      pension: payer.pension + (pensionEligible(kind, payer) ? share(taken) : 0),
+    })),
   };
 }
 
 // After CPP and OAS, the after-tax shortfall is taken from Other, non-registered,
 // and RRSP in proportion to those balances so they run down together. The TFSA
-// is not touched until that pool is gone.
+// is not touched until that pool is gone. With two payers (a couple), each
+// withdrawal is split evenly between their returns.
 export function withdrawProRataTaxable({
   other,
   otherAcb,
@@ -74,13 +100,14 @@ export function withdrawProRataTaxable({
   nonRegAcb,
   rrsp,
   need,
-  base,
+  base = 0,
+  payers = [{ base, pension: 0, age: 0 }],
   factor,
   province,
 }) {
   let tax = 0;
   let remaining = Math.max(0, need);
-  let nextBase = base;
+  let nextPayers = payers;
   let otherBal = Math.max(0, other);
   let otherBasis = Math.max(0, otherAcb);
   let nonRegBal = Math.max(0, nonReg);
@@ -99,41 +126,41 @@ export function withdrawProRataTaxable({
       acb: otherBasis,
       kind: "other",
       need: otherNeed,
-      base: nextBase,
+      payers: nextPayers,
       factor,
       province,
     });
     otherBal = otherTake.balance;
     otherBasis = otherTake.acb;
     tax += otherTake.tax;
-    nextBase = otherTake.base;
+    nextPayers = otherTake.payers;
 
     const nonRegTake = takeTaxable({
       balance: nonRegBal,
       acb: nonRegBasis,
       kind: "nonReg",
       need: nonRegNeed,
-      base: nextBase,
+      payers: nextPayers,
       factor,
       province,
     });
     nonRegBal = nonRegTake.balance;
     nonRegBasis = nonRegTake.acb;
     tax += nonRegTake.tax;
-    nextBase = nonRegTake.base;
+    nextPayers = nonRegTake.payers;
 
     const rrspTake = takeTaxable({
       balance: rrspBal,
       acb: 0,
       kind: "rrsp",
       need: rrspNeed,
-      base: nextBase,
+      payers: nextPayers,
       factor,
       province,
     });
     rrspBal = rrspTake.balance;
     tax += rrspTake.tax;
-    nextBase = rrspTake.base;
+    nextPayers = rrspTake.payers;
 
     remaining = Math.max(0, remaining - otherTake.net - nonRegTake.net - rrspTake.net);
   }
@@ -146,7 +173,7 @@ export function withdrawProRataTaxable({
     rrsp: rrspBal,
     need: remaining,
     tax,
-    base: nextBase,
+    payers: nextPayers,
   };
 }
 
@@ -167,38 +194,30 @@ function oasFactor(startAge, age) {
 // CPP and OAS amounts are the age-65 figures in today's dollars; the caller raises them
 // with inflation. Each person starts CPP at the later of retirement and 60, and OAS at the
 // later of retirement and 65, both capped at 70. The spouse retires with Person 1.
-// The recovery screen uses today's OAS threshold against today's pension income.
-function pensionCash({
-  retired,
-  age,
-  retireAge,
-  partnerAge,
-  partnerRetireAge,
-  clientCpp,
-  clientOas,
-  partnerCpp,
-  partnerOas,
-  otherIncome,
-  threshold,
-  rate,
-}) {
-  if (!retired) return { client: 0, spouse: 0 };
+function pensionCash({ retired, age, retireAge, partnerAge, partnerRetireAge, clientCpp, clientOas, partnerCpp, partnerOas }) {
+  const none = { clientCpp: 0, clientOas: 0, spouseCpp: 0, spouseOas: 0 };
+  if (!retired) return none;
   const cppStart = clampAge(retireAge, 60, 70);
   const oasStart = clampAge(retireAge, 65, 70);
-  const cpp = age >= cppStart ? Math.max(0, clientCpp) * cppStartFactor(cppStart) : 0;
-  let oas = age >= oasStart ? Math.max(0, clientOas) * oasFactor(oasStart, age) : 0;
-  const proxy = Math.max(0, otherIncome) + cpp + oas;
-  if (threshold > 0 && proxy > threshold) {
-    oas -= Math.min(oas, rate * (proxy - threshold));
-  }
-  let spouse = 0;
+  const result = {
+    ...none,
+    clientCpp: age >= cppStart ? Math.max(0, clientCpp) * cppStartFactor(cppStart) : 0,
+    clientOas: age >= oasStart ? Math.max(0, clientOas) * oasFactor(oasStart, age) : 0,
+  };
   if (partnerAge != null) {
     const spouseCppStart = clampAge(partnerRetireAge, 60, 70);
     const spouseOasStart = clampAge(partnerRetireAge, 65, 70);
-    if (partnerAge >= spouseCppStart) spouse += Math.max(0, partnerCpp) * cppStartFactor(spouseCppStart);
-    if (partnerAge >= spouseOasStart) spouse += Math.max(0, partnerOas) * oasFactor(spouseOasStart, partnerAge);
+    if (partnerAge >= spouseCppStart) result.spouseCpp = Math.max(0, partnerCpp) * cppStartFactor(spouseCppStart);
+    if (partnerAge >= spouseOasStart) result.spouseOas = Math.max(0, partnerOas) * oasFactor(spouseOasStart, partnerAge);
   }
-  return { client: cpp + oas, spouse };
+  return result;
+}
+
+// The recovery tax takes back OAS at the rate on net income above the threshold.
+// Both are in today's dollars, against today's threshold.
+function oasAfterRecovery(oas, netIncome, threshold, rate) {
+  if (!(threshold > 0) || netIncome <= threshold) return oas;
+  return oas - Math.min(oas, rate * (netIncome - threshold));
 }
 
 // Year-by-year balances. Contributions are capped by room. At retirement,
@@ -274,7 +293,7 @@ export function projectPortfolio({
       nonRegAcb += nonRegIn;
     }
 
-    const pension = pensionCash({
+    const benefits = pensionCash({
       retired,
       age,
       retireAge: retire,
@@ -284,15 +303,11 @@ export function projectPortfolio({
       clientOas: clientOasToday,
       partnerCpp: partnerCppToday,
       partnerOas: partnerOasToday,
-      otherIncome: otherIncomeToday,
-      threshold: oasRecoveryThreshold,
-      rate: oasRecoveryRate,
     });
-    const clientPensionNominal = pension.client * factor;
-    const pensionNominal = (pension.client + pension.spouse) * factor;
-    const otherNominal = retired ? Math.max(0, otherIncomeToday) * factor : 0;
-    const incomeTax = taxNominal(0, pensionNominal + otherNominal, factor, province);
-    const afterTaxIncome = Math.max(0, pensionNominal + otherNominal - incomeTax);
+    const otherToday = retired ? Math.max(0, otherIncomeToday) : 0;
+    const otherNominal = otherToday * factor;
+    const couple = Number.isFinite(partnerAge);
+    const spouseAge = couple ? partnerAge + year : 0;
     // Requested after-tax income, raised with inflation from today's dollars.
     // CPP, OAS, and other income are kept in full even when they exceed that
     // request; accounts only top up a shortfall.
@@ -307,34 +322,70 @@ export function projectPortfolio({
     const nonRegGainAtDeath = Math.max(0, nonReg - nonRegAcb);
     const otherGainAtDeath = Math.max(0, other - otherAcb);
     const totalAtDeath = tfsa + rrsp + nonReg + other;
-    const deathBase = retired ? otherNominal + clientPensionNominal : Math.max(0, workingIncomeToday) * factor;
     const deathInclusion = (rollover ? 0 : rrspAtDeath)
       + nonRegGainAtDeath * CAPITAL_GAINS_INCLUSION
       + otherGainAtDeath * CAPITAL_GAINS_INCLUSION;
-    const deathTax = taxNominal(deathBase, deathInclusion, factor, province);
 
-    let need = Math.max(0, incomeRequested - afterTaxIncome);
-    let tax = 0;
-    let base = otherNominal + pensionNominal;
-    const taxable = withdrawProRataTaxable({
-      other,
-      otherAcb,
-      nonReg,
-      nonRegAcb,
-      rrsp,
-      need,
-      base,
-      factor,
-      province,
-    });
+    // Taxable withdrawals count toward each person's OAS recovery screen, and the
+    // recovery changes how much must be withdrawn, so settle the two together.
+    // A couple's withdrawals are split evenly between their returns.
+    let extraToday = 0;
+    let clientOas = 0;
+    let spouseOas = 0;
+    let clientPension = 0;
+    let spousePension = 0;
+    let pensionNet = 0;
+    let otherNet = 0;
+    let clientBase = 0;
+    let taxable = null;
+    for (let pass = 0; pass < 6; pass += 1) {
+      clientOas = oasAfterRecovery(
+        benefits.clientOas,
+        otherToday + benefits.clientCpp + benefits.clientOas + extraToday,
+        oasRecoveryThreshold,
+        oasRecoveryRate,
+      );
+      spouseOas = couple
+        ? oasAfterRecovery(benefits.spouseOas, benefits.spouseCpp + benefits.spouseOas + extraToday, oasRecoveryThreshold, oasRecoveryRate)
+        : 0;
+      clientPension = (benefits.clientCpp + clientOas) * factor;
+      spousePension = (benefits.spouseCpp + spouseOas) * factor;
+      clientBase = clientPension + otherNominal;
+      const clientTax = incomeTaxNominal(clientBase, factor, province, age, otherNominal);
+      const spouseTax = incomeTaxNominal(spousePension, factor, province, spouseAge);
+      const pensionShare = clientBase > 0 ? clientPension / clientBase : 0;
+      pensionNet = clientPension - clientTax * pensionShare + spousePension - spouseTax;
+      otherNet = otherNominal - clientTax * (1 - pensionShare);
+      const payers = [{ base: clientBase, pension: otherNominal, age }];
+      if (couple) payers.push({ base: spousePension, pension: 0, age: spouseAge });
+      taxable = withdrawProRataTaxable({
+        other,
+        otherAcb,
+        nonReg,
+        nonRegAcb,
+        rrsp,
+        need: Math.max(0, incomeRequested - pensionNet - otherNet),
+        payers,
+        factor,
+        province,
+      });
+      const nextExtra = (taxable.payers[0].base - clientBase) / factor;
+      if (Math.abs(nextExtra - extraToday) < 1) break;
+      extraToday = nextExtra;
+    }
+    const afterTaxIncome = Math.max(0, pensionNet + otherNet);
+    const pensionNominal = clientPension + spousePension;
+    const oasRecovery = (benefits.clientOas - clientOas + benefits.spouseOas - spouseOas) * factor;
+    const deathBase = retired ? clientBase : Math.max(0, workingIncomeToday) * factor;
+    const deathTax = taxNominal(deathBase, deathInclusion, factor, province, { age, pension: retired ? otherNominal : 0 });
+
+    let need = taxable.need;
+    const tax = taxable.tax;
     other = taxable.other;
     otherAcb = taxable.otherAcb;
     nonReg = taxable.nonReg;
     nonRegAcb = taxable.nonRegAcb;
     rrsp = taxable.rrsp;
-    need = taxable.need;
-    tax += taxable.tax;
-    base = taxable.base;
     const tfsaTake = Math.min(tfsa, need);
     tfsa -= tfsaTake;
     need -= tfsaTake;
@@ -354,7 +405,9 @@ export function projectPortfolio({
       nonRegIn,
       incomeRequested,
       pension: pensionNominal,
-      pensionNet: afterTaxIncome,
+      pensionNet,
+      otherNet,
+      oasRecovery,
       withdrawal,
       incomeTaken,
       tax,
