@@ -9,7 +9,19 @@
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
 
-  gtag('config', 'G-3EV5EXLFQV');
+  gtag('config', 'G-3EV5EXLFQV', (function () {
+    function bare(value) {
+      try {
+        var url = new URL(value, location.origin);
+        return url.origin + url.pathname;
+      } catch (e) {
+        return String(value).split('#')[0].split('?')[0];
+      }
+    }
+    var fields = { page_location: bare(location.href) };
+    if (document.referrer) fields.page_referrer = bare(document.referrer);
+    return fields;
+  })());
 </script>
 <title>Business Owner Life Insurance &amp; Wealth Planning Alberta | Marchand Wealth</title>
 <meta name="description" content="Tax-efficient corporate insurance, estate planning, and business succession strategies for Alberta business owners. Serving Sherwood Park, Edmonton &amp; area. Book a free consultation with Ethan Marchand.">

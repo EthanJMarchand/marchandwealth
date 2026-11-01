@@ -8,7 +8,19 @@
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
-  gtag('config', 'G-3EV5EXLFQV');
+  gtag('config', 'G-3EV5EXLFQV', (function () {
+    function bare(value) {
+      try {
+        var url = new URL(value, location.origin);
+        return url.origin + url.pathname;
+      } catch (e) {
+        return String(value).split('#')[0].split('?')[0];
+      }
+    }
+    var fields = { page_location: bare(location.href) };
+    if (document.referrer) fields.page_referrer = bare(document.referrer);
+    return fields;
+  })());
 </script>
 <title>Financial Plan | Marchand Wealth</title>
 <meta name="description" content="A simplified financial plan from Marchand Wealth. Life insurance need, disability and critical illness amounts, and the retirement savings path. Entries stay in this browser tab.">
@@ -117,7 +129,7 @@
       Alberta &middot; Individual planning
     </div>
     <h1 class="font-serif font-semibold text-4xl md:text-5xl leading-[1.1] text-navydeep mb-5">Financial plan</h1>
-    <p class="text-inksoft text-[15.5px] max-w-lg mx-auto">The insurance need, disability and critical illness amounts, and the retirement savings path — one step at a time. Entries stay in this tab. Closing it discards them. Nothing is stored in the browser, and nothing is sent to Marchand Wealth.</p>
+    <p class="text-inksoft text-[15.5px] max-w-lg mx-auto">The insurance need, disability and critical illness amounts, and the retirement savings path — one step at a time. Entries stay in this tab. Closing it discards them. Nothing is stored in the browser, and this page does not send them.</p>
   </div>
 </section>
 
@@ -153,7 +165,7 @@
         <div class="no-print">
           <p class="text-sm leading-6 text-inksoft">
             One step at a time. Each step asks for a few facts and shows what they change. Entries stay in this tab only and are not saved
-            in the browser or sent anywhere. This page does not choose a policy or an investment.
+            in the browser. They are emailed to me only if you submit the client intake. This page does not choose a policy or an investment.
           </p>
           <button id="sample-case" type="button" class="mt-2 text-xs text-inksoft/70 underline decoration-transparent underline-offset-2 transition hover:text-inksoft hover:decoration-inksoft/40">Load sample household</button>
         </div>
@@ -760,6 +772,10 @@
         <section id="ref-print" data-step="print" data-step-title="Print" class="plan-step no-print rounded-sm border border-line bg-white p-5 md:p-6 shadow-sm">
           <h2 class="font-serif font-semibold text-2xl text-navydeep">The plan is ready</h2>
           <p class="mt-2 text-sm leading-6 text-inksoft">Print it for the file, or go back to any step to adjust. The printed plan carries the summary, every entry, each chart and table, and the note behind each one.</p>
+          <div class="mt-4 rounded-sm border border-line bg-paperdim px-4 py-3.5">
+            <p class="text-[11.5px] font-semibold uppercase tracking-[0.14em] text-golddim">How this information is handled</p>
+            <p class="mt-2 text-[13px] leading-6 text-inksoft">If you opened this page from a plan link, your details are in that web address. Anyone with the link can open the same entries. Printing the plan gives you a copy to keep. These entries are emailed to me, Ethan Marchand of Marchand Financial Solutions Inc., only when you submit the client intake. This website does not keep an account for you, and closing the tab leaves nothing saved in the browser.</p>
+          </div>
           <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             <button id="print-plan" type="button" class="inline-flex w-full sm:w-auto min-h-12 items-center justify-center px-5 py-2.5 rounded-sm bg-navydeep text-white text-sm font-semibold hover:bg-navy transition">Print plan</button>
             <button id="new-case" type="button" class="inline-flex w-full sm:w-auto min-h-12 items-center justify-center px-5 py-2.5 rounded-sm border border-navydeep text-navydeep text-sm font-semibold hover:bg-navydeep hover:text-white transition">Clear plan</button>
@@ -837,7 +853,7 @@
         A Life and A&amp;S licence does not by itself authorize a securities or mutual fund recommendation.
       </p>
       <p>
-        The entries are not sent to a server and are not written to this browser. They exist only while this tab is open.
+        The entries are not written to this browser. They exist in this tab, and in the web address if you opened a plan link. Nothing is submitted from this page.
       </p>
     </div>
     </section>

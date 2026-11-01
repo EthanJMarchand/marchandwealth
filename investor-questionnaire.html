@@ -8,7 +8,19 @@
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
-  gtag('config', 'G-3EV5EXLFQV');
+  gtag('config', 'G-3EV5EXLFQV', (function () {
+    function bare(value) {
+      try {
+        var url = new URL(value, location.origin);
+        return url.origin + url.pathname;
+      } catch (e) {
+        return String(value).split('#')[0].split('?')[0];
+      }
+    }
+    var fields = { page_location: bare(location.href) };
+    if (document.referrer) fields.page_referrer = bare(document.referrer);
+    return fields;
+  })());
 </script>
 <title>Investor Questionnaire | Marchand Wealth</title>
 <meta name="description" content="Thirteen quick questions about your goals, timeline, and comfort with market ups and downs. Find your investor profile and recommended portfolio mix with Marchand Wealth.">
@@ -152,6 +164,11 @@
       </section>
 
       <div id="iq-submit-step" class="hidden space-y-4">
+        <div class="rounded-sm border border-line bg-white/80 px-4 py-3.5">
+          <p class="text-[11.5px] font-semibold uppercase tracking-[0.14em] text-golddim">How this information is handled</p>
+          <p class="mt-2 text-[13px] leading-6 text-inksoft">What you enter here is shared with me, Ethan Marchand, an independent life insurance advisor with Marchand Financial Solutions Inc., so I can prepare for our conversation. Submitting this form emails those details to me. That message is how I receive them.</p>
+          <p class="mt-2 text-[13px] leading-6 text-inksoft">The PDF you download is your copy, kept on your device. The link to your answers holds the same details in the web address. Anyone you give that link to can open those entries. This website does not keep an account for you, and closing the tab leaves nothing saved in the browser.</p>
+        </div>
         <p id="iq-status" class="text-[13.5px] text-inksoft" role="status"></p>
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
           <button type="submit" id="iq-submit" class="inline-flex items-center justify-center w-full sm:w-auto px-6 py-3 rounded-sm bg-gold text-navydeep text-sm font-semibold hover:bg-golddim transition">

@@ -9,7 +9,19 @@
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
 
-  gtag('config', 'G-3EV5EXLFQV');
+  gtag('config', 'G-3EV5EXLFQV', (function () {
+    function bare(value) {
+      try {
+        var url = new URL(value, location.origin);
+        return url.origin + url.pathname;
+      } catch (e) {
+        return String(value).split('#')[0].split('?')[0];
+      }
+    }
+    var fields = { page_location: bare(location.href) };
+    if (document.referrer) fields.page_referrer = bare(document.referrer);
+    return fields;
+  })());
 </script>
 <title>Contact Ethan Marchand | Marchand Wealth</title>
 <meta name="description" content="Get in touch with Ethan Marchand, Independent Insurance & Wealth Advisor in Sherwood Park, Alberta. Call, text, email, or fill out the contact form to prepare for your consultation.">
@@ -366,6 +378,10 @@
         <textarea name="additionalNotes" rows="4" class="text-[14.5px] px-3.5 py-2.5 border border-line rounded-sm bg-white w-full"></textarea>
       </label>
 
+      <div class="rounded-sm border border-line bg-paperdim px-4 py-3.5 mb-4">
+        <p class="text-[11.5px] font-semibold uppercase tracking-[0.14em] text-golddim">How this information is handled</p>
+        <p class="mt-2 text-[13px] leading-6 text-inksoft">What you enter here is shared with me, Ethan Marchand, an independent life insurance advisor with Marchand Financial Solutions Inc., so I can prepare for our conversation. Submitting this form emails those details to me. That message is how I receive them. This website does not keep an account for you.</p>
+      </div>
       <label id="box-consent" class="flex items-start gap-2.5 text-[13.5px] text-inksoft leading-relaxed mb-3 px-4 py-3.5 border-2 border-gold rounded-sm">
         <input type="checkbox" name="consent" required class="mt-0.5">
         I understand this information is for planning purposes only and is not an application for insurance.<em class="text-golddim not-italic font-semibold">*</em>
