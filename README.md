@@ -13,7 +13,7 @@ The marketing site, client tools (quote, TFSA calculator, financial plan, client
 | [`index.html`](index.html) | Homepage — services, why-independent pitch, about, FAQ |
 | [`life-insurance-quote.html`](life-insurance-quote.html) | Free instant life insurance quote tool — Compulife quoter embedded in an iframe, plus SEO content and FAQ |
 | [`tfsa-calculator.html`](tfsa-calculator.html) | Free public tool: whether a planned monthly contribution catches up your TFSA room (and when), plus projected retirement balance and income |
-| [`needs-analysis.html`](needs-analysis.html) | Simplified financial plan — life insurance need, protection amounts, and retirement savings path. Entries stay in the browser tab |
+| [`needs-analysis.html`](needs-analysis.html) | Simplified financial plan — life insurance need, protection amounts, and retirement savings path, one step at a time. Entries stay in the browser tab |
 | [`client-intake.html`](client-intake.html) | Client intake form — one question at a time, submitted via Netlify Forms with a link that opens the financial plan pre-filled |
 | [`investor-questionnaire.html`](investor-questionnaire.html) | Investor profile questionnaire — 13 questions, six risk profiles, Netlify submission with a re-open link, and a PDF download. See [The investor questionnaire](#the-investor-questionnaire) |
 | [`insights.html`](insights.html) | Blog index — article cards rendered from [`insights-data.js`](insights-data.js) |
@@ -117,6 +117,12 @@ Nothing else in the codebase needs to be touched:
 [`needs-analysis.html`](needs-analysis.html) is a simplified financial plan for life insurance need, disability and critical illness amounts, and the retirement savings path. It is a normal page on this site, with the same header, footer, and colours as the rest of Marchand Wealth. The calculation code lives in [`needs-analysis/`](needs-analysis/) and is loaded by the page. Nothing on the page is posted to a server, and nothing is written to the browser. Print the plan when a copy needs to be kept. The print sets the file name to `YYYY-MM-DD-Financial-Plan-<names>` (the meeting date, or today if none is set), and each page carries the same footer line as the questionnaire PDF, with page numbers.
 
 The meeting starts by choosing life insurance, disability, and critical illness, financial planning, or both. Sections that do not belong to that choice stay off the page and out of the letter. The page does not choose a product.
+
+**One step at a time.** The page shows one step of the form at a time (Scope, Plan, Household, Life insurance, its chart, Disability & CI, Retirement income, Accounts, Growth & contributions, Tax & probate, Assumptions, Print), with Back/Next, a progress bar, and pills to jump between steps. The plan summary stays beside the form the whole way. "Show every section" puts the whole form on one page again. A step is any element with `data-step` and `data-step-title` inside `#worksheet` — a whole section, or a block inside one (Sections D and F are split). Steps whose section is out of scope are skipped. The step classes only act on screen; the print carries every section.
+
+**Notes behind each entry.** Explanations live in `.plan-note` elements, hidden on screen and opened from a small `.plan-tip` trigger (`data-tip` names the note's id) in one shared popover — hover, click, or keyboard. In print every `.plan-note` appears in place under the entry or heading it explains, so the printed plan still carries the full wording. Text that JavaScript writes (`#years-hint`, `#death-tax-note`, `#allocation-note`, and so on) keeps its id and simply lives inside a note.
+
+**Print.** Letter landscape. The summary prints as a grid of figure cards, each entry prints as a label/value row, Person 1 and Person 2 sit side by side, Fig. D1 and D2 share a row, and Table F3 starts on its own page. Anything hidden on screen (no spouse, no corporation, out of scope) stays out of the print.
 
 Preview it through a local server (VS Code Live Server, `python3 -m http.server`, or `npx serve .`). Opening the file directly will not load the worksheet, because the browser blocks its JavaScript modules from a `file://` address.
 

@@ -464,24 +464,27 @@ function timingFor(saving, field) {
 
 // This year's deposit can be zero when the room is already used. The next
 // change in the schedule is the amount to show, with the year it starts.
-export function describeDeposits(rows) {
+// `wanted` is the yearly amount each slider asks for: { tfsa, rrsp, nonReg }.
+export function describeDeposits(rows, wanted = {}) {
   const saving = (rows || []).filter((row) => !row.retired);
   const accounts = {
     tfsa: timingFor(saving, "tfsaIn"),
     rrsp: timingFor(saving, "rrspIn"),
     nonReg: timingFor(saving, "nonRegIn"),
   };
-  const now = saving[0] ? saving[0].tfsaIn + saving[0].rrspIn + saving[0].nonRegIn : 0;
+  // Deposits follow the room year over year until they reach the slider. The
+  // headline waits for the year every account has got there — or, when the room
+  // never lets an account reach its slider, the year that account starts.
   let offset = 0;
-  let annual = now;
-  let calendarYear = saving[0]?.calendarYear ?? null;
-  if (now <= 0.5) {
-    const index = saving.findIndex((row, i) => i > 0 && row.tfsaIn + row.rrspIn + row.nonRegIn > 0.5);
-    if (index > 0) {
-      offset = index;
-      annual = saving[index].tfsaIn + saving[index].rrspIn + saving[index].nonRegIn;
-      calendarYear = saving[index].calendarYear;
-    }
+  for (const [field, want] of [["tfsaIn", wanted.tfsa], ["rrspIn", wanted.rrsp], ["nonRegIn", wanted.nonReg]]) {
+    const started = saving.findIndex((row) => (row[field] || 0) > 0.5);
+    if (started < 0) continue;
+    const target = Math.max(0, want || 0);
+    const reached = target > 0.5 ? saving.findIndex((row) => (row[field] || 0) + 0.5 >= target) : -1;
+    offset = Math.max(offset, reached >= 0 ? reached : started);
   }
+  const row = saving[offset];
+  const annual = row ? row.tfsaIn + row.rrspIn + row.nonRegIn : 0;
+  const calendarYear = row?.calendarYear ?? null;
   return { accounts, headline: { annual, offset, calendarYear } };
 }

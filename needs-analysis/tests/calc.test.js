@@ -772,6 +772,73 @@ test("the schedule reports this year's deposit and when the room is binding", ()
   assert.equal(described.headline.calendarYear, 2027);
 });
 
+test("the contribution headline is the level the plan settles at, not this year's partial deposit", () => {
+  // RRSP has room today; TFSA room is gone until January, then $14,000 a year.
+  const mixed = projectPortfolio({
+    currentAge: 40,
+    retirementAge: 65,
+    years: 5,
+    startYear: 2026,
+    tfsaAnnual: 32400,
+    rrspAnnual: 6000,
+    tfsaRoomNow: 0,
+    rrspRoomNow: 100000,
+    tfsaNewRoom: [14000, 14000, 14000, 14000],
+    rrspNewRoom: [30000, 30000, 30000, 30000],
+    province: "AB",
+  });
+  const described = describeDeposits(mixed.rows, { tfsa: 32400, rrsp: 6000 });
+  assert.equal(mixed.rows[0].tfsaIn + mixed.rows[0].rrspIn, 6000);
+  assert.equal(described.headline.offset, 1);
+  assert.equal(described.headline.annual, 20000);
+  assert.equal(described.headline.calendarYear, 2027);
+
+  // Room grows year over year until the slider is reached; the headline waits for that.
+  const ramp = projectPortfolio({
+    currentAge: 40,
+    retirementAge: 65,
+    years: 6,
+    startYear: 2026,
+    tfsaAnnual: 12000,
+    tfsaRoomNow: 7200,
+    tfsaNewRoom: [9000, 14000, 14000, 14000, 14000],
+    province: "AB",
+  });
+  const rampDescribed = describeDeposits(ramp.rows, { tfsa: 12000 });
+  assert.deepEqual(ramp.rows.slice(0, 6).map((row) => row.tfsaIn), [7200, 9000, 12000, 12000, 12000, 12000]);
+  assert.equal(rampDescribed.headline.offset, 2);
+  assert.equal(rampDescribed.headline.annual, 12000);
+  assert.equal(rampDescribed.headline.calendarYear, 2028);
+
+  // A steady schedule from the first year keeps offset 0.
+  const steady = projectPortfolio({
+    currentAge: 40,
+    retirementAge: 65,
+    years: 4,
+    startYear: 2026,
+    nonRegAnnual: 2400,
+    province: "AB",
+  });
+  assert.equal(describeDeposits(steady.rows, { nonReg: 2400 }).headline.offset, 0);
+  assert.equal(describeDeposits(steady.rows, { nonReg: 2400 }).headline.annual, 2400);
+
+  // Catch-up room lets the slider be met from the first year; later room limits
+  // are the per-account lines' job, not the headline's.
+  const catchUp = projectPortfolio({
+    currentAge: 40,
+    retirementAge: 65,
+    years: 6,
+    startYear: 2026,
+    tfsaAnnual: 20000,
+    tfsaRoomNow: 40000,
+    tfsaNewRoom: [14000, 14000, 14000, 14000, 14000],
+    province: "AB",
+  });
+  const catchUpDescribed = describeDeposits(catchUp.rows, { tfsa: 20000 });
+  assert.equal(catchUpDescribed.headline.offset, 0);
+  assert.equal(catchUpDescribed.headline.annual, 20000);
+});
+
 test("TFSA and RRSP deposits stay at the slider until room runs out", () => {
   const capped = depositsOverYears({
     desiredAnnual: 12000,

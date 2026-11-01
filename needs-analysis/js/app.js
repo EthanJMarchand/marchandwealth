@@ -146,6 +146,313 @@ function showsPlanning() {
   return mode === "planning" || mode === "both";
 }
 
+function showsInsurance() {
+  const mode = planningMode();
+  return mode === "insurance" || mode === "both";
+}
+
+// ---------------------------------------------------------------------------
+// One step at a time. Each [data-step] is a section, or a block inside one.
+// Only the active step is shown on screen; print ignores the step classes.
+// ---------------------------------------------------------------------------
+let activeStep = "a";
+const visitedSteps = new Set();
+let stepListSignature = "";
+
+function stepNodes() {
+  return [...$("worksheet").querySelectorAll("[data-step]")];
+}
+
+function stepInScope(node) {
+  const section = node.closest("section");
+  if (!section) return true;
+  if (section.classList.contains("scope-insurance") && !showsInsurance()) return false;
+  if (section.classList.contains("scope-planning") && !showsPlanning()) return false;
+  return true;
+}
+
+function activeSteps() {
+  return stepNodes().filter(stepInScope);
+}
+
+function showingAllSteps() {
+  return document.body.classList.contains("plan-show-all");
+}
+
+function renderStepList(steps, index) {
+  const list = $("plan-step-list");
+  const signature = steps.map((node) => node.dataset.step).join("|");
+  if (signature !== stepListSignature) {
+    stepListSignature = signature;
+    list.replaceChildren();
+    for (const node of steps) {
+      const item = document.createElement("li");
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "plan-step-pill";
+      button.dataset.go = node.dataset.step;
+      button.textContent = node.dataset.stepTitle;
+      item.append(button);
+      list.append(item);
+    }
+  }
+  [...list.querySelectorAll(".plan-step-pill")].forEach((pill, position) => {
+    const active = position === index;
+    pill.classList.toggle("is-active", active);
+    pill.classList.toggle("is-done", !active && visitedSteps.has(pill.dataset.go));
+    if (active) pill.setAttribute("aria-current", "step");
+    else pill.removeAttribute("aria-current");
+  });
+}
+
+function applyStep() {
+  const form = $("worksheet");
+  const steps = activeSteps();
+  if (!steps.length) return;
+  let index = steps.findIndex((node) => node.dataset.step === activeStep);
+  if (index < 0) {
+    index = 0;
+    activeStep = steps[0].dataset.step;
+  }
+  const current = steps[index];
+  visitedSteps.add(activeStep);
+
+  for (const section of form.querySelectorAll(":scope > section")) {
+    const owns = section === current || section.contains(current);
+    section.classList.toggle("plan-step-off", !owns);
+  }
+  for (const node of stepNodes()) {
+    if (node.tagName === "SECTION") continue;
+    node.classList.toggle("plan-step-off", node !== current);
+  }
+
+  const all = showingAllSteps();
+  $("plan-step-count").textContent = all ? "Every section" : `Step ${index + 1} of ${steps.length}`;
+  $("plan-step-name").textContent = current.dataset.stepTitle;
+  $("plan-progress-bar").style.width = `${Math.round(((index + 1) / steps.length) * 100)}%`;
+  renderStepList(steps, index);
+
+  const back = $("plan-step-back");
+  const next = $("plan-step-next");
+  back.disabled = index === 0;
+  const after = steps[index + 1];
+  next.hidden = !after;
+  if (after) $("plan-step-next-label").textContent = `Next: ${after.dataset.stepTitle}`;
+}
+
+function focusStep(node) {
+  const all = showingAllSteps();
+  const anchor = all ? node : $("plan-stepper");
+  anchor.scrollIntoView({ behavior: "smooth", block: "start" });
+  if (all || window.matchMedia("(max-width: 767px)").matches) return;
+  const control = [...node.querySelectorAll("input, select, textarea")].find((el) => (
+    !el.disabled
+    && el.type !== "hidden"
+    && el.type !== "range"
+    && el.offsetParent !== null
+  ));
+  if (control) control.focus({ preventScroll: true });
+}
+
+function goToStep(id, { focus = true } = {}) {
+  const target = activeSteps().find((node) => node.dataset.step === id);
+  if (!target) return;
+  activeStep = id;
+  applyStep();
+  if (focus) focusStep(target);
+}
+
+function moveStep(delta) {
+  const steps = activeSteps();
+  const index = steps.findIndex((node) => node.dataset.step === activeStep);
+  const next = steps[index + delta];
+  if (next) goToStep(next.dataset.step);
+}
+
+function initSteps() {
+  $("plan-step-back").addEventListener("click", () => moveStep(-1));
+  $("plan-step-next").addEventListener("click", () => moveStep(1));
+  $("plan-step-list").addEventListener("click", (event) => {
+    const pill = event.target.closest("[data-go]");
+    if (pill) goToStep(pill.dataset.go);
+  });
+  $("plan-view-toggle").addEventListener("click", () => {
+    const all = document.body.classList.toggle("plan-show-all");
+    const toggle = $("plan-view-toggle");
+    toggle.setAttribute("aria-pressed", String(all));
+    toggle.textContent = all ? "One step at a time" : "Show every section";
+    applyStep();
+    if (!all) focusStep(activeSteps().find((node) => node.dataset.step === activeStep));
+  });
+  // In one-step view, focus landing in a step that is not active (search, tab, or an
+  // anchor link) makes that step the active one so the field is never hidden.
+  $("worksheet").addEventListener("focusin", (event) => {
+    if (showingAllSteps()) return;
+    const node = event.target.closest?.("[data-step]");
+    if (!node || node.dataset.step === activeStep) return;
+    if (!stepInScope(node)) return;
+    activeStep = node.dataset.step;
+    applyStep();
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Notes behind each entry. The note text stays in the page as .plan-note (printed
+// in place). On screen a trigger opens it in one shared popover.
+// ---------------------------------------------------------------------------
+let tipPopover = null;
+let tipOpenFor = null;
+let tipPinned = false;
+let tipHideTimer = null;
+
+function tipBody() {
+  return tipPopover.querySelector(".plan-tip-popover-body");
+}
+
+// The popover shows a copy of the note. Ids stay unique to the note itself.
+function fillTipBody(note) {
+  const body = tipBody();
+  body.innerHTML = note.innerHTML;
+  body.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
+}
+
+function noteFor(trigger) {
+  return trigger ? document.getElementById(trigger.dataset.tip) : null;
+}
+
+function positionTip() {
+  if (!tipOpenFor || !tipPopover || tipPopover.hidden) return;
+  const sheet = window.matchMedia("(max-width: 767px)").matches;
+  tipPopover.classList.toggle("is-sheet", sheet);
+  if (sheet) {
+    tipPopover.style.left = "";
+    tipPopover.style.top = "";
+    tipPopover.style.width = "";
+    return;
+  }
+  const rect = tipOpenFor.getBoundingClientRect();
+  const width = Math.min(368, window.innerWidth - 32);
+  tipPopover.style.width = `${width}px`;
+  const height = tipPopover.offsetHeight;
+  let left = Math.max(16, Math.min(rect.left - 8, window.innerWidth - width - 16));
+  let top = rect.bottom + 8;
+  if (top + height > window.innerHeight - 16 && rect.top - 8 - height >= 16) {
+    top = rect.top - 8 - height;
+  }
+  top = Math.max(16, Math.min(top, window.innerHeight - height - 16));
+  tipPopover.style.left = `${left}px`;
+  tipPopover.style.top = `${top}px`;
+}
+
+function closeTip() {
+  clearTimeout(tipHideTimer);
+  if (tipOpenFor) tipOpenFor.setAttribute("aria-expanded", "false");
+  tipOpenFor = null;
+  tipPinned = false;
+  if (tipPopover) tipPopover.hidden = true;
+}
+
+function openTip(trigger, { pinned }) {
+  const note = noteFor(trigger);
+  if (!note || !tipPopover) return;
+  clearTimeout(tipHideTimer);
+  if (tipOpenFor && tipOpenFor !== trigger) tipOpenFor.setAttribute("aria-expanded", "false");
+  tipPinned = pinned || (tipPinned && tipOpenFor === trigger);
+  tipOpenFor = trigger;
+  trigger.setAttribute("aria-expanded", "true");
+  fillTipBody(note);
+  tipPopover.hidden = false;
+  positionTip();
+}
+
+function scheduleTipClose() {
+  clearTimeout(tipHideTimer);
+  tipHideTimer = setTimeout(() => {
+    if (!tipPinned) closeTip();
+  }, 240);
+}
+
+function refreshTip() {
+  if (!tipOpenFor || !tipPopover || tipPopover.hidden) return;
+  const note = noteFor(tipOpenFor);
+  if (!note) {
+    closeTip();
+    return;
+  }
+  fillTipBody(note);
+  positionTip();
+}
+
+function initTips() {
+  tipPopover = document.createElement("div");
+  tipPopover.id = "plan-tip-popover";
+  tipPopover.className = "plan-tip-popover no-print";
+  tipPopover.setAttribute("role", "note");
+  tipPopover.hidden = true;
+  const close = document.createElement("button");
+  close.type = "button";
+  close.className = "plan-tip-popover-close";
+  close.setAttribute("aria-label", "Close note");
+  close.textContent = "×";
+  close.addEventListener("click", () => {
+    const trigger = tipOpenFor;
+    closeTip();
+    trigger?.focus();
+  });
+  const body = document.createElement("div");
+  body.className = "plan-tip-popover-body";
+  tipPopover.append(close, body);
+  tipPopover.addEventListener("mouseenter", () => clearTimeout(tipHideTimer));
+  tipPopover.addEventListener("mouseleave", () => {
+    if (!tipPinned) scheduleTipClose();
+  });
+  document.body.append(tipPopover);
+
+  document.querySelectorAll(".plan-tip").forEach((trigger) => {
+    trigger.setAttribute("aria-expanded", "false");
+    trigger.setAttribute("aria-controls", "plan-tip-popover");
+  });
+
+  document.addEventListener("click", (event) => {
+    const trigger = event.target.closest?.(".plan-tip");
+    if (trigger) {
+      event.preventDefault();
+      if (tipOpenFor === trigger && tipPinned) closeTip();
+      else openTip(trigger, { pinned: true });
+      return;
+    }
+    if (tipOpenFor && !tipPopover.contains(event.target)) closeTip();
+  });
+  if (window.matchMedia("(hover: hover)").matches) {
+    document.addEventListener("mouseover", (event) => {
+      const trigger = event.target.closest?.(".plan-tip");
+      if (!trigger) return;
+      if (trigger === tipOpenFor) clearTimeout(tipHideTimer);
+      else if (!tipPinned) openTip(trigger, { pinned: false });
+    });
+    document.addEventListener("mouseout", (event) => {
+      const trigger = event.target.closest?.(".plan-tip");
+      if (trigger && trigger === tipOpenFor && !tipPinned) scheduleTipClose();
+    });
+  }
+  document.addEventListener("focusin", (event) => {
+    const trigger = event.target.closest?.(".plan-tip");
+    if (trigger && trigger !== tipOpenFor && !tipPinned) openTip(trigger, { pinned: false });
+  });
+  document.addEventListener("focusout", (event) => {
+    const trigger = event.target.closest?.(".plan-tip");
+    if (trigger && trigger === tipOpenFor && !tipPinned) scheduleTipClose();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !tipOpenFor) return;
+    const trigger = tipOpenFor;
+    closeTip();
+    trigger.focus();
+  });
+  window.addEventListener("scroll", positionTip, { passive: true });
+  window.addEventListener("resize", positionTip);
+}
+
 function hasPartner() {
   return $("has-partner").checked;
 }
@@ -470,11 +777,13 @@ function contributionSchedule(model) {
 }
 
 function contributionHeadline(model) {
-  const described = describeDeposits(model.portfolio.rows);
+  const monthly = model.portfolio.monthly || {};
+  const wanted = { tfsa: (monthly.tfsa || 0) * 12, rrsp: (monthly.rrsp || 0) * 12, nonReg: (monthly.nonReg || 0) * 12 };
+  const described = describeDeposits(model.portfolio.rows, wanted);
   const { annual, offset, calendarYear } = described.headline;
   let label = "Monthly contributions";
-  if (offset === 1) label = "Monthly contributions, beginning next year";
-  else if (offset > 1) label = `Monthly contributions, beginning in ${calendarYear}`;
+  if (offset === 1) label = "Monthly contributions, from next year";
+  else if (offset > 1) label = `Monthly contributions, from ${calendarYear}`;
   return { label, monthly: annual / 12 };
 }
 
@@ -1183,6 +1492,8 @@ function render() {
   renderWealthChart(model);
   renderPortfolioTable(model);
   renderEarlyDeath(model);
+  applyStep();
+  refreshTip();
 }
 
 function compactDollars(value) {
@@ -2395,6 +2706,30 @@ function applyPrefillFromUrl() {
   return true;
 }
 
+function printPlan() {
+  const panels = [...document.querySelectorAll("#worksheet details")];
+  const wasOpen = panels.map((panel) => panel.open);
+  panels.forEach((panel) => { panel.open = true; });
+  closeTip();
+  const title = document.title;
+  const names = hasPartner() ? `${personName()}-${partnerName()}` : personName();
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const fileName = [$("meeting-date").value || today, "Financial-Plan", names]
+    .filter(Boolean)
+    .join("-")
+    .replace(/[^\w-]+/g, "-")
+    .replace(/-+/g, "-");
+  document.title = fileName;
+  const restore = () => {
+    panels.forEach((panel, index) => { panel.open = wasOpen[index]; });
+    document.title = title;
+    window.removeEventListener("afterprint", restore);
+  };
+  window.addEventListener("afterprint", restore);
+  window.print();
+}
+
 function init() {
   clearLegacyStorage();
   initProvinces();
@@ -2404,6 +2739,8 @@ function init() {
   defaultProfileNote = $("investor-profile-note").textContent;
   applyPrefillFromUrl();
   syncInvestorProfileNote();
+  initSteps();
+  initTips();
   render();
 
   $("worksheet").addEventListener("input", (event) => {
@@ -2440,33 +2777,16 @@ function init() {
     render();
   });
   $("sample-case").addEventListener("click", loadSample);
-  $("print-plan").addEventListener("click", () => {
-    const panels = [...document.querySelectorAll("#worksheet details")];
-    const wasOpen = panels.map((panel) => panel.open);
-    panels.forEach((panel) => { panel.open = true; });
-    const title = document.title;
-    const names = hasPartner() ? `${personName()}-${partnerName()}` : personName();
-    const now = new Date();
-    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-    const fileName = [$("meeting-date").value || today, "Financial-Plan", names]
-      .filter(Boolean)
-      .join("-")
-      .replace(/[^\w-]+/g, "-")
-      .replace(/-+/g, "-");
-    document.title = fileName;
-    const restore = () => {
-      panels.forEach((panel, index) => { panel.open = wasOpen[index]; });
-      document.title = title;
-      window.removeEventListener("afterprint", restore);
-    };
-    window.addEventListener("afterprint", restore);
-    window.print();
-  });
+  $("print-plan").addEventListener("click", printPlan);
+  $("print-plan-quick").addEventListener("click", printPlan);
   $("new-case").addEventListener("click", () => {
     const named = $("client-name").value.trim() || $("personal-income").value.trim();
     if (named && !confirm("Clear every entry on this plan? Closing the tab discards them too, and clearing cannot be undone.")) return;
     resetSession();
+    visitedSteps.clear();
+    activeStep = "a";
     render();
+    focusStep(activeSteps()[0]);
   });
 }
 
