@@ -207,6 +207,18 @@
     return new Date(y, m - 1, d).toLocaleDateString("en-CA", { year: "numeric", month: "long", day: "numeric" });
   }
 
+  function formatPhone(raw) {
+    const trimmed = String(raw ?? "").trim();
+    const digits = trimmed.replace(/\D/g, "");
+    if (digits.length === 10) {
+      return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+    }
+    if (digits.length === 11 && digits[0] === "1") {
+      return `${digits.slice(1, 4)}-${digits.slice(4, 7)}-${digits.slice(7)}`;
+    }
+    return trimmed;
+  }
+
   function todayIso() {
     const now = new Date();
     const pad = (n) => String(n).padStart(2, "0");
@@ -313,15 +325,21 @@
     text("Your investor profile", M, y);
     y += 20;
     font("helvetica", "normal", 10.5, PDF.inksoft);
-    const metaParts = [`Prepared for ${report.name}.`, `Completed ${formatDate(report.date)}.`];
+    const preparedLines = wrap(`Prepared for ${report.name}. Completed ${formatDate(report.date)}.`, CW);
+    text(preparedLines, M, y, { lineHeightFactor: 1.3 });
+    y += preparedLines.length * 14;
     const contactParts = [
-      report.phone,
+      formatPhone(report.phone),
       report.email,
       report.preferredContact ? `Preferred contact: ${report.preferredContact}` : "",
     ].filter(Boolean);
-    if (contactParts.length) metaParts.push(contactParts.join("  ·  "));
-    text(metaParts.join("  "), M, y);
-    y += 22;
+    if (contactParts.length) {
+      font("helvetica", "normal", 9.5, PDF.inksoft);
+      const contactLines = wrap(contactParts.join("  ·  "), CW);
+      text(contactLines, M, y, { lineHeightFactor: 1.3 });
+      y += contactLines.length * 13;
+    }
+    y += 8;
 
     const panelH = 168;
     doc.setFillColor(...PDF.paper);
