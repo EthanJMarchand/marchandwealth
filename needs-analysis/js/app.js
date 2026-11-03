@@ -2326,6 +2326,7 @@ function fillDefaults() {
 function planHasEntries() {
   const name = $("client-name").value.trim();
   if (name && name !== "Person 1") return true;
+  if (!blank("client-phone") || !blank("client-email") || !blank("preferred-contact")) return true;
   if ($("has-partner").checked) return true;
   const filled = [
     "client-age",
@@ -2362,6 +2363,9 @@ function loadSample() {
   $("advisor-firm").value = DEFAULT_ADVISOR.firm;
 
   $("client-name").value = "Alex Morgan";
+  $("client-phone").value = "780-555-0142";
+  $("client-email").value = "alex.morgan@example.com";
+  $("preferred-contact").value = "Text";
   $("client-age").value = "42";
   $("retirement-age").value = "65";
   $("personal-income").value = "95000";
@@ -2601,6 +2605,9 @@ function applyPrefillFromUrl() {
 
   const textFields = [
     "client-name",
+    "client-phone",
+    "client-email",
+    "preferred-contact",
     "partner-name",
     "client-age",
     "partner-age",
@@ -2641,6 +2648,18 @@ function applyPrefillFromUrl() {
     const el = $(id);
     if (!el) continue;
     el.value = params.get(id) ?? "";
+  }
+
+  if (!params.has("client-phone") && params.has("phone")) {
+    $("client-phone").value = params.get("phone") ?? "";
+  }
+  if (!params.has("client-email") && params.has("email")) {
+    $("client-email").value = params.get("email") ?? "";
+  }
+  if (params.has("preferred-contact")) {
+    const rawPref = (params.get("preferred-contact") || "").trim().toLowerCase();
+    const matchPref = ["Call", "Text", "Email"].find((m) => m.toLowerCase() === rawPref);
+    $("preferred-contact").value = matchPref || "";
   }
 
   if (params.has("has-partner")) {

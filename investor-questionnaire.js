@@ -313,7 +313,14 @@
     text("Your investor profile", M, y);
     y += 20;
     font("helvetica", "normal", 10.5, PDF.inksoft);
-    text(`Prepared for ${report.name}. Completed ${formatDate(report.date)}.`, M, y);
+    const metaParts = [`Prepared for ${report.name}.`, `Completed ${formatDate(report.date)}.`];
+    const contactParts = [
+      report.phone,
+      report.email,
+      report.preferredContact ? `Preferred contact: ${report.preferredContact}` : "",
+    ].filter(Boolean);
+    if (contactParts.length) metaParts.push(contactParts.join("  ·  "));
+    text(metaParts.join("  "), M, y);
     y += 22;
 
     const panelH = 168;
@@ -653,8 +660,11 @@
 
   document.getElementById("iq-questions").innerHTML = QUESTIONS.map(questionHtml).join("");
 
-  const STEPS = ["name", ...QUESTIONS.map((q) => q.id), "results"];
+  const STEPS = ["name", "contact", ...QUESTIONS.map((q) => q.id), "results"];
   const nameInput = form.elements["client-name"];
+  const phoneInput = form.elements["client-phone"];
+  const emailInput = form.elements["client-email"];
+  const preferredContactInput = form.elements["preferred-contact"];
   const nextStepCard = document.getElementById("iq-next-step");
   const intakeLink = document.getElementById("iq-intake-link");
   const submitStep = document.getElementById("iq-submit-step");
@@ -665,6 +675,12 @@
   const downloadStatus = document.getElementById("iq-download-status");
   const reviewBanner = document.getElementById("iq-review-banner");
 
+  const CONTACT_METHODS = ["Call", "Text", "Email"];
+  const normalizePreferredContact = (value) => {
+    const clean = String(value ?? "").trim().toLowerCase();
+    return CONTACT_METHODS.find((m) => m.toLowerCase() === clean) || "";
+  };
+
   let cursor = 0;
   let completedDate = todayIso();
   let reviewMode = false;
@@ -672,6 +688,11 @@
 
   const stepEl = (name) => form.querySelector(`[data-step="${name}"]`);
   const nameReady = () => nameInput.value.trim() !== "";
+  const contactReady = () => (
+    phoneInput.value.trim() !== ""
+    && emailInput.value.trim() !== ""
+    && CONTACT_METHODS.includes(preferredContactInput.value.trim())
+  );
 
   function answers() {
     const out = {};
@@ -686,6 +707,7 @@
 
   function stepDone(name, a) {
     if (name === "name") return nameReady();
+    if (name === "contact") return contactReady();
     if (name === "results") return true;
     return Boolean(a[name]);
   }
@@ -717,7 +739,7 @@
   function render() {
     const a = answers();
     STEPS.forEach((name, i) => stepEl(name)?.classList.toggle("hidden", i > cursor));
-    const complete = nameReady() && allAnswered(a);
+    const complete = nameReady() && contactReady() && allAnswered(a);
     if (complete) renderResults(a);
     const finished = complete && cursor >= STEPS.length - 1;
     submitStep.classList.toggle("hidden", !finished);
@@ -753,7 +775,12 @@
 
   function scrollToStep(name) {
     const el = stepEl(name);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (!el) return;
+    if (name === "contact") {
+      const firstEmpty = [phoneInput, emailInput, preferredContactInput].find((input) => input.value.trim() === "") || phoneInput;
+      firstEmpty.focus({ preventScroll: true });
+    }
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function advance(fromName) {
@@ -767,19 +794,48 @@
     return true;
   }
 
+  const contactInputs = [phoneInput, emailInput, preferredContactInput];
+
   form.addEventListener("pointerdown", () => { pointerAnswer = true; });
   form.addEventListener("keydown", (event) => {
     pointerAnswer = false;
-    if (event.target !== nameInput) return;
-    if (event.key === "Enter") {
-      event.preventDefault();
-      if (advance("name")) scrollToStep(STEPS[cursor]);
-    } else if (event.key === "Tab" && !event.shiftKey) {
-      advance("name");
+    if (event.target === nameInput) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        if (advance("name")) scrollToStep(STEPS[cursor]);
+      } else if (event.key === "Tab" && !event.shiftKey) {
+        if (advance("name")) {
+          event.preventDefault();
+          scrollToStep(STEPS[cursor]);
+        }
+      }
+      return;
+    }
+    if (contactInputs.includes(event.target)) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        const nextEmpty = contactInputs.find((input) => input.value.trim() === "");
+        if (nextEmpty && nextEmpty !== event.target) {
+          nextEmpty.focus();
+        } else if (advance("contact")) {
+          scrollToStep(STEPS[cursor]);
+        }
+      } else if (event.key === "Tab" && !event.shiftKey && event.target === preferredContactInput) {
+        if (advance("contact")) scrollToStep(STEPS[cursor]);
+      }
     }
   });
 
   nameInput.addEventListener("input", render);
+  phoneInput.addEventListener("input", render);
+  emailInput.addEventListener("input", render);
+  preferredContactInput.addEventListener("change", () => {
+    if (cursor === STEPS.indexOf("contact") && contactReady()) {
+      if (advance("contact")) setTimeout(() => scrollToStep(STEPS[cursor]), 180);
+    } else {
+      render();
+    }
+  });
 
   form.addEventListener("change", (event) => {
     if (event.target.type !== "radio") return;
@@ -796,6 +852,9 @@
   function reviewUrl(a) {
     const params = new URLSearchParams();
     params.set("name", nameInput.value.trim());
+    if (phoneInput.value.trim()) params.set("client-phone", phoneInput.value.trim());
+    if (emailInput.value.trim()) params.set("client-email", emailInput.value.trim());
+    if (preferredContactInput.value.trim()) params.set("preferred-contact", preferredContactInput.value.trim());
     params.set("date", completedDate);
     QUESTIONS.forEach((q) => { if (a[q.id]) params.set(q.id, a[q.id]); });
     return `${window.location.origin}/investor-questionnaire.html?${params.toString()}`;
@@ -804,6 +863,9 @@
   function intakeUrl(a) {
     const params = new URLSearchParams();
     params.set("client-name", nameInput.value.trim());
+    params.set("client-phone", phoneInput.value.trim());
+    params.set("client-email", emailInput.value.trim());
+    params.set("preferred-contact", preferredContactInput.value.trim());
     params.set("investor-profile", scoreAnswers(a).profile.key);
     params.set("iq-link", reviewUrl(a));
     return `/client-intake.html?${params.toString()}`;
@@ -815,6 +877,9 @@
     body.set("form-name", "investor-questionnaire");
     body.set("bot-field", form.elements["bot-field"]?.value || "");
     body.set("client-name", nameInput.value.trim());
+    body.set("client-phone", phoneInput.value.trim());
+    body.set("client-email", emailInput.value.trim());
+    body.set("preferred-contact", preferredContactInput.value.trim());
     body.set("risk-profile", `${r.profile.name} (risk level ${r.profile.level} of 6)`);
     body.set("recommended-portfolio", `${r.profile.equity}% equity / ${r.profile.fixed}% fixed income`);
     body.set("iq-link", link);
@@ -831,7 +896,7 @@
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const a = answers();
-    if (!nameReady() || !allAnswered(a)) {
+    if (!nameReady() || !contactReady() || !allAnswered(a)) {
       statusEl.textContent = "Please answer every question before submitting.";
       statusEl.className = "text-[13.5px] text-red-700";
       return;
@@ -864,7 +929,7 @@
   let copyReset = null;
   copyBtn.addEventListener("click", async () => {
     const a = answers();
-    if (!nameReady() || !allAnswered(a)) return;
+    if (!nameReady() || !contactReady() || !allAnswered(a)) return;
     const link = reviewUrl(a);
     clearTimeout(copyReset);
     try {
@@ -920,7 +985,15 @@
     try {
       const [JsPDF, logo] = await Promise.all([loadJsPdf(), loadLogo()]);
       const name = nameInput.value.trim();
-      const doc = buildPdf(JsPDF, { name, date: completedDate, answers: a, result: scoreAnswers(a) }, logo);
+      const doc = buildPdf(JsPDF, {
+        name,
+        phone: phoneInput.value.trim(),
+        email: emailInput.value.trim(),
+        preferredContact: preferredContactInput.value.trim(),
+        date: completedDate,
+        answers: a,
+        result: scoreAnswers(a),
+      }, logo);
       const safeName = name.replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "") || "Client";
       doc.save(`${completedDate}-Investor-Questionnaire-${safeName}.pdf`);
     } catch {
@@ -933,8 +1006,21 @@
 
   /* Opened from a submitted link: restore every answer. */
   const params = new URLSearchParams(window.location.search);
-  if (params.has("name") || QUESTIONS.some((q) => params.has(q.id))) {
-    nameInput.value = params.get("name") || "";
+  if (
+    params.has("name")
+    || params.has("client-name")
+    || params.has("client-phone")
+    || params.has("phone")
+    || params.has("client-email")
+    || params.has("email")
+    || params.has("preferred-contact")
+    || QUESTIONS.some((q) => params.has(q.id))
+  ) {
+    nameInput.value = (params.get("name") || params.get("client-name") || "").trim();
+    phoneInput.value = (params.get("client-phone") || params.get("phone") || "").trim();
+    emailInput.value = (params.get("client-email") || params.get("email") || "").trim();
+    const pref = normalizePreferredContact(params.get("preferred-contact"));
+    if (pref) preferredContactInput.value = pref;
     QUESTIONS.forEach((q) => {
       const v = params.get(q.id);
       if (!v || !optionFor(q, v)) return;

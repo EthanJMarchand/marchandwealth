@@ -116,6 +116,23 @@
         </label>
       </div>
 
+      <div class="iq-step hidden scroll-mt-24 space-y-5" data-step="contact">
+        <label class="block text-sm font-medium text-navydeep" for="iq-phone">Phone number
+          <input id="iq-phone" name="client-phone" type="tel" inputmode="tel" autocomplete="tel" required class="mt-2 w-full rounded-sm border border-line bg-white/90 px-3.5 py-3 text-base shadow-sm focus:border-gold focus:outline-none" />
+        </label>
+        <label class="block text-sm font-medium text-navydeep" for="iq-email">Email
+          <input id="iq-email" name="client-email" type="email" inputmode="email" autocomplete="email" required class="mt-2 w-full rounded-sm border border-line bg-white/90 px-3.5 py-3 text-base shadow-sm focus:border-gold focus:outline-none" />
+        </label>
+        <label class="block text-sm font-medium text-navydeep" for="iq-preferred-contact">Preferred contact method
+          <select id="iq-preferred-contact" name="preferred-contact" required class="mt-2 w-full rounded-sm border border-line bg-white/90 px-3.5 py-3 text-base shadow-sm focus:border-gold focus:outline-none">
+            <option value="">Choose one</option>
+            <option value="Call">Call</option>
+            <option value="Text">Text</option>
+            <option value="Email">Email</option>
+          </select>
+        </label>
+      </div>
+
       <div id="iq-questions" class="contents"></div>
 
       <section class="iq-step hidden scroll-mt-24" data-step="results" aria-labelledby="iq-results-heading">
@@ -207,6 +224,9 @@
 <!-- Registers the JavaScript-built submission with Netlify Forms at deploy time. -->
 <form name="investor-questionnaire" data-netlify="true" netlify-honeypot="bot-field" hidden>
   <input name="client-name">
+  <input name="client-phone">
+  <input name="client-email">
+  <input name="preferred-contact">
   <input name="risk-profile">
   <input name="recommended-portfolio">
   <input name="iq-link">

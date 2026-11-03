@@ -18,11 +18,18 @@
 
   const dependantCount = () => Math.max(0, Math.min(12, Math.floor(money(form.elements["dependant-count"]?.value))));
 
+  const CONTACT_METHODS = ["Call", "Text", "Email"];
+  const normalizePreferredContact = (value) => {
+    const clean = String(value ?? "").trim().toLowerCase();
+    return CONTACT_METHODS.find((m) => m.toLowerCase() === clean) || "";
+  };
+
   // How far the client has walked. Optional money fields unlock on leave, even if blank.
   let cursor = 0;
 
   const STEP_ORDER = [
     "name",
+    "contact",
     "age",
     "income",
     "household",
@@ -82,6 +89,11 @@
 
   function stepComplete(name) {
     if (name === "name") return filled(form.elements["client-name"]?.value);
+    if (name === "contact") {
+      return filled(form.elements["client-phone"]?.value)
+        && filled(form.elements["client-email"]?.value)
+        && CONTACT_METHODS.includes(String(form.elements["preferred-contact"]?.value ?? "").trim());
+    }
     if (name === "age") return filled(form.elements["client-age"]?.value);
     if (name === "income") return filled(form.elements["personal-income"]?.value);
     if (name === "household") return householdChosen();
@@ -109,7 +121,7 @@
   }
 
   function requiredGate(name) {
-    return ["name", "age", "income", "household", "spouse", "dependants", "retirement", "returns"].includes(name);
+    return ["name", "contact", "age", "income", "household", "spouse", "dependants", "retirement", "returns"].includes(name);
   }
 
   function canAdvance(stepName) {
@@ -255,26 +267,34 @@
     pointerFocus = false;
   });
 
+  function syncIqLinks() {
+    const params = new URLSearchParams();
+    const name = form.elements["client-name"]?.value.trim() || "";
+    const phone = form.elements["client-phone"]?.value.trim() || "";
+    const email = form.elements["client-email"]?.value.trim() || "";
+    const preferred = normalizePreferredContact(form.elements["preferred-contact"]?.value);
+    if (name) params.set("name", name);
+    if (phone) params.set("client-phone", phone);
+    if (email) params.set("client-email", email);
+    if (preferred) params.set("preferred-contact", preferred);
+    const qs = params.toString();
+    const href = qs ? `/investor-questionnaire.html?${qs}` : "/investor-questionnaire.html";
+    document.querySelectorAll('a[href^="/investor-questionnaire.html"]').forEach((link) => {
+      link.setAttribute("href", href);
+    });
+  }
+
   form.addEventListener("input", (event) => {
     const stepName = stepFromEventTarget(event.target);
     if (!stepName) return;
-
-    // Required single-answer steps: unlock the next question as soon as this one has a value.
-    if (requiredGate(stepName) && stepComplete(stepName)) {
-      const next = advanceFrom(stepName);
-      // Don't steal focus while they are still typing in a text field.
-      if (next && event.target.type === "radio") focusStep(next);
-      else updateVisibility();
-      return;
-    }
-
-    // Typing in an optional section does not auto-skip ahead; Tab/blur does.
+    if (stepName === "name" || stepName === "contact") syncIqLinks();
     updateVisibility();
   });
 
   form.addEventListener("change", (event) => {
     const stepName = stepFromEventTarget(event.target);
     if (!stepName) return;
+    if (stepName === "name" || stepName === "contact") syncIqLinks();
     if (stepName === "household") {
       // Choosing yes/no always opens the next appropriate block.
       const next = advanceFrom(stepName);
@@ -282,14 +302,21 @@
       else updateVisibility();
       return;
     }
-    if (requiredGate(stepName) && stepComplete(stepName)) {
+    if (stepName === "contact" && event.target.name === "preferred-contact" && stepComplete("contact")) {
+      const next = advanceFrom(stepName);
+      if (next) focusStep(next);
+      else updateVisibility();
+      return;
+    }
+    if (requiredGate(stepName) && stepComplete(stepName) && event.target.tagName === "SELECT") {
       advanceFrom(stepName);
       updateVisibility();
+      return;
     }
+    updateVisibility();
   });
 
   form.addEventListener("keydown", (event) => {
-    if (event.key !== "Tab" || event.shiftKey) return;
     const stepName = stepFromEventTarget(event.target);
     if (!stepName) return;
 
@@ -299,6 +326,24 @@
     const controls = stepControls(step);
     const last = controls[controls.length - 1];
     const onNextArrow = event.target.classList?.contains("intake-next-arrow");
+
+    if (event.key === "Enter" && event.target.type !== "submit" && event.target.type !== "button" && event.target.tagName !== "TEXTAREA") {
+      if (stepName === "submit") return;
+      event.preventDefault();
+      const index = controls.indexOf(event.target);
+      if (index >= 0 && index < controls.length - 1 && !canAdvance(stepName)) {
+        const nextField = controls[index + 1];
+        nextField.focus();
+        selectIfPrefill(nextField);
+        return;
+      }
+      if (!canAdvance(stepName)) return;
+      const next = advanceFrom(stepName);
+      if (next) focusStep(next);
+      return;
+    }
+
+    if (event.key !== "Tab" || event.shiftKey) return;
     if (event.target !== last && !onNextArrow) return;
 
     // Leaving the last field or the next-arrow: unlock and jump into the next question.
@@ -310,18 +355,8 @@
     if (!nextControl) return;
     event.preventDefault();
     nextControl.focus();
+    selectIfPrefill(nextControl);
     nextControl.scrollIntoView({ behavior: "smooth", block: "center" });
-  });
-
-  form.addEventListener("focusout", (event) => {
-    const stepName = stepFromEventTarget(event.target);
-    if (!stepName) return;
-    // If focus is moving within the same step, do nothing.
-    const nextTarget = event.relatedTarget;
-    if (nextTarget && stepFromEventTarget(nextTarget) === stepName) return;
-
-    if (requiredGate(stepName) && !stepComplete(stepName)) return;
-    advanceFrom(stepName);
   });
 
   const Profiles = window.MarchandInvestorProfiles;
@@ -364,7 +399,32 @@
   });
 
   const incoming = new URLSearchParams(window.location.search);
-  if (filled(incoming.get("client-name"))) form.elements["client-name"].value = incoming.get("client-name").trim();
+  let iqParams = null;
+  try {
+    const iqLink = new URL(incoming.get("iq-link") || "");
+    if (iqLink.pathname === "/investor-questionnaire.html") {
+      document.getElementById("iq-link-field").value = iqLink.href;
+      document.getElementById("intake-iq-card")?.classList.add("hidden");
+      iqParams = iqLink.searchParams;
+    }
+  } catch {
+    // No questionnaire link to carry forward.
+  }
+
+  const incomingName = incoming.get("client-name") || incoming.get("name") || iqParams?.get("name") || iqParams?.get("client-name") || "";
+  if (filled(incomingName)) form.elements["client-name"].value = incomingName.trim();
+
+  const incomingPhone = incoming.get("client-phone") || incoming.get("phone") || iqParams?.get("client-phone") || iqParams?.get("phone") || "";
+  if (filled(incomingPhone)) form.elements["client-phone"].value = incomingPhone.trim();
+
+  const incomingEmail = incoming.get("client-email") || incoming.get("email") || iqParams?.get("client-email") || iqParams?.get("email") || "";
+  if (filled(incomingEmail)) form.elements["client-email"].value = incomingEmail.trim();
+
+  const incomingPreferred = normalizePreferredContact(
+    incoming.get("preferred-contact") || iqParams?.get("preferred-contact")
+  );
+  if (incomingPreferred) form.elements["preferred-contact"].value = incomingPreferred;
+
   questionnaireProfile = Profiles.profileByKey(incoming.get("investor-profile"));
   if (questionnaireProfile) {
     profileSelect.value = questionnaireProfile.key;
@@ -372,19 +432,23 @@
     form.elements["retirement-return"].value = String(questionnaireProfile.retirement);
     syncProfileNote();
   }
-  try {
-    const iqLink = new URL(incoming.get("iq-link") || "");
-    if (iqLink.pathname === "/investor-questionnaire.html") {
-      document.getElementById("iq-link-field").value = iqLink.href;
-      document.getElementById("intake-iq-card")?.classList.add("hidden");
-    }
-  } catch {
-    // No questionnaire link to carry forward.
+
+  syncIqLinks();
+
+  const visibleOnLoad = visibleStepNames();
+  while (
+    cursor < visibleOnLoad.length - 1
+    && requiredGate(visibleOnLoad[cursor])
+    && stepComplete(visibleOnLoad[cursor])
+  ) {
+    cursor += 1;
   }
-  if (stepComplete("name")) cursor = 1;
 
   updateVisibility();
-  if (stepComplete("name")) form.elements["client-age"].focus();
+  if (cursor > 0) {
+    const nextField = firstControl(visibleOnLoad[cursor]);
+    if (nextField) nextField.focus();
+  }
 
   const statusEl = document.getElementById("intake-status");
   const successEl = document.getElementById("intake-success");
@@ -396,6 +460,9 @@
     const params = new URLSearchParams();
     params.set("planning-mode", "both");
     params.set("client-name", form.elements["client-name"].value.trim());
+    params.set("client-phone", form.elements["client-phone"].value.trim());
+    params.set("client-email", form.elements["client-email"].value.trim());
+    params.set("preferred-contact", form.elements["preferred-contact"].value.trim());
     params.set("client-age", form.elements["client-age"].value.trim());
     params.set("personal-income", form.elements["personal-income"].value.trim());
 
@@ -475,6 +542,7 @@
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (!filled(form.elements["client-name"]?.value)
+      || !stepComplete("contact")
       || !filled(form.elements["client-age"]?.value)
       || !filled(form.elements["personal-income"]?.value)
       || !householdChosen()) {

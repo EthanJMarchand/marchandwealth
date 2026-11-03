@@ -112,7 +112,24 @@
         </label>
       </div>
 
-      <div class="intake-step hidden" data-step="age" data-requires="name">
+      <div class="intake-step hidden space-y-5" data-step="contact" data-requires="name">
+        <label class="block text-sm font-medium text-navydeep" for="intake-phone">Phone number
+          <input id="intake-phone" name="client-phone" type="tel" inputmode="tel" autocomplete="tel" required class="mt-2 w-full rounded-sm border border-line bg-white/90 px-3.5 py-3 text-base shadow-sm focus:border-gold focus:outline-none" />
+        </label>
+        <label class="block text-sm font-medium text-navydeep" for="intake-email">Email
+          <input id="intake-email" name="client-email" type="email" inputmode="email" autocomplete="email" required class="mt-2 w-full rounded-sm border border-line bg-white/90 px-3.5 py-3 text-base shadow-sm focus:border-gold focus:outline-none" />
+        </label>
+        <label class="block text-sm font-medium text-navydeep" for="intake-preferred-contact">Preferred contact method
+          <select id="intake-preferred-contact" name="preferred-contact" required class="mt-2 w-full rounded-sm border border-line bg-white/90 px-3.5 py-3 text-base shadow-sm focus:border-gold focus:outline-none">
+            <option value="">Choose one</option>
+            <option value="Call">Call</option>
+            <option value="Text">Text</option>
+            <option value="Email">Email</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="intake-step hidden" data-step="age" data-requires="contact">
         <label class="block text-sm font-medium text-navydeep" for="intake-age">Your age
           <input id="intake-age" name="client-age" inputmode="numeric" required class="mt-2 w-full rounded-sm border border-line bg-white/90 px-3.5 py-3 text-base shadow-sm focus:border-gold focus:outline-none" />
         </label>
