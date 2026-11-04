@@ -767,28 +767,34 @@
   }
 
   function syncNextArrow(a) {
-    form.querySelectorAll(".intake-next-arrow").forEach((btn) => btn.remove());
     const frontier = STEPS[cursor];
-    if (!frontier || cursor >= STEPS.length - 1) return;
-    const el = stepEl(frontier);
+    const el = frontier && cursor < STEPS.length - 1 ? stepEl(frontier) : null;
+    form.querySelectorAll(".intake-next-arrow").forEach((btn) => {
+      if (btn.parentElement !== el) btn.remove();
+    });
     if (!el) return;
 
     const ready = stepDone(frontier, a);
-    const button = document.createElement("button");
-    button.type = "button";
+    let button = el.querySelector(":scope > .intake-next-arrow");
+    if (!button) {
+      button = document.createElement("button");
+      button.type = "button";
+      button.innerHTML = `
+        <span class="intake-next-arrow-label"></span>
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+          <path d="M5 8.5 L11 14.5 L17 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      `;
+      button.addEventListener("click", () => {
+        if (advance(frontier)) scrollToStep(STEPS[cursor]);
+      });
+      el.append(button);
+    }
     button.className = `intake-next-arrow${ready ? "" : " is-waiting"}`;
     button.setAttribute("aria-label", ready ? "Show the next question" : "Answer this question to continue");
     button.disabled = !ready;
-    button.innerHTML = `
-      <span class="intake-next-arrow-label">${ready ? "Next" : "More below"}</span>
-      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
-        <path d="M5 8.5 L11 14.5 L17 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    `;
-    button.addEventListener("click", () => {
-      if (advance(frontier)) scrollToStep(STEPS[cursor]);
-    });
-    el.append(button);
+    const label = button.querySelector(".intake-next-arrow-label");
+    if (label) label.textContent = ready ? "Next" : "More below";
   }
 
   function scrollToStep(name) {
